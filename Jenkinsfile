@@ -17,5 +17,13 @@ pipeline {
                 sh 'docker run --rm tadpole-app:latest'
             }
         }
+        stage('Archive') {
+            steps {
+                timeout(time: 2, unit: 'MINUTES') {
+                    input message: 'Do you want to archive the artifacts?', ok: 'Yes'
+                }
+                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+            }
+        }
     }
 }
