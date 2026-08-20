@@ -40,6 +40,20 @@ pipeline {
                 sh "docker run --rm tadpole-app:${params.TARGET_ENV}"
             }
         }
+<<<<<<< HEAD
+        stage('Code Coverage') {
+            steps {
+                sh 'mvn jacoco:report'
+=======
+        stage('Archive') {
+            steps {
+                timeout(time: 2, unit: 'MINUTES') {
+                    input message: 'Do you want to archive the artifacts?', ok: 'Yes'
+                }
+                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+>>>>>>> feature/jenkins-additions
+            }
+        }
     }
 
     post {
