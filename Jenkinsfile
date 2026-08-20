@@ -18,9 +18,12 @@ pipeline {
             }
         }
         stage('Archive') {
-            input {
-                message "Do you want to archive the artifacts?"
-                ok "Yes"
+            timeout(time: 2, unit: 'MINUTES') {
+                input {
+                    message "Do you want to archive the artifacts?"
+                    ok "Yes"
+                    cancel "No"
+                }
             }
             steps {
                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
