@@ -17,5 +17,10 @@ pipeline {
                 sh 'docker run --rm tadpole-app:latest'
             }
         }
+        stage('Code Coverage') {
+            steps {
+                sh 'mvn jacoco:report'
+            }
+        }
     }
 }
