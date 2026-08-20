@@ -4,6 +4,7 @@
 - Devon: Dates
 - Grace: Grapes
 - Michael: Mayo
+- Justin: Jalapenos
 
 ## Team Git Workflow Choice
 For our project, we opted to use Trunk-based Development, for the sake of having smaller feature branches that we will work on progressively with frequent merges to main.
