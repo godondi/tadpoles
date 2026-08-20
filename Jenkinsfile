@@ -8,7 +8,7 @@ pipeline {
         }
         stage('Build Image') {
             steps {
-                sh 'mvn -B clean package -DskipTests'
+                sh 'mvn -B clean verify -DskipTests'    // verify performs an additional step after package
                 sh 'docker build -t tadpole-app:latest .'
             }
         }
