@@ -4,7 +4,7 @@ pipeline {
     // Parameters exposed in the Jenkins UI when starting a build
     parameters {
         booleanParam(name: 'SKIP_TESTS', defaultValue: false, description: 'Skip Maven tests')
-        choice(name: 'TARGET_ENV', defaultValue: 'latest', choices: "latest\ndev\nstaging\nprod", description: 'Target build environment')
+        choice(name: 'TARGET_ENV', choices: "dev\nstaging\nprod", description: 'Target build environment')
         booleanParam(name: 'SKIP_SMOKE_TEST', defaultValue: false, description: 'Skip running the smoke test container')
     }
 
