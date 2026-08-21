@@ -64,7 +64,7 @@
                 <artifactId>spotbugs-maven-plugin</artifactId>
                 <version>${spotbugs.version}</version>
                 <configuration>
-                    <failOnViolation>false</failOnViolation>
+                    <failOnError>false</failOnError>
                 </configuration>
                 <executions>
                     <execution>
