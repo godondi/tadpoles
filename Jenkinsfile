@@ -4,7 +4,7 @@ pipeline {
     // Parameters exposed in the Jenkins UI when starting a build
     parameters {
         booleanParam(name: 'SKIP_TESTS', defaultValue: false, description: 'Skip Maven tests')
-        choice(name: 'TARGET_ENV', choices: "dev\nstaging\nprod", description: 'Target build environment')
+        choice(name: 'TARGET_ENV', defaultValue: 'latest', choices: "latest\ndev\nstaging\nprod", description: 'Target build environment')
         booleanParam(name: 'SKIP_SMOKE_TEST', defaultValue: false, description: 'Skip running the smoke test container')
     }
 
@@ -22,7 +22,7 @@ pipeline {
                     def skipArg = params.SKIP_TESTS ? '-DskipTests' : ''
 
                     echo "Building for environment: ${params.TARGET_ENV}"
-                    sh "mvn -B clean package ${skipArg}"
+                    sh "mvn -B clean verify -DskipTests ${skipArg}"
 
                     // Pass the TARGET_ENV as a build-arg and tag the image with the environment
                     sh "docker build --build-arg ENV=${params.TARGET_ENV} -t tadpole-app:${params.TARGET_ENV} ."
