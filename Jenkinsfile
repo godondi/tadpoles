@@ -30,20 +30,24 @@ pipeline {
             }
         }
 
-        stage('Smoke Test') {
-            // Only run this stage if SKIP_SMOKE_TEST is false
-            when {
-                expression { return !params.SKIP_SMOKE_TEST }
-            }
-            steps {
-                // Run the image tagged for the selected environment
-                sh "docker run --rm tadpole-app:${params.TARGET_ENV}"
-            }
-        }
+        stage('Parallel Test') {
+            parallel {
+                stage('Smoke Test') {
+                    // Only run this stage if SKIP_SMOKE_TEST is false
+                    when {
+                        expression { return !params.SKIP_SMOKE_TEST }
+                    }
+                    steps {
+                        // Run the image tagged for the selected environment
+                        sh "docker run --rm tadpole-app:${params.TARGET_ENV}"
+                    }
+                }
 
-        stage('Code Coverage') {
-            steps {
-                sh 'mvn jacoco:report'
+                stage('Code Coverage') {
+                    steps {
+                        sh 'mvn jacoco:report'
+                    }
+                }
             }
         }
         
