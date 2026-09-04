@@ -1,6 +1,6 @@
 CREATE TABLE advisors (
-	advisor_id	    SERIAL PRIMARY KEY,
-	adviosr_name    TEXT NOT NULL
+	advisor_id	    	SERIAL PRIMARY KEY,
+	adviosr_name    	TEXT NOT NULL
 );
 
 CREATE TABLE model_portfolios (
@@ -18,8 +18,8 @@ CREATE TABLE clients (
 CREATE TABLE instruments (
 	instrument_id	    SERIAL PRIMARY KEY,
 	instrument_name	    TEXT NOT NULL UNIQUE,
-	ticker	            TEXT NOT NULL UNIQUE,
-	currency		    TEXT NOT NULL
+	ticker	            VARCHAR(8) NOT NULL UNIQUE,
+	currency		    CHAR(3) NOT NULL
 );
 
 CREATE TABLE model_portfolio_holdings (
@@ -45,11 +45,11 @@ CREATE TABLE client_holdings (
 );
 
 CREATE TABLE client_trades (
-	trade_id		SERIAL PRIMARY KEY,
-    client_id 		INTEGER NOT NULL REFERENCES clients(client_id),
-	instrument_id	INTEGER NOT NULL REFERENCES instruments(instrument_id),
-	trade_type		TEXT NOT NULL CHECK (trade_type IN ('BUY', 'SELL')),
-	quantity		INTEGER NOT NULL CHECK (quantity > 0), 
-    price			NUMERIC(10,2) NOT NULL CHECK (price > 0),
-	trade_date		DATE NOT NULL
+	trade_id			SERIAL PRIMARY KEY,
+    client_id	 		INTEGER NOT NULL REFERENCES clients(client_id),
+	instrument_id		INTEGER NOT NULL REFERENCES instruments(instrument_id),
+	trade_type			TEXT NOT NULL CHECK (trade_type IN ('BUY', 'SELL')),
+	quantity			INTEGER NOT NULL CHECK (quantity > 0), 
+    price				NUMERIC(10,2) NOT NULL CHECK (price > 0),
+	trade_date			DATE NOT NULL
 );
