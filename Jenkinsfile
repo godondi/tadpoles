@@ -6,10 +6,16 @@ pipeline {
                 checkout scm
             }
         }
+        stage('Build Backend') {
+            steps {
+                dir('backend') {
+                    sh 'mvn -B clean verify'
+                }
+            }
+        }
         stage('Build Image') {
             steps {
-                sh 'mvn -B clean verify -DskipTests'    // verify performs an additional step after package
-                sh 'docker build -t tadpole-app:latest .'
+                sh 'docker build -t tadpole-app:latest -f backend/Dockerfile backend'
             }
         }
         stage('Smoke Test') {
@@ -19,7 +25,9 @@ pipeline {
         }
         stage('Code Coverage') {
             steps {
-                sh 'mvn jacoco:report'
+                dir('backend') {
+                    sh 'mvn jacoco:report'
+                }
             }
         }
         stage('Archive') {
@@ -27,7 +35,7 @@ pipeline {
                 timeout(time: 2, unit: 'MINUTES') {
                     input message: 'Do you want to archive the artifacts?', ok: 'Yes'
                 }
-                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+                archiveArtifacts artifacts: 'backend/target/*.jar', fingerprint: true
             }
         }
     }
