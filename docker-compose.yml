@@ -1,0 +1,9 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: tadpole-app:latest
+    container_name: tadpole-backend
+    ports:
+      - "8080:8080"
