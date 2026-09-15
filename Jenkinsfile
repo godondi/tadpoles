@@ -30,6 +30,14 @@ pipeline {
                 }
             }
         }
+        stage('Database Integration Tests') {
+            steps {
+                sh 'docker build -t tadpole-testing:latest -f testing/Dockerfile .'
+                sh 'docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD":/workspace -w /workspace/testing tadpole-testing:latest mvn -B test'
+                junit testResults: 'testing/target/surefire-reports/*.xml'
+                archiveArtifacts artifacts: 'testing/target/surefire-reports/*.xml', fingerprint: true
+            }
+        }
         stage('Archive') {
             steps {
                 timeout(time: 2, unit: 'MINUTES') {
