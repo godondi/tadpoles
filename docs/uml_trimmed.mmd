@@ -1,0 +1,298 @@
+classDiagram
+direction LR
+
+%% Mock architecture for an assumed Spring Boot application using JWT + Spring Security.
+%% Domain relationships are derived from database/schema/tadpoles_schema.sql.
+
+%%namespace Security {
+%%    class SecurityConfig {
+%%        +securityFilterChain(HttpSecurity)
+%%        +passwordEncoder()
+%%        +authenticationProvider()
+%%    }
+%%
+%%    class JwtAuthenticationFilter {
+%%        +doFilterInternal(req, res, chain)
+%%    }
+%%
+%%    class JwtService {
+%%        +generateToken(userDetails)
+%%        +extractUsername(token)
+%%        +isTokenValid(token, userDetails)
+%%    }
+%%
+%%    class CustomUserDetailsService {
+%%        +loadUserByUsername(username)
+%%    }
+%%
+%%    class AuthenticationService {
+%%        +register(request)
+%%        +authenticate(request)
+%%    }
+%%
+%%    class AppUser {
+%%        +Long id
+%%        +String username
+%%        +String passwordHash
+%%        +Boolean enabled
+%%    }
+%%
+%%    class Role {
+%%        <<enumeration>>
+%%        ADVISOR
+%%        ADMIN
+%%        OPERATIONS
+%%    }
+%%
+%%    class AuthController {
+%%        +register(RegisterRequest)
+%%        +login(LoginRequest)
+%%        +refreshToken()
+%%    }
+%%
+%%    class LoginRequest {
+%%        +String username
+%%        +String password
+%%    }
+%%
+%%    class RegisterRequest {
+%%        +String username
+%%        +String password
+%%        +Role role
+%%    }
+%%
+%%    class JwtResponse {
+%%        +String accessToken
+%%        +String refreshToken
+%%    }
+%%}
+
+namespace Controllers {
+    class AdvisorController {
+        +getAdvisorClients(advisorId)
+        +getAdvisorPortfolios(advisorId)
+    }
+
+    class ClientController {
+        +getClient(clientId)
+        +createClient(request)
+        +assignAdvisor(clientId, advisorId)
+        +subscribeToModel(clientId, portfolioId)
+    }
+
+    class PortfolioController {
+        +getModelPortfolio(portfolioId)
+        +createModelPortfolio(request)
+        +setTargetAllocation(portfolioId, holdings)
+    }
+
+    class HoldingsController {
+        +getClientHoldings(clientId)
+        +getPortfolioDrift(clientId)
+    }
+
+    class TradeController {
+        +createTrade(request)
+        +getTradesByClient(clientId)
+        +rebalanceClient(clientId)
+    }
+}
+
+namespace Services {
+    class AdvisorService {
+        +findById(advisorId)
+        +getClients(advisorId)
+    }
+
+    class ClientService {
+        +createClient(request)
+        +getClientSummary(clientId)
+        +assignAdvisor(clientId, advisorId)
+    }
+
+    class PortfolioService {
+        +createPortfolio(request)
+        +addHolding(portfolioId, instrumentId, targetWeightPct)
+        +getTargetAllocation(portfolioId)
+    }
+
+    class SubscriptionService {
+        +subscribeClient(clientId, portfolioId)
+        +getSubscriptions(clientId)
+    }
+
+    class HoldingsService {
+        +getClientHoldings(clientId)
+        +calculateDrift(clientId)
+    }
+
+    class TradeService {
+        +createTrade(request)
+        +getTradeHistory(clientId)
+    }
+
+    class RebalancingService {
+        +rebalanceClient(clientId)
+        +compareActualVsTarget(clientId)
+    }
+}
+
+namespace Repositories {
+    class AdvisorRepository
+    class ClientRepository
+    class ModelPortfolioRepository
+    class InstrumentRepository
+    class ModelPortfolioHoldingRepository
+    class ClientSubscriptionRepository
+    class ClientHoldingRepository
+    class ClientTradeRepository
+    class UserRepository
+}
+
+namespace Domain {
+    class Advisor {
+        +Long advisorId
+        +String advisorName
+    }
+
+    class Client {
+        +Long clientId
+        +String clientName
+    }
+
+    class ModelPortfolio {
+        +Long modelPortfolioId
+        +String modelName
+    }
+
+    class Instrument {
+        +Long instrumentId
+        +String instrumentName
+        +String ticker
+        +String currency
+    }
+
+    class ModelPortfolioHolding {
+        +BigDecimal targetWeightPct
+    }
+
+    class ClientSubscription {
+        +LocalDate subscribedDate
+    }
+
+    class ClientHolding {
+        +Integer quantity
+        +LocalDate asOfDate
+    }
+
+    class ClientTrade {
+        +Long tradeId
+        +TradeType tradeType
+        +Integer quantity
+        +BigDecimal price
+        +LocalDate tradeDate
+    }
+
+    class TradeType {
+        <<enumeration>>
+        BUY
+        SELL
+    }
+}
+
+%%namespace DTOs {
+%%    class ClientSummaryDto {
+%%        +String clientName
+%%        +String advisorName
+%%        +String modelName
+%%    }
+%%
+%%    class TradeRequest {
+%%        +Long clientId
+%%        +Long instrumentId
+%%        +TradeType tradeType
+%%        +Integer quantity
+%%        +BigDecimal price
+%%    }
+%%
+%%    class PortfolioDriftDto {
+%%        +Long clientId
+%%        +String ticker
+%%        +BigDecimal actualWeightPct
+%%        +BigDecimal targetWeightPct
+%%    }
+%%}
+
+%%%% Security relationships
+%%SecurityConfig --> JwtAuthenticationFilter : registers
+%%SecurityConfig --> CustomUserDetailsService : configures
+%%JwtAuthenticationFilter --> JwtService : validates token
+%%JwtAuthenticationFilter --> CustomUserDetailsService : loads principal
+%%AuthenticationService --> JwtService : issues JWT
+%%AuthenticationService --> UserRepository : persists users
+%%AuthController --> AuthenticationService : delegates
+%%AppUser --> Role : has
+
+%% Controller to service relationships
+AdvisorController --> AdvisorService : uses
+ClientController --> ClientService : uses
+ClientController --> SubscriptionService : uses
+PortfolioController --> PortfolioService : uses
+HoldingsController --> HoldingsService : uses
+HoldingsController --> RebalancingService : uses
+TradeController --> TradeService : uses
+TradeController --> RebalancingService : uses
+
+%% Service to repository relationships
+AdvisorService --> AdvisorRepository : uses
+ClientService --> ClientRepository : uses
+ClientService --> AdvisorRepository : uses
+ClientService --> ModelPortfolioRepository : uses
+PortfolioService --> ModelPortfolioRepository : uses
+PortfolioService --> ModelPortfolioHoldingRepository : uses
+PortfolioService --> InstrumentRepository : uses
+SubscriptionService --> ClientSubscriptionRepository : uses
+SubscriptionService --> ClientRepository : uses
+SubscriptionService --> ModelPortfolioRepository : uses
+HoldingsService --> ClientHoldingRepository : uses
+HoldingsService --> ClientRepository : uses
+HoldingsService --> InstrumentRepository : uses
+TradeService --> ClientTradeRepository : uses
+TradeService --> ClientRepository : uses
+TradeService --> InstrumentRepository : uses
+RebalancingService --> HoldingsService : reads actual holdings
+RebalancingService --> PortfolioService : reads target allocation
+RebalancingService --> TradeService : creates rebalance trades
+
+%% Repository to domain relationships
+AdvisorRepository --> Advisor
+ClientRepository --> Client
+ModelPortfolioRepository --> ModelPortfolio
+InstrumentRepository --> Instrument
+ModelPortfolioHoldingRepository --> ModelPortfolioHolding
+ClientSubscriptionRepository --> ClientSubscription
+ClientHoldingRepository --> ClientHolding
+ClientTradeRepository --> ClientTrade
+%%UserRepository --> AppUser
+
+%% DTO usage
+%%ClientService --> ClientSummaryDto : returns
+%%TradeController --> TradeRequest : accepts
+%%TradeService --> TradeRequest : consumes
+%%HoldingsService --> PortfolioDriftDto : returns
+
+%% Domain relationships from schema
+Advisor "1" --> "*" Client : advises
+ModelPortfolio "1" --> "*" Client : assigned default model
+ModelPortfolio "1" --> "*" ModelPortfolioHolding : contains
+Instrument "1" --> "*" ModelPortfolioHolding : target asset
+Client "1" --> "*" ClientSubscription : subscribes
+ModelPortfolio "1" --> "*" ClientSubscription : subscription target
+Client "1" --> "*" ClientHolding : owns
+Instrument "1" --> "*" ClientHolding : held asset
+Client "1" --> "*" ClientTrade : places
+Instrument "1" --> "*" ClientTrade : traded asset
+ClientTrade --> TradeType
+
+%%note for Advisor "Maps to advisors table; schema column name is legacy typo: adviosr_name"
+%%note for AppUser "Assumed security entity for Spring Security/JWT; not present in current SQL schema"
