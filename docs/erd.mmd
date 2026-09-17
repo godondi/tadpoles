@@ -1,0 +1,67 @@
+erDiagram
+	%% Database ERD for database/schema/tadpoles_schema.sql
+	%% Note: advisors.adviosr_name is kept as written in the schema (legacy typo).
+
+	advisors {
+		SERIAL advisor_id PK
+		TEXT advisor_name
+	}
+
+	model_portfolios {
+		SERIAL model_portfolio_id PK
+		TEXT model_name
+	}
+
+	clients {
+		SERIAL client_id PK
+		TEXT client_name
+		INTEGER advisor_id FK
+		INTEGER model_portfolio_id FK
+	}
+
+	instruments {
+		SERIAL instrument_id PK
+		TEXT instrument_name UK
+		TEXT ticker UK
+		TEXT currency
+	}
+
+	model_portfolio_holdings {
+		INTEGER model_portfolio_id PK, FK
+		INTEGER instrument_id PK, FK
+		NUMERIC target_weight_pct
+	}
+
+	client_subscriptions {
+		INTEGER client_id PK, FK
+		INTEGER model_portfolio_id PK, FK
+		DATE subscribed_date
+	}
+
+	client_holdings {
+		INTEGER client_id PK, FK
+		INTEGER instrument_id PK, FK
+		INTEGER quantity
+		DATE as_of_date
+	}
+
+	client_trades {
+		SERIAL trade_id PK
+		INTEGER client_id FK
+		INTEGER instrument_id FK
+		TEXT trade_type
+		INTEGER quantity
+		NUMERIC price
+		DATE trade_date
+	}
+
+	advisors ||--o{ clients : advises
+	model_portfolios ||--o{ clients : default_model
+	model_portfolios ||--o{ model_portfolio_holdings : defines
+	instruments ||--o{ model_portfolio_holdings : included_in
+	clients ||--o{ client_subscriptions : subscribes
+	model_portfolios ||--o{ client_subscriptions : subscribed_to
+	clients ||--o{ client_holdings : owns
+	instruments ||--o{ client_holdings : held_in
+	clients ||--o{ client_trades : places
+	instruments ||--o{ client_trades : traded_in

@@ -1,6 +1,6 @@
 CREATE TABLE advisors (
 	advisor_id	    SERIAL PRIMARY KEY,
-	adviosr_name    TEXT NOT NULL
+	advisor_name    TEXT NOT NULL
 );
 
 CREATE TABLE model_portfolios (
