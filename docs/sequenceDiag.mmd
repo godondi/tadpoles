@@ -1,0 +1,27 @@
+sequenceDiagram
+    participant Trader as Trader/Client
+    participant TradeCtrl as TradeController
+    participant TradeSvc as TradeService
+    participant InstrRepo as InstrumentRepository
+    participant TradeRepo as ClientTradeRepository
+    participant Database
+
+    Trader->>TradeCtrl: createTrade(tradeRequest)
+    Note over TradeCtrl: tradeRequest contains:<br/>clientId, instrumentId,<br/>quantity, price, TradeType.BUY
+
+    TradeCtrl->>TradeSvc: createTrade(request)
+
+    TradeSvc->>InstrRepo: findById(instrumentId)
+    InstrRepo->>Database: SELECT * FROM instruments
+    Database-->>InstrRepo: Instrument
+    InstrRepo-->>TradeSvc: Instrument
+
+    TradeSvc->>TradeSvc: Create ClientTrade<br/>(BUY, quantity, price, date)
+
+    TradeSvc->>TradeRepo: save(clientTrade)
+    TradeRepo->>Database: INSERT INTO client_trades
+    Database-->>TradeRepo: tradeId
+    TradeRepo-->>TradeSvc: ClientTrade (persisted)
+
+    TradeSvc-->>TradeCtrl: ClientTrade
+    TradeCtrl-->>Trader: Trade Confirmation
