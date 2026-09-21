@@ -7,3 +7,13 @@ services:
     container_name: tadpole-backend
     ports:
       - "8080:8080"
+  testing:
+    build:
+      context: .
+      dockerfile: testing/Dockerfile
+    image: tadpole-testing:latest
+    container_name: tadpole-testing
+    profiles:
+      - testing
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
