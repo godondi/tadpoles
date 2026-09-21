@@ -1,0 +1,139 @@
+erDiagram
+    %% Revised ERD for docs/revised_schema.sql
+    %% Adds JWT/Spring Security admin support plus audit/history tracking.
+
+    users {
+        SERIAL user_id PK
+        TEXT username UK
+        TEXT email UK
+        TEXT password_hash
+        TEXT display_name
+        BOOLEAN enabled
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    roles {
+        SERIAL role_id PK
+        TEXT role_name UK
+    }
+
+    user_roles {
+        INTEGER user_id PK, FK
+        INTEGER role_id PK, FK
+    }
+
+    advisors {
+        SERIAL advisor_id PK
+        TEXT advisor_name
+        INTEGER user_id FK
+    }
+
+    model_portfolios {
+        SERIAL model_portfolio_id PK
+        TEXT model_name
+        TEXT description
+        BOOLEAN is_active
+        INTEGER created_by_user_id FK
+        TIMESTAMP created_at
+    }
+
+    clients {
+        SERIAL client_id PK
+        TEXT client_name
+        INTEGER advisor_id FK
+        INTEGER model_portfolio_id FK
+        INTEGER created_by_user_id FK
+        TIMESTAMP created_at
+    }
+
+    instruments {
+        SERIAL instrument_id PK
+        TEXT instrument_name UK
+        TEXT ticker UK
+        TEXT currency
+        TEXT asset_class
+        TEXT security_type
+        BOOLEAN is_active
+    }
+
+    model_portfolio_holdings {
+        INTEGER model_portfolio_id PK, FK
+        INTEGER instrument_id PK, FK
+        NUMERIC target_weight_pct
+    }
+
+    client_subscriptions {
+        SERIAL subscription_id PK
+        INTEGER client_id FK
+        INTEGER model_portfolio_id FK
+        DATE subscribed_date
+        DATE ended_date
+        TEXT status
+        INTEGER approved_by_user_id FK
+    }
+
+    client_trades {
+        SERIAL trade_id PK
+        INTEGER client_id FK
+        INTEGER instrument_id FK
+        INTEGER submitted_by_user_id FK
+        INTEGER approved_by_user_id FK
+        TEXT trade_type
+        INTEGER quantity
+        NUMERIC price
+        DATE trade_date
+        TEXT status
+        TIMESTAMP executed_at
+        TEXT reason
+    }
+
+    client_holdings {
+        SERIAL holding_id PK
+        INTEGER client_id FK
+        INTEGER instrument_id FK
+        INTEGER quantity
+        DATE as_of_date
+    }
+
+    refresh_tokens {
+        SERIAL refresh_token_id PK
+        INTEGER user_id FK
+        TEXT token_hash UK
+        TIMESTAMP expires_at
+        TIMESTAMP revoked_at
+        TIMESTAMP created_at
+    }
+
+    audit_logs {
+        SERIAL audit_log_id PK
+        INTEGER user_id FK
+        TEXT entity_name
+        TEXT entity_id
+        TEXT action_type
+        JSONB old_values
+        JSONB new_values
+        TIMESTAMP created_at
+    }
+
+    roles ||--o{ user_roles : assigned
+    users ||--o{ user_roles : has
+    users ||--o{ advisors : authenticates_as
+    users ||--o{ model_portfolios : creates
+    users ||--o{ clients : creates
+    advisors ||--o{ clients : advises
+    model_portfolios ||--o{ clients : default_model
+    model_portfolios ||--o{ model_portfolio_holdings : defines
+    instruments ||--o{ model_portfolio_holdings : included_in
+    clients ||--o{ client_subscriptions : subscribes
+    model_portfolios ||--o{ client_subscriptions : subscription_target
+    users ||--o{ client_subscriptions : approves
+    clients ||--o{ client_trades : places
+    instruments ||--o{ client_trades : traded_in
+    users ||--o{ client_trades : submits
+    users ||--o{ client_trades : approves
+    clients ||--o{ client_holdings : owns
+    instruments ||--o{ client_holdings : held_in
+    users ||--o{ refresh_tokens : owns
+    users ||--o{ audit_logs : performs
+
