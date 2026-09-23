@@ -28,20 +28,26 @@ namespace Security {
     class AuthenticationService {
         +register(request)
         +authenticate(request)
+        +refreshToken(request)
+        +logout(request)
     }
 
     class AppUser {
         +Long id
         +String username
+        +String email
+        +String displayName
         +String passwordHash
         +Boolean enabled
     }
 
     class Role {
         <<enumeration>>
-        ADVISOR
         ADMIN
-        OPERATIONS
+        AUDITOR
+        ANALYST
+        ADVISOR
+        CLIENT
     }
 
     class AuthController {
@@ -58,7 +64,9 @@ namespace Security {
     class RegisterRequest {
         +String username
         +String password
-        +Role role
+        +List<Role> roles
+        +Long advisorId
+        +Long clientId
     }
 
     class JwtResponse {
@@ -92,9 +100,16 @@ namespace Controllers {
     }
 
     class TradeController {
-        +createTrade(request)
+        +placeClientTrade(clientId, request)
         +getTradesByClient(clientId)
-        +rebalanceClient(clientId)
+        +getTradeById(tradeId)
+    }
+
+    class TradeSuggestionController {
+        +createSuggestion(advisorId, clientId, request)
+        +getSuggestionsByClient(clientId)
+        +getSuggestionsByAdvisor(advisorId)
+        +updateSuggestionStatus(suggestionId, request)
     }
 }
 
@@ -127,8 +142,16 @@ namespace Services {
     }
 
     class TradeService {
-        +createTrade(request)
+        +placeTrade(clientId, request)
         +getTradeHistory(clientId)
+        +getTradeById(tradeId)
+    }
+
+    class TradeSuggestionService {
+        +createSuggestion(advisorId, clientId, request)
+        +getSuggestionsByClient(clientId)
+        +getSuggestionsByAdvisor(advisorId)
+        +updateSuggestionStatus(suggestionId, request)
     }
 
     class RebalancingService {
@@ -137,16 +160,106 @@ namespace Services {
     }
 }
 
-namespace Repositories {
-    class AdvisorRepository
-    class ClientRepository
-    class ModelPortfolioRepository
-    class InstrumentRepository
-    class ModelPortfolioHoldingRepository
-    class ClientSubscriptionRepository
-    class ClientHoldingRepository
-    class ClientTradeRepository
-    class UserRepository
+namespace Mappers {
+    class UserMapper {
+        +selectById(userId)
+        +selectByUsername(username)
+        +insert(user)
+        +update(user)
+        +updateEnabled(userId, enabled)
+        +selectRoles(userId)
+        +replaceRoles(userId, roleIds)
+    }
+
+    class RoleMapper {
+        +selectAll()
+        +selectByName(roleName)
+        +insert(role)
+    }
+
+    class AdvisorMapper {
+        +selectById(advisorId)
+        +selectByUserId(userId)
+        +selectClients(advisorId)
+        +insert(advisor)
+        +update(advisor)
+    }
+
+    class ClientMapper {
+        +selectById(clientId)
+        +selectByUserId(userId)
+        +selectByAdvisorId(advisorId)
+        +insert(client)
+        +update(client)
+        +assignAdvisor(clientId, advisorId)
+        +assignModelPortfolio(clientId, portfolioId)
+    }
+
+    class ModelPortfolioMapper {
+        +selectById(portfolioId)
+        +selectAll()
+        +insert(portfolio)
+        +update(portfolio)
+        +selectCreatedByUserId(userId)
+    }
+
+    class InstrumentMapper {
+        +selectById(instrumentId)
+        +selectByTicker(ticker)
+        +selectAll()
+        +insert(instrument)
+        +update(instrument)
+        +setActive(instrumentId, active)
+    }
+
+    class ModelPortfolioHoldingMapper {
+        +selectByPortfolioId(portfolioId)
+        +replaceHoldings(portfolioId, holdings)
+        +insertBatch(holdings)
+        +deleteByPortfolioId(portfolioId)
+    }
+
+    class ClientSubscriptionMapper {
+        +selectByClientId(clientId)
+        +selectActiveByClientId(clientId)
+        +insert(subscription)
+        +updateStatus(subscriptionId, status)
+        +approve(subscriptionId, approverUserId)
+    }
+
+    class TradeSuggestionMapper {
+        +selectById(suggestionId)
+        +selectByClientId(clientId)
+        +selectByAdvisorId(advisorId)
+        +insert(suggestion)
+        +updateStatus(suggestionId, status)
+    }
+
+    class ClientTradeMapper {
+        +selectById(tradeId)
+        +selectByClientId(clientId)
+        +insert(trade)
+        +updateStatus(tradeId, status)
+    }
+
+    class ClientHoldingMapper {
+        +selectLatestByClientId(clientId)
+        +upsertSnapshot(holding)
+    }
+
+    class RefreshTokenMapper {
+        +selectByHash(tokenHash)
+        +insert(token)
+        +revokeByTokenHash(tokenHash)
+        +revokeByUserId(userId)
+        +deleteExpired()
+    }
+
+    class AuditLogMapper {
+        +insert(entry)
+        +selectByUserId(userId)
+        +selectByEntity(entityName, entityId)
+    }
 }
 
 namespace Domain {
@@ -181,22 +294,63 @@ namespace Domain {
     }
 
     class ClientHolding {
-        +Integer quantity
+        +Double quantity
         +LocalDate asOfDate
     }
 
     class ClientTrade {
         +Long tradeId
         +TradeType tradeType
-        +Integer quantity
+        +Double quantity
         +BigDecimal price
         +LocalDate tradeDate
+    }
+
+    class TradeSuggestion {
+        +Long suggestionId
+        +Long advisorId
+        +Long clientId
+        +Long instrumentId
+        +TradeType tradeType
+        +Double quantity
+        +BigDecimal proposedPrice
+        +SuggestionStatus status
+        +String notes
+    }
+
+    class RefreshToken {
+        +Long refreshTokenId
+        +Long userId
+        +String tokenHash
+        +LocalDateTime expiresAt
+        +LocalDateTime revokedAt
+        +LocalDateTime createdAt
+    }
+
+    class AuditLog {
+        +Long auditLogId
+        +Long userId
+        +String entityName
+        +String entityId
+        +String actionType
+        +String oldValues
+        +String newValues
+        +LocalDateTime createdAt
     }
 
     class TradeType {
         <<enumeration>>
         BUY
         SELL
+    }
+
+    class SuggestionStatus {
+        <<enumeration>>
+        SUGGESTED
+        VIEWED
+        ACCEPTED
+        REJECTED
+        EXPIRED
     }
 }
 
@@ -211,8 +365,31 @@ namespace DTOs {
         +Long clientId
         +Long instrumentId
         +TradeType tradeType
-        +Integer quantity
+        +Double quantity
         +BigDecimal price
+    }
+
+    class TradeSuggestionRequest {
+        +Long instrumentId
+        +TradeType tradeType
+        +Double quantity
+        +BigDecimal proposedPrice
+        +String notes
+    }
+
+    class TradeSuggestionSummaryDto {
+        +Long suggestionId
+        +Long advisorId
+        +Long clientId
+        +Long instrumentId
+        +TradeType tradeType
+        +Double quantity
+        +SuggestionStatus status
+    }
+
+    class TradeSuggestionDecisionRequest {
+        +SuggestionStatus status
+        +String notes
     }
 
     class PortfolioDriftDto {
@@ -229,9 +406,12 @@ SecurityConfig --> CustomUserDetailsService : configures
 JwtAuthenticationFilter --> JwtService : validates token
 JwtAuthenticationFilter --> CustomUserDetailsService : loads principal
 AuthenticationService --> JwtService : issues JWT
-AuthenticationService --> UserRepository : persists users
+AuthenticationService --> UserMapper : persists users
+AuthenticationService --> RefreshTokenMapper : persists tokens
+AuthenticationService --> RoleMapper : resolves roles
 AuthController --> AuthenticationService : delegates
 AppUser --> Role : has
+CustomUserDetailsService --> UserMapper : loads principal
 
 %% Controller to service relationships
 AdvisorController --> AdvisorService : uses
@@ -241,44 +421,56 @@ PortfolioController --> PortfolioService : uses
 HoldingsController --> HoldingsService : uses
 HoldingsController --> RebalancingService : uses
 TradeController --> TradeService : uses
-TradeController --> RebalancingService : uses
+TradeSuggestionController --> TradeSuggestionService : uses
 
-%% Service to repository relationships
-AdvisorService --> AdvisorRepository : uses
-ClientService --> ClientRepository : uses
-ClientService --> AdvisorRepository : uses
-ClientService --> ModelPortfolioRepository : uses
-PortfolioService --> ModelPortfolioRepository : uses
-PortfolioService --> ModelPortfolioHoldingRepository : uses
-PortfolioService --> InstrumentRepository : uses
-SubscriptionService --> ClientSubscriptionRepository : uses
-SubscriptionService --> ClientRepository : uses
-SubscriptionService --> ModelPortfolioRepository : uses
-HoldingsService --> ClientHoldingRepository : uses
-HoldingsService --> ClientRepository : uses
-HoldingsService --> InstrumentRepository : uses
-TradeService --> ClientTradeRepository : uses
-TradeService --> ClientRepository : uses
-TradeService --> InstrumentRepository : uses
+%% Service to mapper relationships
+AdvisorService --> AdvisorMapper : uses
+ClientService --> ClientMapper : uses
+ClientService --> AdvisorMapper : uses
+ClientService --> ModelPortfolioMapper : uses
+PortfolioService --> ModelPortfolioMapper : uses
+PortfolioService --> ModelPortfolioHoldingMapper : uses
+PortfolioService --> InstrumentMapper : uses
+SubscriptionService --> ClientSubscriptionMapper : uses
+SubscriptionService --> ClientMapper : uses
+SubscriptionService --> ModelPortfolioMapper : uses
+HoldingsService --> ClientHoldingMapper : uses
+HoldingsService --> ClientMapper : uses
+HoldingsService --> InstrumentMapper : uses
+TradeService --> ClientTradeMapper : uses
+TradeService --> ClientMapper : uses
+TradeService --> InstrumentMapper : uses
+TradeSuggestionService --> TradeSuggestionMapper : uses
+TradeSuggestionService --> AdvisorMapper : uses
+TradeSuggestionService --> ClientMapper : uses
+TradeSuggestionService --> InstrumentMapper : uses
 RebalancingService --> HoldingsService : reads actual holdings
 RebalancingService --> PortfolioService : reads target allocation
 RebalancingService --> TradeService : creates rebalance trades
 
-%% Repository to domain relationships
-AdvisorRepository --> Advisor
-ClientRepository --> Client
-ModelPortfolioRepository --> ModelPortfolio
-InstrumentRepository --> Instrument
-ModelPortfolioHoldingRepository --> ModelPortfolioHolding
-ClientSubscriptionRepository --> ClientSubscription
-ClientHoldingRepository --> ClientHolding
-ClientTradeRepository --> ClientTrade
-UserRepository --> AppUser
+%% Mapper to domain relationships
+UserMapper --> AppUser
+RoleMapper --> Role
+AdvisorMapper --> Advisor
+ClientMapper --> Client
+ModelPortfolioMapper --> ModelPortfolio
+InstrumentMapper --> Instrument
+ModelPortfolioHoldingMapper --> ModelPortfolioHolding
+ClientSubscriptionMapper --> ClientSubscription
+ClientHoldingMapper --> ClientHolding
+ClientTradeMapper --> ClientTrade
+TradeSuggestionMapper --> TradeSuggestion
+    RefreshTokenMapper --> RefreshToken
+    AuditLogMapper --> AuditLog
 
 %% DTO usage
 ClientService --> ClientSummaryDto : returns
 TradeController --> TradeRequest : accepts
 TradeService --> TradeRequest : consumes
+TradeSuggestionController --> TradeSuggestionRequest : accepts
+TradeSuggestionService --> TradeSuggestionRequest : consumes
+TradeSuggestionService --> TradeSuggestionSummaryDto : returns
+TradeSuggestionController --> TradeSuggestionDecisionRequest : accepts
 HoldingsService --> PortfolioDriftDto : returns
 
 %% Domain relationships from schema
@@ -292,7 +484,15 @@ Client "1" --> "*" ClientHolding : owns
 Instrument "1" --> "*" ClientHolding : held asset
 Client "1" --> "*" ClientTrade : places
 Instrument "1" --> "*" ClientTrade : traded asset
+Advisor "1" --> "*" TradeSuggestion : recommends
+Client "1" --> "*" TradeSuggestion : receives
+Instrument "1" --> "*" TradeSuggestion : suggested asset
 ClientTrade --> TradeType
+TradeSuggestion --> TradeType
+TradeSuggestion --> SuggestionStatus
+RefreshToken --> AppUser
+AuditLog --> AppUser
 
 note for Advisor "Maps to advisors table; schema column name is legacy typo: adviosr_name"
 note for AppUser "Assumed security entity for Spring Security/JWT; not present in current SQL schema"
+note for TradeSuggestion "Advisors suggest trades here; only clients place actual trades"
