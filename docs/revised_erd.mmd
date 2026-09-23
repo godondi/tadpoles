@@ -73,6 +73,19 @@ erDiagram
         INTEGER approved_by_user_id FK
     }
 
+    trade_suggestions {
+        SERIAL suggestion_id PK
+        INTEGER advisor_id FK
+        INTEGER client_id FK
+        INTEGER instrument_id FK
+        TEXT trade_type
+        NUMERIC quantity
+        NUMERIC proposed_price
+        TIMESTAMP suggested_at
+        TEXT status
+        TEXT notes
+    }
+
     client_trades {
         SERIAL trade_id PK
         INTEGER client_id FK
@@ -80,7 +93,7 @@ erDiagram
         INTEGER submitted_by_user_id FK
         INTEGER approved_by_user_id FK
         TEXT trade_type
-        INTEGER quantity
+        NUMERIC quantity
         NUMERIC price
         DATE trade_date
         TEXT status
@@ -92,7 +105,7 @@ erDiagram
         SERIAL holding_id PK
         INTEGER client_id FK
         INTEGER instrument_id FK
-        INTEGER quantity
+        NUMERIC quantity
         DATE as_of_date
     }
 
@@ -128,6 +141,9 @@ erDiagram
     clients ||--o{ client_subscriptions : subscribes
     model_portfolios ||--o{ client_subscriptions : subscription_target
     users ||--o{ client_subscriptions : approves
+    advisors ||--o{ trade_suggestions : recommends
+    clients ||--o{ trade_suggestions : receives
+    instruments ||--o{ trade_suggestions : suggested_asset
     clients ||--o{ client_trades : places
     instruments ||--o{ client_trades : traded_in
     users ||--o{ client_trades : submits
@@ -136,4 +152,6 @@ erDiagram
     instruments ||--o{ client_holdings : held_in
     users ||--o{ refresh_tokens : owns
     users ||--o{ audit_logs : performs
+
+    %% Advisors suggest trades here; clients place the actual executed trades in client_trades.
 

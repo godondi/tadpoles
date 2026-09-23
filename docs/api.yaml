@@ -1,0 +1,1551 @@
+openapi: 3.1.0
+info:
+  title: Tadpoles API Starter
+  version: 1.0.0
+  description: >-
+    Starter OpenAPI contract for the Tadpoles Spring Boot application.
+    The API assumes JWT authentication, Spring Security authorization,
+    and role-aware responses for Admin, Auditor, Analyst, Advisor, and Client users.
+servers:
+  - url: /api
+    description: Application API root
+
+tags:
+  - name: Authentication
+  - name: Users
+  - name: Advisors
+  - name: Clients
+  - name: Portfolios
+  - name: Instruments
+  - name: Trades
+  - name: Trade Suggestions
+  - name: Audit
+  - name: Analytics
+  - name: Dashboard
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a new application user
+      operationId: registerUser
+      x-required-roles: [ADMIN]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterUserRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Authenticate a user and return JWT tokens
+      operationId: login
+      x-required-roles: []
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Exchange a refresh token for a new access token
+      operationId: refreshToken
+      x-required-roles: []
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: New access token issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Revoke the current refresh token
+      operationId: logout
+      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '204':
+          description: Token revoked
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get the currently authenticated user profile
+      operationId: getCurrentUser
+      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users:
+    get:
+      tags: [Users]
+      summary: List users for administration
+      operationId: listUsers
+      x-required-roles: [ADMIN]
+      responses:
+        '200':
+          description: Paginated user list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    get:
+      tags: [Users]
+      summary: Get a user by ID
+      operationId: getUserById
+      x-required-roles: [ADMIN]
+      responses:
+        '200':
+          description: User record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Users]
+      summary: Update a user profile or status
+      operationId: updateUser
+      x-required-roles: [ADMIN]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /users/{userId}/roles:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    put:
+      tags: [Users]
+      summary: Replace the roles assigned to a user
+      operationId: setUserRoles
+      x-required-roles: [ADMIN]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRolesRequest'
+      responses:
+        '200':
+          description: Roles updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+
+  /advisors:
+    get:
+      tags: [Advisors]
+      summary: List advisors
+      operationId: listAdvisors
+      x-required-roles: [ADMIN, AUDITOR, ANALYST]
+      responses:
+        '200':
+          description: Advisor list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdvisorListResponse'
+    post:
+      tags: [Advisors]
+      summary: Create an advisor record
+      operationId: createAdvisor
+      x-required-roles: [ADMIN]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAdvisorRequest'
+      responses:
+        '201':
+          description: Advisor created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdvisorSummary'
+
+  /advisors/{advisorId}:
+    parameters:
+      - $ref: '#/components/parameters/AdvisorId'
+    get:
+      tags: [Advisors]
+      summary: Get advisor details
+      operationId: getAdvisorById
+      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR]
+      responses:
+        '200':
+          description: Advisor record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdvisorSummary'
+    patch:
+      tags: [Advisors]
+      summary: Update advisor metadata
+      operationId: updateAdvisor
+      x-required-roles: [ADMIN]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAdvisorRequest'
+      responses:
+        '200':
+          description: Advisor updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdvisorSummary'
+
+  /advisors/{advisorId}/clients:
+    parameters:
+      - $ref: '#/components/parameters/AdvisorId'
+    get:
+      tags: [Advisors]
+      summary: List clients assigned to an advisor
+      operationId: listAdvisorClients
+      x-required-roles: [ADMIN, ADVISOR]
+      responses:
+        '200':
+          description: Clients for advisor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientListResponse'
+
+  /clients:
+    get:
+      tags: [Clients]
+      summary: List clients
+      operationId: listClients
+      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR]
+      responses:
+        '200':
+          description: Client list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientListResponse'
+    post:
+      tags: [Clients]
+      summary: Create a client record
+      operationId: createClient
+      x-required-roles: [ADMIN, ADVISOR]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClientRequest'
+      responses:
+        '201':
+          description: Client created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientSummary'
+
+  /clients/{clientId}:
+    parameters:
+      - $ref: '#/components/parameters/ClientId'
+    get:
+      tags: [Clients]
+      summary: Get client details
+      operationId: getClientById
+      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      responses:
+        '200':
+          description: Client summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientSummary'
+    patch:
+      tags: [Clients]
+      summary: Update a client record
+      operationId: updateClient
+      x-required-roles: [ADMIN, ADVISOR]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClientRequest'
+      responses:
+        '200':
+          description: Client updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientSummary'
+
+  /clients/{clientId}/advisor:
+    parameters:
+      - $ref: '#/components/parameters/ClientId'
+    put:
+      tags: [Clients]
+      summary: Assign or reassign a client to an advisor
+      operationId: assignClientAdvisor
+      x-required-roles: [ADMIN]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignAdvisorRequest'
+      responses:
+        '200':
+          description: Advisor assignment updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientSummary'
+
+  /clients/{clientId}/subscriptions:
+    parameters:
+      - $ref: '#/components/parameters/ClientId'
+    get:
+      tags: [Clients]
+      summary: Get subscriptions for a client
+      operationId: listClientSubscriptions
+      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      responses:
+        '200':
+          description: Subscription list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionListResponse'
+    post:
+      tags: [Clients]
+      summary: Subscribe a client to a model portfolio
+      operationId: createClientSubscription
+      x-required-roles: [ADMIN, ADVISOR]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubscriptionRequest'
+      responses:
+        '201':
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionSummary'
+
+  /clients/{clientId}/holdings:
+    parameters:
+      - $ref: '#/components/parameters/ClientId'
+    get:
+      tags: [Clients]
+      summary: Get current holdings for a client
+      operationId: getClientHoldings
+      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      responses:
+        '200':
+          description: Holding list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HoldingListResponse'
+
+  /clients/{clientId}/trades:
+    parameters:
+      - $ref: '#/components/parameters/ClientId'
+    get:
+      tags: [Clients]
+      summary: List trades for a client
+      operationId: listClientTrades
+      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      responses:
+        '200':
+          description: Trade history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeListResponse'
+    post:
+      tags: [Trades]
+      summary: Submit an actual trade for a client
+      operationId: createClientTrade
+      x-required-roles: [CLIENT]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TradeRequest'
+      responses:
+        '201':
+          description: Trade created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeSummary'
+
+  /advisors/{advisorId}/clients/{clientId}/trade-suggestions:
+    parameters:
+      - $ref: '#/components/parameters/AdvisorId'
+      - $ref: '#/components/parameters/ClientId'
+    post:
+      tags: [Trade Suggestions]
+      summary: Suggest a trade for a client
+      operationId: createTradeSuggestion
+      x-required-roles: [ADVISOR]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TradeSuggestionRequest'
+      responses:
+        '201':
+          description: Trade suggestion created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeSuggestionSummary'
+
+  /clients/{clientId}/trade-suggestions:
+    parameters:
+      - $ref: '#/components/parameters/ClientId'
+    get:
+      tags: [Trade Suggestions]
+      summary: List trade suggestions for a client
+      operationId: listClientTradeSuggestions
+      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      responses:
+        '200':
+          description: Trade suggestion list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeSuggestionListResponse'
+
+  /trade-suggestions/{suggestionId}:
+    parameters:
+      - name: suggestionId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      tags: [Trade Suggestions]
+      summary: Get a trade suggestion by ID
+      operationId: getTradeSuggestionById
+      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      responses:
+        '200':
+          description: Trade suggestion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeSuggestionSummary'
+    patch:
+      tags: [Trade Suggestions]
+      summary: Update the status of a trade suggestion
+      operationId: updateTradeSuggestionStatus
+      x-required-roles: [CLIENT]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TradeSuggestionDecisionRequest'
+      responses:
+        '200':
+          description: Trade suggestion updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeSuggestionSummary'
+
+  /model-portfolios:
+    get:
+      tags: [Portfolios]
+      summary: List model portfolios
+      operationId: listModelPortfolios
+      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR]
+      responses:
+        '200':
+          description: Model portfolio list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelPortfolioListResponse'
+    post:
+      tags: [Portfolios]
+      summary: Create a model portfolio
+      operationId: createModelPortfolio
+      x-required-roles: [ADMIN]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateModelPortfolioRequest'
+      responses:
+        '201':
+          description: Portfolio created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelPortfolioSummary'
+
+  /model-portfolios/{portfolioId}:
+    parameters:
+      - $ref: '#/components/parameters/PortfolioId'
+    get:
+      tags: [Portfolios]
+      summary: Get model portfolio details
+      operationId: getModelPortfolio
+      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      responses:
+        '200':
+          description: Portfolio summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelPortfolioSummary'
+    patch:
+      tags: [Portfolios]
+      summary: Update portfolio metadata
+      operationId: updateModelPortfolio
+      x-required-roles: [ADMIN]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateModelPortfolioRequest'
+      responses:
+        '200':
+          description: Portfolio updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelPortfolioSummary'
+
+  /model-portfolios/{portfolioId}/holdings:
+    parameters:
+      - $ref: '#/components/parameters/PortfolioId'
+    get:
+      tags: [Portfolios]
+      summary: Get target holdings for a model portfolio
+      operationId: getModelPortfolioHoldings
+      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      responses:
+        '200':
+          description: Target holding list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TargetHoldingListResponse'
+    put:
+      tags: [Portfolios]
+      summary: Replace target holdings for a model portfolio
+      operationId: setModelPortfolioHoldings
+      x-required-roles: [ADMIN]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TargetHoldingListRequest'
+      responses:
+        '200':
+          description: Holdings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TargetHoldingListResponse'
+
+  /instruments:
+    get:
+      tags: [Instruments]
+      summary: List instruments
+      operationId: listInstruments
+      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      responses:
+        '200':
+          description: Instrument list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstrumentListResponse'
+    post:
+      tags: [Instruments]
+      summary: Create an instrument
+      operationId: createInstrument
+      x-required-roles: [ADMIN]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInstrumentRequest'
+      responses:
+        '201':
+          description: Instrument created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstrumentSummary'
+
+  /instruments/{instrumentId}:
+    parameters:
+      - $ref: '#/components/parameters/InstrumentId'
+    get:
+      tags: [Instruments]
+      summary: Get instrument details
+      operationId: getInstrumentById
+      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      responses:
+        '200':
+          description: Instrument summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstrumentSummary'
+    patch:
+      tags: [Instruments]
+      summary: Update instrument metadata
+      operationId: updateInstrument
+      x-required-roles: [ADMIN]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateInstrumentRequest'
+      responses:
+        '200':
+          description: Instrument updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstrumentSummary'
+
+  /trades:
+    get:
+      tags: [Trades]
+      summary: List trades across the system
+      operationId: listTrades
+      x-required-roles: [ADMIN, AUDITOR, ANALYST]
+      responses:
+        '200':
+          description: Trade list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeListResponse'
+
+  /trades/{tradeId}:
+    parameters:
+      - $ref: '#/components/parameters/TradeId'
+    get:
+      tags: [Trades]
+      summary: Get a trade by ID
+      operationId: getTradeById
+      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      responses:
+        '200':
+          description: Trade summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeSummary'
+    patch:
+      tags: [Trades]
+      summary: Review or update trade status
+      operationId: updateTradeStatus
+      x-required-roles: [ADMIN]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTradeRequest'
+      responses:
+        '200':
+          description: Trade updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeSummary'
+
+  /audit-logs:
+    get:
+      tags: [Audit]
+      summary: List audit log entries
+      operationId: listAuditLogs
+      x-required-roles: [ADMIN, AUDITOR]
+      responses:
+        '200':
+          description: Audit log list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogListResponse'
+
+  /analytics/summary:
+    get:
+      tags: [Analytics]
+      summary: Return high-level analytics data for external consumers
+      operationId: getAnalyticsSummary
+      x-required-roles: [ADMIN, AUDITOR, ANALYST]
+      responses:
+        '200':
+          description: Analytics summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsSummaryResponse'
+
+  /analytics/advisors/{advisorId}:
+    parameters:
+      - $ref: '#/components/parameters/AdvisorId'
+    get:
+      tags: [Analytics]
+      summary: Return analytics for a specific advisor
+      operationId: getAdvisorAnalytics
+      x-required-roles: [ADMIN, ANALYST, ADVISOR]
+      responses:
+        '200':
+          description: Advisor analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsSummaryResponse'
+
+  /analytics/clients/{clientId}:
+    parameters:
+      - $ref: '#/components/parameters/ClientId'
+    get:
+      tags: [Analytics]
+      summary: Return analytics for a specific client
+      operationId: getClientAnalytics
+      x-required-roles: [ADMIN, ANALYST, ADVISOR, CLIENT]
+      responses:
+        '200':
+          description: Client analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsSummaryResponse'
+
+  /analytics/model-portfolios/{portfolioId}:
+    parameters:
+      - $ref: '#/components/parameters/PortfolioId'
+    get:
+      tags: [Analytics]
+      summary: Return analytics for a specific model portfolio
+      operationId: getPortfolioAnalytics
+      x-required-roles: [ADMIN, ANALYST, ADVISOR, CLIENT]
+      responses:
+        '200':
+          description: Portfolio analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsSummaryResponse'
+
+  /dashboard/me:
+    get:
+      tags: [Dashboard]
+      summary: Return role-aware dashboard data for the current user
+      operationId: getCurrentDashboard
+      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      responses:
+        '200':
+          description: Dashboard payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    AdvisorId:
+      name: advisorId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    ClientId:
+      name: clientId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    PortfolioId:
+      name: portfolioId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    InstrumentId:
+      name: instrumentId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    TradeId:
+      name: tradeId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+
+  responses:
+    BadRequest:
+      description: Invalid or malformed request
+    Unauthorized:
+      description: Missing or invalid authentication
+    NotFound:
+      description: Resource not found
+    Conflict:
+      description: Duplicate resource or conflicting state
+
+  schemas:
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+
+    RefreshTokenRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+
+    RegisterUserRequest:
+      type: object
+      required: [username, password, displayName]
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        displayName:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+          description: Roles assigned at creation time
+        advisorId:
+          type: integer
+          format: int64
+          nullable: true
+        clientId:
+          type: integer
+          format: int64
+          nullable: true
+
+    AuthTokens:
+      type: object
+      required: [accessToken]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+        expiresInSeconds:
+          type: integer
+          format: int64
+
+    UserProfile:
+      type: object
+      properties:
+        userId:
+          type: integer
+          format: int64
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        enabled:
+          type: boolean
+        roles:
+          type: array
+          items:
+            type: string
+        advisorId:
+          type: integer
+          format: int64
+          nullable: true
+        clientId:
+          type: integer
+          format: int64
+          nullable: true
+
+    UserListResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserProfile'
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+        email:
+          type: string
+          format: email
+        enabled:
+          type: boolean
+
+    UserRolesRequest:
+      type: object
+      required: [roles]
+      properties:
+        roles:
+          type: array
+          items:
+            type: string
+
+    AdvisorSummary:
+      type: object
+      properties:
+        advisorId:
+          type: integer
+          format: int64
+        advisorName:
+          type: string
+        userId:
+          type: integer
+          format: int64
+          nullable: true
+
+    AdvisorListResponse:
+      type: object
+      properties:
+        advisors:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdvisorSummary'
+
+    CreateAdvisorRequest:
+      type: object
+      required: [advisorName]
+      properties:
+        advisorName:
+          type: string
+        userId:
+          type: integer
+          format: int64
+          nullable: true
+
+    UpdateAdvisorRequest:
+      type: object
+      properties:
+        advisorName:
+          type: string
+        userId:
+          type: integer
+          format: int64
+          nullable: true
+
+    ClientSummary:
+      type: object
+      properties:
+        clientId:
+          type: integer
+          format: int64
+        clientName:
+          type: string
+        advisorId:
+          type: integer
+          format: int64
+          nullable: true
+        modelPortfolioId:
+          type: integer
+          format: int64
+          nullable: true
+
+    ClientListResponse:
+      type: object
+      properties:
+        clients:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClientSummary'
+
+    CreateClientRequest:
+      type: object
+      required: [clientName]
+      properties:
+        clientName:
+          type: string
+        advisorId:
+          type: integer
+          format: int64
+          nullable: true
+        modelPortfolioId:
+          type: integer
+          format: int64
+          nullable: true
+        createdByUserId:
+          type: integer
+          format: int64
+          nullable: true
+
+    UpdateClientRequest:
+      type: object
+      properties:
+        clientName:
+          type: string
+        advisorId:
+          type: integer
+          format: int64
+          nullable: true
+        modelPortfolioId:
+          type: integer
+          format: int64
+          nullable: true
+
+    AssignAdvisorRequest:
+      type: object
+      required: [advisorId]
+      properties:
+        advisorId:
+          type: integer
+          format: int64
+
+    ModelPortfolioSummary:
+      type: object
+      properties:
+        modelPortfolioId:
+          type: integer
+          format: int64
+        modelName:
+          type: string
+        description:
+          type: string
+        isActive:
+          type: boolean
+
+    ModelPortfolioListResponse:
+      type: object
+      properties:
+        modelPortfolios:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelPortfolioSummary'
+
+    CreateModelPortfolioRequest:
+      type: object
+      required: [modelName]
+      properties:
+        modelName:
+          type: string
+        description:
+          type: string
+        createdByUserId:
+          type: integer
+          format: int64
+          nullable: true
+
+    UpdateModelPortfolioRequest:
+      type: object
+      properties:
+        modelName:
+          type: string
+        description:
+          type: string
+        isActive:
+          type: boolean
+
+    TargetHoldingItem:
+      type: object
+      required: [instrumentId, targetWeightPct]
+      properties:
+        instrumentId:
+          type: integer
+          format: int64
+        targetWeightPct:
+          type: number
+          format: float
+
+    TargetHoldingListRequest:
+      type: object
+      required: [holdings]
+      properties:
+        holdings:
+          type: array
+          items:
+            $ref: '#/components/schemas/TargetHoldingItem'
+
+    TargetHoldingListResponse:
+      type: object
+      properties:
+        portfolioId:
+          type: integer
+          format: int64
+        holdings:
+          type: array
+          items:
+            $ref: '#/components/schemas/TargetHoldingItem'
+
+    InstrumentSummary:
+      type: object
+      properties:
+        instrumentId:
+          type: integer
+          format: int64
+        instrumentName:
+          type: string
+        ticker:
+          type: string
+        currency:
+          type: string
+        assetClass:
+          type: string
+        securityType:
+          type: string
+        isActive:
+          type: boolean
+
+    InstrumentListResponse:
+      type: object
+      properties:
+        instruments:
+          type: array
+          items:
+            $ref: '#/components/schemas/InstrumentSummary'
+
+    CreateInstrumentRequest:
+      type: object
+      required: [instrumentName, ticker, currency]
+      properties:
+        instrumentName:
+          type: string
+        ticker:
+          type: string
+        currency:
+          type: string
+        assetClass:
+          type: string
+        securityType:
+          type: string
+
+    UpdateInstrumentRequest:
+      type: object
+      properties:
+        instrumentName:
+          type: string
+        ticker:
+          type: string
+        currency:
+          type: string
+        assetClass:
+          type: string
+        securityType:
+          type: string
+        isActive:
+          type: boolean
+
+    TradeRequest:
+      type: object
+      required: [clientId, instrumentId, tradeType, quantity, price, tradeDate]
+      properties:
+        clientId:
+          type: integer
+          format: int64
+        instrumentId:
+          type: integer
+          format: int64
+        tradeType:
+          type: string
+          enum: [BUY, SELL]
+        quantity:
+          type: number
+          format: double
+        price:
+          type: number
+          format: double
+        tradeDate:
+          type: string
+          format: date
+        reason:
+          type: string
+
+    TradeSummary:
+      type: object
+      properties:
+        tradeId:
+          type: integer
+          format: int64
+        clientId:
+          type: integer
+          format: int64
+        instrumentId:
+          type: integer
+          format: int64
+        tradeType:
+          type: string
+          enum: [BUY, SELL]
+        quantity:
+          type: number
+          format: double
+        price:
+          type: number
+          format: double
+        tradeDate:
+          type: string
+          format: date
+        status:
+          type: string
+        executedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    TradeSuggestionRequest:
+      type: object
+      required: [instrumentId, tradeType, quantity]
+      properties:
+        instrumentId:
+          type: integer
+          format: int64
+        tradeType:
+          type: string
+          enum: [BUY, SELL]
+        quantity:
+          type: number
+          format: double
+        proposedPrice:
+          type: number
+          format: double
+          nullable: true
+        notes:
+          type: string
+
+    TradeSuggestionSummary:
+      type: object
+      properties:
+        suggestionId:
+          type: integer
+          format: int64
+        advisorId:
+          type: integer
+          format: int64
+        clientId:
+          type: integer
+          format: int64
+        instrumentId:
+          type: integer
+          format: int64
+        tradeType:
+          type: string
+          enum: [BUY, SELL]
+        quantity:
+          type: number
+          format: double
+        proposedPrice:
+          type: number
+          format: double
+          nullable: true
+        status:
+          type: string
+          enum: [SUGGESTED, VIEWED, ACCEPTED, REJECTED, EXPIRED]
+        suggestedAt:
+          type: string
+          format: date-time
+
+    TradeSuggestionListResponse:
+      type: object
+      properties:
+        suggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TradeSuggestionSummary'
+
+    TradeSuggestionDecisionRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [VIEWED, ACCEPTED, REJECTED, EXPIRED]
+        notes:
+          type: string
+
+    TradeListResponse:
+      type: object
+      properties:
+        trades:
+          type: array
+          items:
+            $ref: '#/components/schemas/TradeSummary'
+
+    UpdateTradeRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED, EXECUTED]
+        approvedByUserId:
+          type: integer
+          format: int64
+          nullable: true
+        executedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reason:
+          type: string
+
+    SubscriptionSummary:
+      type: object
+      properties:
+        subscriptionId:
+          type: integer
+          format: int64
+        clientId:
+          type: integer
+          format: int64
+        modelPortfolioId:
+          type: integer
+          format: int64
+        subscribedDate:
+          type: string
+          format: date
+        endedDate:
+          type: string
+          format: date
+          nullable: true
+        status:
+          type: string
+
+    SubscriptionListResponse:
+      type: object
+      properties:
+        subscriptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubscriptionSummary'
+
+    CreateSubscriptionRequest:
+      type: object
+      required: [modelPortfolioId, subscribedDate]
+      properties:
+        modelPortfolioId:
+          type: integer
+          format: int64
+        subscribedDate:
+          type: string
+          format: date
+        approvedByUserId:
+          type: integer
+          format: int64
+          nullable: true
+
+    HoldingSummary:
+      type: object
+      properties:
+        holdingId:
+          type: integer
+          format: int64
+        clientId:
+          type: integer
+          format: int64
+        instrumentId:
+          type: integer
+          format: int64
+        quantity:
+          type: number
+          format: double
+        asOfDate:
+          type: string
+          format: date
+
+    HoldingListResponse:
+      type: object
+      properties:
+        holdings:
+          type: array
+          items:
+            $ref: '#/components/schemas/HoldingSummary'
+
+    AuditLogSummary:
+      type: object
+      properties:
+        auditLogId:
+          type: integer
+          format: int64
+        userId:
+          type: integer
+          format: int64
+          nullable: true
+        entityName:
+          type: string
+        entityId:
+          type: string
+          nullable: true
+        actionType:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    AuditLogListResponse:
+      type: object
+      properties:
+        auditLogs:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogSummary'
+
+    AnalyticsSummaryResponse:
+      type: object
+      properties:
+        scope:
+          type: string
+          description: Scope of the analytics payload, such as admin, advisor, client, or portfolio
+        generatedAt:
+          type: string
+          format: date-time
+        metrics:
+          type: object
+          additionalProperties: true
+        series:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+
+    DashboardResponse:
+      type: object
+      properties:
+        dashboardType:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        widgets:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+
+
+
