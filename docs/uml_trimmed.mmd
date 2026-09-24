@@ -74,10 +74,18 @@ namespace Controllers {
     }
 
     class ClientController {
-        +getClient(clientId)
+        +listClients()
         +createClient(request)
-        +assignAdvisor(clientId, advisorId)
-        +subscribeToModel(clientId, portfolioId)
+        +getClient(clientId)
+        +updateClient(clientId, request)
+        +getClientBalance(clientId)
+    }
+
+    class InstrumentController {
+        +listInstruments()
+        +createInstrument(request)
+        +getInstrument(instrumentId)
+        +updateInstrument(instrumentId, request)
     }
 
     class PortfolioController {
@@ -105,9 +113,18 @@ namespace Services {
     }
 
     class ClientService {
+        +listClients()
+        +getClient(clientId)
         +createClient(request)
-        +getClientSummary(clientId)
-        +assignAdvisor(clientId, advisorId)
+        +updateClient(clientId, request)
+        +getClientBalance(clientId)
+    }
+
+    class InstrumentService {
+        +listInstruments()
+        +getInstrument(instrumentId)
+        +createInstrument(request)
+        +updateInstrument(instrumentId, request)
     }
 
     class PortfolioService {
@@ -158,6 +175,7 @@ namespace Domain {
     class Client {
         +Long clientId
         +String clientName
+        +BigDecimal cashBalance
     }
 
     class ModelPortfolio {
@@ -236,7 +254,7 @@ namespace Domain {
 %% Controller to service relationships
 AdvisorController --> AdvisorService : uses
 ClientController --> ClientService : uses
-ClientController --> SubscriptionService : uses
+InstrumentController --> InstrumentService : uses
 PortfolioController --> PortfolioService : uses
 HoldingsController --> HoldingsService : uses
 HoldingsController --> RebalancingService : uses
@@ -246,8 +264,7 @@ TradeController --> RebalancingService : uses
 %% Service to repository relationships
 AdvisorService --> AdvisorRepository : uses
 ClientService --> ClientRepository : uses
-ClientService --> AdvisorRepository : uses
-ClientService --> ModelPortfolioRepository : uses
+InstrumentService --> InstrumentRepository : uses
 PortfolioService --> ModelPortfolioRepository : uses
 PortfolioService --> ModelPortfolioHoldingRepository : uses
 PortfolioService --> InstrumentRepository : uses

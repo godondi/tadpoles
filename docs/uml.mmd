@@ -82,10 +82,18 @@ namespace Controllers {
     }
 
     class ClientController {
-        +getClient(clientId)
+        +listClients()
         +createClient(request)
-        +assignAdvisor(clientId, advisorId)
-        +subscribeToModel(clientId, portfolioId)
+        +getClient(clientId)
+        +updateClient(clientId, request)
+        +getClientBalance(clientId)
+    }
+
+    class InstrumentController {
+        +listInstruments()
+        +createInstrument(request)
+        +getInstrument(instrumentId)
+        +updateInstrument(instrumentId, request)
     }
 
     class PortfolioController {
@@ -120,9 +128,18 @@ namespace Services {
     }
 
     class ClientService {
+        +listClients()
+        +getClient(clientId)
         +createClient(request)
-        +getClientSummary(clientId)
-        +assignAdvisor(clientId, advisorId)
+        +updateClient(clientId, request)
+        +getClientBalance(clientId)
+    }
+
+    class InstrumentService {
+        +listInstruments()
+        +getInstrument(instrumentId)
+        +createInstrument(request)
+        +updateInstrument(instrumentId, request)
     }
 
     class PortfolioService {
@@ -186,13 +203,11 @@ namespace Mappers {
     }
 
     class ClientMapper {
-        +selectById(clientId)
-        +selectByUserId(userId)
-        +selectByAdvisorId(advisorId)
+        +getClient(clientId)
+        +listClients()
         +insert(client)
         +update(client)
-        +assignAdvisor(clientId, advisorId)
-        +assignModelPortfolio(clientId, portfolioId)
+        +getClientBalance(clientId)
     }
 
     class ModelPortfolioMapper {
@@ -204,12 +219,10 @@ namespace Mappers {
     }
 
     class InstrumentMapper {
-        +selectById(instrumentId)
-        +selectByTicker(ticker)
-        +selectAll()
+        +getInstrument(instrumentId)
+        +listInstruments()
         +insert(instrument)
         +update(instrument)
-        +setActive(instrumentId, active)
     }
 
     class ModelPortfolioHoldingMapper {
@@ -271,6 +284,7 @@ namespace Domain {
     class Client {
         +Long clientId
         +String clientName
+        +BigDecimal cashBalance
     }
 
     class ModelPortfolio {
@@ -416,7 +430,7 @@ CustomUserDetailsService --> UserMapper : loads principal
 %% Controller to service relationships
 AdvisorController --> AdvisorService : uses
 ClientController --> ClientService : uses
-ClientController --> SubscriptionService : uses
+InstrumentController --> InstrumentService : uses
 PortfolioController --> PortfolioService : uses
 HoldingsController --> HoldingsService : uses
 HoldingsController --> RebalancingService : uses
@@ -426,8 +440,7 @@ TradeSuggestionController --> TradeSuggestionService : uses
 %% Service to mapper relationships
 AdvisorService --> AdvisorMapper : uses
 ClientService --> ClientMapper : uses
-ClientService --> AdvisorMapper : uses
-ClientService --> ModelPortfolioMapper : uses
+InstrumentService --> InstrumentMapper : uses
 PortfolioService --> ModelPortfolioMapper : uses
 PortfolioService --> ModelPortfolioHoldingMapper : uses
 PortfolioService --> InstrumentMapper : uses

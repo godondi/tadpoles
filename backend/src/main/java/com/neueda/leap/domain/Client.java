@@ -1,6 +1,7 @@
 package com.neueda.leap.domain;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 /**
  * Domain model for the `clients` table.
@@ -12,6 +13,7 @@ public class Client {
     private Integer modelPortfolioId;
     private Integer createdByUserId;
     private LocalDateTime createdAt;
+    private BigDecimal cashBalance;
     public Integer getClientId() {
         return clientId;
     }
@@ -47,5 +49,11 @@ public class Client {
     }
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+    public BigDecimal getCashBalance() {
+        return cashBalance;
+    }
+    public void setCashBalance(BigDecimal cashBalance) {
+        this.cashBalance = cashBalance;
     }
 }

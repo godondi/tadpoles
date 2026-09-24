@@ -356,6 +356,22 @@ paths:
               schema:
                 $ref: '#/components/schemas/ClientSummary'
 
+  /clients/{clientId}/balance:
+    parameters:
+      - $ref: '#/components/parameters/ClientId'
+    get:
+      tags: [Clients]
+      summary: Get the client cash balance
+      operationId: getClientBalance
+      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      responses:
+        '200':
+          description: Client cash balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientBalanceResponse'
+
   /clients/{clientId}/advisor:
     parameters:
       - $ref: '#/components/parameters/ClientId'
@@ -1080,6 +1096,9 @@ components:
           type: integer
           format: int64
           nullable: true
+        cashBalance:
+          type: number
+          format: double
 
     ClientListResponse:
       type: object
@@ -1107,6 +1126,9 @@ components:
           type: integer
           format: int64
           nullable: true
+        cashBalance:
+          type: number
+          format: double
 
     UpdateClientRequest:
       type: object
@@ -1121,6 +1143,19 @@ components:
           type: integer
           format: int64
           nullable: true
+        cashBalance:
+          type: number
+          format: double
+
+    ClientBalanceResponse:
+      type: object
+      properties:
+        clientId:
+          type: integer
+          format: int64
+        cashBalance:
+          type: number
+          format: double
 
     AssignAdvisorRequest:
       type: object
@@ -1246,6 +1281,8 @@ components:
           type: string
         securityType:
           type: string
+        isActive:
+          type: boolean
 
     UpdateInstrumentRequest:
       type: object
@@ -1546,6 +1583,4 @@ components:
           items:
             type: object
             additionalProperties: true
-
-
 

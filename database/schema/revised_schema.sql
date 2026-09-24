@@ -44,7 +44,8 @@ CREATE TABLE clients (
     advisor_id          INTEGER REFERENCES advisors(advisor_id),
     model_portfolio_id  INTEGER REFERENCES model_portfolios(model_portfolio_id),
     created_by_user_id  INTEGER REFERENCES users(user_id),
-    created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    cash_balance        NUMERIC(18,2) NOT NULL DEFAULT 0.00
 );
 
 CREATE TABLE instruments (
