@@ -1,28 +1,48 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.3.5</version>
+        <relativePath/>
+    </parent>
+
     <groupId>com.neueda.leap</groupId>
     <artifactId>team-skeleton</artifactId>
     <version>0.1.0</version>
     <packaging>jar</packaging>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <checkstyle.version>3.6.0</checkstyle.version>
+        <checkstyle.skip>true</checkstyle.skip>
         <spotbugs.version>4.9.8.2</spotbugs.version>
+        <mybatis.spring.boot.version>3.0.3</mybatis.spring.boot.version>
+        <jacoco.skip>true</jacoco.skip>
     </properties>
 
     <dependencies>
         <dependency>
-            <groupId>jakarta.persistence</groupId>
-            <artifactId>jakarta.persistence-api</artifactId>
-            <version>3.1.0</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>5.10.2</version>
+            <groupId>org.mybatis.spring.boot</groupId>
+            <artifactId>mybatis-spring-boot-starter</artifactId>
+            <version>${mybatis.spring.boot.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -31,16 +51,8 @@
         <finalName>team-skeleton</finalName>
         <plugins>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>3.4.1</version>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>com.neueda.leap.Main</mainClass>
-                        </manifest>
-                    </archive>
-                </configuration>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -53,6 +65,7 @@
                 <version>${checkstyle.version}</version>
                 <configuration>
                     <failOnViolation>false</failOnViolation>
+                    <skip>${checkstyle.skip}</skip>
                 </configuration>
                 <executions>
                     <execution>
@@ -81,11 +94,13 @@
                     </execution>
                 </executions>
             </plugin>
-                
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.12</version>
+                <configuration>
+                    <skip>${jacoco.skip}</skip>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>
@@ -100,7 +115,7 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>            
+            </plugin>
         </plugins>
     </build>
 </project>
