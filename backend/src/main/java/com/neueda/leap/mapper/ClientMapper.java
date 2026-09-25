@@ -9,6 +9,7 @@ import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 import org.apache.ibatis.annotations.UpdateProvider;
 
 @Mapper
@@ -25,6 +26,20 @@ public interface ClientMapper {
             WHERE client_id = #{id}
             """)
     Client getClient(@Param("id") Integer id);
+
+    @Select("""
+            SELECT client_id AS clientId,
+                   client_name AS clientName,
+                   advisor_id AS advisorId,
+                   model_portfolio_id AS modelPortfolioId,
+                   created_by_user_id AS createdByUserId,
+                   created_at AS createdAt,
+                   cash_balance AS cashBalance
+            FROM clients
+            WHERE client_id = #{id}
+            FOR UPDATE
+            """)
+    Client getClientForUpdate(@Param("id") Integer id);
 
     @Select("""
             SELECT client_id AS clientId,
@@ -67,6 +82,13 @@ public interface ClientMapper {
             WHERE client_id = #{id}
             """)
     BigDecimal getClientBalance(@Param("id") Integer id);
+
+    @Update("""
+            UPDATE clients
+            SET cash_balance = #{cashBalance}
+            WHERE client_id = #{id}
+            """)
+    int updateClientBalance(@Param("id") Integer id, @Param("cashBalance") BigDecimal cashBalance);
 
     class ClientSqlProvider {
         public String buildUpdateClient(Client client) {
