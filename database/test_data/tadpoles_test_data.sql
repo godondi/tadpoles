@@ -89,17 +89,17 @@ INSERT INTO model_portfolios (model_portfolio_id, model_name, description, is_ac
 (9,  'Capital Preservation','Low-risk allocation with cash and short-duration exposure', FALSE, 1, '2026-02-09 09:00:00'),
 (10, 'ESG Opportunity',    'Sustainable investing model with ESG screens', TRUE, 1, '2026-02-10 09:00:00');
 
-INSERT INTO clients (client_id, client_name, advisor_id, model_portfolio_id, created_by_user_id, created_at) VALUES
-(1,  'Acme Family Office',      1,  1,  1,  '2026-03-01 10:00:00'),
-(2,  'Barton Holdings',         2,  2,  1,  '2026-03-02 10:00:00'),
-(3,  'Crescent Trust',          3,  3,  1,  '2026-03-03 10:00:00'),
-(4,  'Delta Capital',           4,  4,  1,  '2026-03-04 10:00:00'),
-(5,  'Emerald Retirement',      5,  5,  1,  '2026-03-05 10:00:00'),
-(6,  'Fjord Partners',          6,  6,  1,  '2026-03-06 10:00:00'),
-(7,  'Granite Investors',       7,  7,  1,  '2026-03-07 10:00:00'),
-(8,  'Harbor Street Wealth',    8,  8,  1,  '2026-03-08 10:00:00'),
-(9,  'Iron Gate Capital',       9,  9,  1,  '2026-03-09 10:00:00'),
-(10, 'Juniper Growth Group',   10, 10,  1,  '2026-03-10 10:00:00');
+INSERT INTO clients (client_id, client_name, advisor_id, model_portfolio_id, created_by_user_id, created_at, cash_balance) VALUES
+(1,  'Acme Family Office',      1,  1,  1,  '2026-03-01 10:00:00', 500.00),
+(2,  'Barton Holdings',         2,  2,  1,  '2026-03-02 10:00:00', 500.00),
+(3,  'Crescent Trust',          3,  3,  1,  '2026-03-03 10:00:00', 500.00),
+(4,  'Delta Capital',           4,  4,  1,  '2026-03-04 10:00:00', 500.00),
+(5,  'Emerald Retirement',      5,  5,  1,  '2026-03-05 10:00:00', 500.00),
+(6,  'Fjord Partners',          6,  6,  1,  '2026-03-06 10:00:00', 500.00),
+(7,  'Granite Investors',       7,  7,  1,  '2026-03-07 10:00:00', 500.00),
+(8,  'Harbor Street Wealth',    8,  8,  1,  '2026-03-08 10:00:00', 500.00),
+(9,  'Iron Gate Capital',       9,  9,  1,  '2026-03-09 10:00:00', 500.00),
+(10, 'Juniper Growth Group',   10, 10,  1,  '2026-03-10 10:00:00', 500.00);
 
 INSERT INTO instruments (instrument_id, instrument_name, ticker, currency, asset_class, security_type, is_active) VALUES
 (1,  'Apple Inc.',                 'AAPL',  'USD', 'Equity',     'COMMON_STOCK', TRUE),

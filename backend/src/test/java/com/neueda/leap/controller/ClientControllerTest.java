@@ -1,12 +1,14 @@
 package com.neueda.leap.controller;
 
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.neueda.leap.config.SecurityConfig;
 import com.neueda.leap.domain.Client;
 import com.neueda.leap.exception.GlobalExceptionHandler;
 import com.neueda.leap.service.ClientService;
@@ -21,7 +23,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(ClientController.class)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, SecurityConfig.class})
 class ClientControllerTest {
     @Autowired
     private MockMvc mockMvc;
@@ -34,7 +36,8 @@ class ClientControllerTest {
         Client client = buildClient();
         when(clientService.listClients()).thenReturn(List.of(client));
 
-        mockMvc.perform(get("/api/clients"))
+        mockMvc.perform(get("/api/clients")
+                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN")))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.clients[0].clientId").value(7))
                 .andExpect(jsonPath("$.clients[0].clientName").value("Alice Investor"))

@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Collection;
+
 @RestController
 @RequestMapping("/api")
 public class ClientController {
@@ -35,23 +37,20 @@ public class ClientController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing token");
         }
 
-        Object rolesClaim = jwt.getClaims().get("roles");
-
-        boolean isAdmin = false;
-        if (rolesClaim instanceof Iterable<?> roles) {
-            for (Object role : roles) {
-                if ("ADMIN".equals(String.valueOf(role))) {
-                    isAdmin = true;
-                    break;
-                }
-            }
-        }
-
-        if (!isAdmin) {
+        if (!hasAdminRole(jwt)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "ADMIN role required");
-            // or use HttpStatus.FORBIDDEN for stricter semantics
         }
         return ClientListResponseDto.fromEntities(clientService.listClients());
+    }
+
+    private boolean hasAdminRole(Jwt jwt) {
+        Object rolesClaim = jwt.getClaims().get("roles");
+
+        if (rolesClaim instanceof Collection<?> roles) {
+            return roles.stream().map(String::valueOf).anyMatch("ADMIN"::equals);
+        }
+
+        return "ADMIN".equals(String.valueOf(rolesClaim));
     }
 
     @PostMapping("/clients")
