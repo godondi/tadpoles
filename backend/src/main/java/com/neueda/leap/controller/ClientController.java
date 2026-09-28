@@ -7,6 +7,8 @@ import com.neueda.leap.dto.ClientResponseDto;
 import com.neueda.leap.dto.CreateClientRequestDto;
 import com.neueda.leap.dto.UpdateClientRequestDto;
 import com.neueda.leap.service.ClientService;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api")
@@ -27,7 +30,27 @@ public class ClientController {
     }
 
     @GetMapping("/clients")
-    public ClientListResponseDto listClients() {
+    public ClientListResponseDto listClients(@AuthenticationPrincipal Jwt jwt) {
+        if (jwt == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing token");
+        }
+
+        Object rolesClaim = jwt.getClaims().get("roles");
+
+        boolean isAdmin = false;
+        if (rolesClaim instanceof Iterable<?> roles) {
+            for (Object role : roles) {
+                if ("ADMIN".equals(String.valueOf(role))) {
+                    isAdmin = true;
+                    break;
+                }
+            }
+        }
+
+        if (!isAdmin) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "ADMIN role required");
+            // or use HttpStatus.FORBIDDEN for stricter semantics
+        }
         return ClientListResponseDto.fromEntities(clientService.listClients());
     }
 
