@@ -1,3 +1,6 @@
+volumes:
+  tadpole-db-data:
+
 services:
   backend:
     build:

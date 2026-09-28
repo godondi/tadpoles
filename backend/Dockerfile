@@ -31,7 +31,7 @@ RUN mvn -B clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-COPY --from=build /build/target/tadpoles.jar app.jar
+COPY --from=build /build/target/team-skeleton.jar app.jar
 
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
