@@ -8,7 +8,7 @@ This note explains what changes may be needed in the UML and schema to support t
 - Advisor
 - Client
 
-It complements `database/schema/revised_schema.sql` and `docs/uml.mmd`.
+It complements `database/schema/001_revised_schema.sql` and `docs/uml.mmd`.
 
 ---
 
