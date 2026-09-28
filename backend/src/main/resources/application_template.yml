@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/tadpoles}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+mybatis:
+  type-aliases-package: com.neueda.leap.domain
+  configuration:
+    map-underscore-to-camel-case: true
+
+server:
+  port: ${PORT:8080}
+

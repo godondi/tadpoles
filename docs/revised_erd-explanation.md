@@ -151,10 +151,29 @@ The revised version uses a surrogate key and a uniqueness rule on:
 - instrument
 - as-of date
 
+The quantity fields involved in actual holdings and trades are now numeric rather than integer so fractional shares can be represented.
+
 Why:
 - the original schema only allowed one row per client/instrument pair
 - that makes historical snapshots harder
 - the revised model is better for reporting and dashboard history
+
+---
+
+### 8. Added `trade_suggestions`
+The revised schema adds a separate table for advisor trade suggestions.
+
+Why:
+- only clients should place actual trades
+- advisors need their own workflow to suggest trades to clients
+- the suggestion should be tracked separately from an executed trade
+
+This table makes it possible to store:
+- which advisor made the suggestion
+- which client received it
+- which instrument was involved
+- the suggested trade type and quantity
+- whether the suggestion was viewed, accepted, rejected, or expired
 
 ---
 
@@ -167,6 +186,7 @@ The revised schema is much better suited to an admin dashboard because it suppor
 - approval workflows
 - historical snapshots
 - token-based sessions
+- separate advisor suggestion workflows
 
 That means the dashboard can safely expose features like:
 - user management
@@ -200,6 +220,12 @@ The revised ERD adds several new relationship groups:
 - instruments to holdings
 - clients to trades
 
+### New trade workflow relationships
+- advisors to trade suggestions
+- clients to trade suggestions
+- instruments to trade suggestions
+- clients still place the actual trades
+
 ---
 
 ## Why the revised model is more realistic for Spring Boot
@@ -226,6 +252,8 @@ Compared with the original schema, the revised version adds:
 - refresh token storage
 - audit logging
 - better historical tracking for holdings and subscriptions
+- a separate advisor trade-suggestion workflow
+- fractional trade and holding quantities
 
 In short:
 - the original schema models the investment domain

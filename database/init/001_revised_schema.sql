@@ -44,7 +44,8 @@ CREATE TABLE clients (
     advisor_id          INTEGER REFERENCES advisors(advisor_id),
     model_portfolio_id  INTEGER REFERENCES model_portfolios(model_portfolio_id),
     created_by_user_id  INTEGER REFERENCES users(user_id),
-    created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    cash_balance        NUMERIC(18,2) NOT NULL DEFAULT 0.00
 );
 
 CREATE TABLE instruments (
@@ -74,6 +75,19 @@ CREATE TABLE client_subscriptions (
     approved_by_user_id     INTEGER REFERENCES users(user_id)
 );
 
+CREATE TABLE trade_suggestions (
+    suggestion_id       SERIAL PRIMARY KEY,
+    advisor_id          INTEGER NOT NULL REFERENCES advisors(advisor_id),
+    client_id           INTEGER NOT NULL REFERENCES clients(client_id),
+    instrument_id       INTEGER NOT NULL REFERENCES instruments(instrument_id),
+    trade_type          TEXT NOT NULL CHECK (trade_type IN ('BUY', 'SELL')),
+    quantity            NUMERIC(18,6) NOT NULL CHECK (quantity > 0),
+    proposed_price      NUMERIC(10,2),
+    suggested_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status              TEXT NOT NULL DEFAULT 'SUGGESTED' CHECK (status IN ('SUGGESTED', 'VIEWED', 'ACCEPTED', 'REJECTED', 'EXPIRED')),
+    notes               TEXT
+);
+
 CREATE TABLE client_trades (
     trade_id                SERIAL PRIMARY KEY,
     client_id               INTEGER NOT NULL REFERENCES clients(client_id),
@@ -81,7 +95,7 @@ CREATE TABLE client_trades (
     submitted_by_user_id    INTEGER REFERENCES users(user_id),
     approved_by_user_id     INTEGER REFERENCES users(user_id),
     trade_type              TEXT NOT NULL CHECK (trade_type IN ('BUY', 'SELL')),
-    quantity                INTEGER NOT NULL CHECK (quantity > 0),
+    quantity                NUMERIC(18,6) NOT NULL CHECK (quantity > 0),
     price                   NUMERIC(10,2) NOT NULL CHECK (price > 0),
     trade_date              DATE NOT NULL,
     status                  TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'EXECUTED')),
@@ -93,7 +107,7 @@ CREATE TABLE client_holdings (
     holding_id      SERIAL PRIMARY KEY,
     client_id       INTEGER NOT NULL REFERENCES clients(client_id),
     instrument_id   INTEGER NOT NULL REFERENCES instruments(instrument_id),
-    quantity        INTEGER NOT NULL CHECK (quantity > 0),
+    quantity        NUMERIC(18,6) NOT NULL CHECK (quantity > 0),
     as_of_date      DATE NOT NULL,
     UNIQUE (client_id, instrument_id, as_of_date)
 );

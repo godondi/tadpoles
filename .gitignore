@@ -1,3 +1,6 @@
 backend/target/
 testing/target/
 .idea/
+target/
+auth-stub/node_modules
+.env

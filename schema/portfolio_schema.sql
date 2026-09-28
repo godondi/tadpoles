@@ -15,11 +15,19 @@ CREATE TABLE clients (
 	model_portfolio_id 	INTEGER REFERENCES model_portfolios(model_portfolio_id)
 ); 
 
+CREATE TABLE client_accounts(
+	account_id 			SERIAL PRIMARY KEY,
+	client_id 			INTEGER NOT NULL REFERENCES clients(client_id),
+	cash_balance 		NUMERIC(15,2) NOT NULL DEFAULT 0,
+	updated_at 			TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE instruments (
 	instrument_id	    SERIAL PRIMARY KEY,
 	instrument_name	    TEXT NOT NULL UNIQUE,
 	ticker	            VARCHAR(8) NOT NULL UNIQUE,
-	currency		    CHAR(3) NOT NULL
+	currency		    CHAR(3) NOT NULL,
+	is_tradable 		BOOLEAN DEFAULT TRUE
 );
 
 CREATE TABLE model_portfolio_holdings (
@@ -52,4 +60,33 @@ CREATE TABLE client_trades (
 	quantity			INTEGER NOT NULL CHECK (quantity > 0), 
     price				NUMERIC(10,2) NOT NULL CHECK (price > 0),
 	trade_date			DATE NOT NULL
+);
+
+CREATE TABLE client_credentials (
+	credentials_id		SERIAL PRIMARY KEY,
+	client_id 			INTEGER NOT NULL REFERENCES clients(client_id),
+	email 				TEXT NOT NULL UNIQUE REFERENCES clients(email),
+	password 			TEXT NOT NULL,
+	failed_login_attempts 	INTEGER NOT NULL DEFAULT 0,
+	locked_until 		TIMESTAMPZ,
+	created_at			TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at			TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE client_sessions (
+	client_session_id 	SERIAL PRIMARY KEY,
+	client_id 			INTEGER NOT NULL REFERENCES clients(client_id),
+	created_at 			TIMESTAMPTZ NOT NULL DEFAULT now(),
+	expires_at 			TIMESTAMPTZ NOT NULL,
+	revoked_at 			TIMESTAMPTZ
+);
+
+CREATE TABLE trading_rules (
+    rule_id SERIAL PRIMARY KEY,
+    rule_name TEXT NOT NULL,
+    min_price NUMERIC(10,2),
+    max_price NUMERIC(10,2),
+    min_quantity INTEGER,
+    max_quantity INTEGER,
+    instrument_id INTEGER REFERENCES instruments(instrument_id)
 );
