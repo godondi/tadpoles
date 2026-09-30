@@ -1,5 +1,6 @@
 DROP TABLE IF EXISTS client_holdings;
 DROP TABLE IF EXISTS client_trades;
+DROP TABLE IF EXISTS model_portfolio_holdings;
 DROP TABLE IF EXISTS clients;
 DROP TABLE IF EXISTS instruments;
 DROP TABLE IF EXISTS advisors;
@@ -50,6 +51,13 @@ CREATE TABLE instruments (
     asset_class VARCHAR(255),
     security_type VARCHAR(255),
     is_active BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE model_portfolio_holdings (
+    model_portfolio_id INTEGER NOT NULL REFERENCES model_portfolios(model_portfolio_id),
+    instrument_id INTEGER NOT NULL REFERENCES instruments(instrument_id),
+    target_weight_pct DECIMAL(5,2) NOT NULL CHECK (target_weight_pct BETWEEN 0 AND 100),
+    PRIMARY KEY (model_portfolio_id, instrument_id)
 );
 
 CREATE TABLE client_trades (

@@ -49,6 +49,22 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
     }
 
+    @ExceptionHandler(ModelPortfolioNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleModelPortfolioNotFound(
+            ModelPortfolioNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return buildErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(ModelPortfolioHoldingNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleModelPortfolioHoldingNotFound(
+            ModelPortfolioHoldingNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return buildErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiErrorResponse> handleBadRequest(
             IllegalArgumentException exception,

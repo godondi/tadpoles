@@ -627,6 +627,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ModelPortfolioListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     post:
       tags: [Portfolios]
       summary: Create a model portfolio
@@ -645,10 +653,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ModelPortfolioSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-  /model-portfolios/{portfolioId}:
+  /model-portfolios/{modelPortfolioId}:
     parameters:
-      - $ref: '#/components/parameters/PortfolioId'
+      - $ref: '#/components/parameters/ModelPortfolioId'
     get:
       tags: [Portfolios]
       summary: Get model portfolio details
@@ -661,6 +681,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ModelPortfolioSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     patch:
       tags: [Portfolios]
       summary: Update portfolio metadata
@@ -679,14 +711,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ModelPortfolioSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-  /model-portfolios/{portfolioId}/holdings:
+  /model-portfolios/{modelPortfolioId}/holdings:
     parameters:
-      - $ref: '#/components/parameters/PortfolioId'
+      - $ref: '#/components/parameters/ModelPortfolioId'
     get:
       tags: [Portfolios]
       summary: Get target holdings for a model portfolio
-      operationId: getModelPortfolioHoldings
+      operationId: listModelPortfolioHoldings
       x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
       responses:
         '200':
@@ -694,25 +740,112 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TargetHoldingListResponse'
-    put:
+                $ref: '#/components/schemas/ModelPortfolioHoldingListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
       tags: [Portfolios]
-      summary: Replace target holdings for a model portfolio
-      operationId: setModelPortfolioHoldings
+      summary: Create a target holding for a model portfolio
+      operationId: createModelPortfolioHolding
       x-required-roles: [ADMIN]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TargetHoldingListRequest'
+              $ref: '#/components/schemas/CreateModelPortfolioHoldingRequest'
       responses:
-        '200':
-          description: Holdings updated
+        '201':
+          description: Holding created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TargetHoldingListResponse'
+                $ref: '#/components/schemas/ModelPortfolioHoldingSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /model-portfolios/{modelPortfolioId}/holdings/{instrumentId}:
+    parameters:
+      - $ref: '#/components/parameters/ModelPortfolioId'
+      - $ref: '#/components/parameters/InstrumentId'
+    get:
+      tags: [Portfolios]
+      summary: Get a target holding for a model portfolio
+      operationId: getModelPortfolioHolding
+      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      responses:
+        '200':
+          description: Target holding record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelPortfolioHoldingSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      tags: [Portfolios]
+      summary: Update a target holding for a model portfolio
+      operationId: updateModelPortfolioHolding
+      x-required-roles: [ADMIN]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateModelPortfolioHoldingRequest'
+      responses:
+        '200':
+          description: Holding updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelPortfolioHoldingSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /instruments:
     get:
@@ -942,6 +1075,13 @@ components:
         format: int64
     ClientId:
       name: clientId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    ModelPortfolioId:
+      name: modelPortfolioId
       in: path
       required: true
       schema:
@@ -1318,7 +1458,28 @@ components:
         isActive:
           type: boolean
 
-    TargetHoldingItem:
+    ModelPortfolioHoldingSummary:
+      type: object
+      properties:
+        modelPortfolioId:
+          type: integer
+          format: int64
+        instrumentId:
+          type: integer
+          format: int64
+        targetWeightPct:
+          type: number
+          format: float
+
+    ModelPortfolioHoldingListResponse:
+      type: object
+      properties:
+        holdings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelPortfolioHoldingSummary'
+
+    CreateModelPortfolioHoldingRequest:
       type: object
       required: [instrumentId, targetWeightPct]
       properties:
@@ -1329,25 +1490,12 @@ components:
           type: number
           format: float
 
-    TargetHoldingListRequest:
-      type: object
-      required: [holdings]
-      properties:
-        holdings:
-          type: array
-          items:
-            $ref: '#/components/schemas/TargetHoldingItem'
-
-    TargetHoldingListResponse:
+    UpdateModelPortfolioHoldingRequest:
       type: object
       properties:
-        portfolioId:
-          type: integer
-          format: int64
-        holdings:
-          type: array
-          items:
-            $ref: '#/components/schemas/TargetHoldingItem'
+        targetWeightPct:
+          type: number
+          format: float
 
     InstrumentSummary:
       type: object
