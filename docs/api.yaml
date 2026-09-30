@@ -221,6 +221,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdvisorListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     post:
       tags: [Advisors]
       summary: Create an advisor record
@@ -239,6 +247,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdvisorSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /advisors/{advisorId}:
     parameters:
@@ -255,6 +275,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdvisorSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     patch:
       tags: [Advisors]
       summary: Update advisor metadata
@@ -273,6 +305,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdvisorSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /advisors/{advisorId}/clients:
     parameters:
@@ -289,6 +335,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ClientListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /clients:
     get:
@@ -914,14 +972,65 @@ components:
   responses:
     BadRequest:
       description: Invalid or malformed request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
     Unauthorized:
       description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+    Forbidden:
+      description: Authenticated user does not have permission to access the resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
     NotFound:
       description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
     Conflict:
       description: Duplicate resource or conflicting state
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+    TooManyRequests:
+      description: Too many requests were submitted in a short time window
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+    InternalServerError:
+      description: Unexpected server-side failure
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
 
   schemas:
+    ApiErrorResponse:
+      type: object
+      required: [timestamp, status, error, message, path]
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+
     LoginRequest:
       type: object
       required: [username, password]
@@ -1583,4 +1692,3 @@ components:
           items:
             type: object
             additionalProperties: true
-

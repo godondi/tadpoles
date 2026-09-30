@@ -17,6 +17,14 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
     }
 
+    @ExceptionHandler(AdvisorNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleAdvisorNotFound(
+            AdvisorNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return buildErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
+    }
+
     @ExceptionHandler(InstrumentNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleInstrumentNotFound(
             InstrumentNotFoundException exception,

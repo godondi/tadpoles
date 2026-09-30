@@ -20,6 +20,7 @@ import org.springframework.test.context.jdbc.Sql;
         "spring.datasource.driverClassName=org.h2.Driver",
         "spring.datasource.username=sa",
         "spring.datasource.password=",
+        "jwt.secret=test-jwt-secret-test-jwt-secret-123456",
         "spring.sql.init.mode=never"
 })
 @Sql(scripts = "/orderfill/schema.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
@@ -63,4 +64,3 @@ class OrderFillServiceIntegrationTest {
                 .compareTo(clientHoldingMapper.getLatestHoldingForUpdate(7, 11).getQuantity()));
     }
 }
-

@@ -54,6 +54,20 @@ public interface ClientMapper {
             """)
     List<Client> listClients();
 
+    @Select("""
+            SELECT client_id AS clientId,
+                   client_name AS clientName,
+                   advisor_id AS advisorId,
+                   model_portfolio_id AS modelPortfolioId,
+                   created_by_user_id AS createdByUserId,
+                   created_at AS createdAt,
+                   cash_balance AS cashBalance
+            FROM clients
+            WHERE advisor_id = #{advisorId}
+            ORDER BY client_id
+            """)
+    List<Client> listClientsByAdvisor(@Param("advisorId") Integer advisorId);
+
     @Insert("""
             INSERT INTO clients (
                 client_name,
