@@ -1,6 +1,7 @@
 package com.neueda.leap.domain;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Domain model for the `users` table.
@@ -14,6 +15,9 @@ public class AppUser {
     private Boolean enabled;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private List<String> roles;
+    private Integer advisorId;
+    private Integer clientId;
     public Integer getUserId() {
         return userId;
     }
@@ -61,5 +65,23 @@ public class AppUser {
     }
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+    public List<String> getRoles() {
+        return roles;
+    }
+    public void setRoles(List<String> roles) {
+        this.roles = roles;
+    }
+    public Integer getAdvisorId() {
+        return advisorId;
+    }
+    public void setAdvisorId(Integer advisorId) {
+        this.advisorId = advisorId;
+    }
+    public Integer getClientId() {
+        return clientId;
+    }
+    public void setClientId(Integer clientId) {
+        this.clientId = clientId;
     }
 }
