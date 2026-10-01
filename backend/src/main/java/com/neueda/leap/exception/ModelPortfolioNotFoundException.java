@@ -5,4 +5,3 @@ public class ModelPortfolioNotFoundException extends RuntimeException {
         super("Model portfolio with id " + modelPortfolioId + " was not found.");
     }
 }
-

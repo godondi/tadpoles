@@ -15,4 +15,3 @@ public interface ModelPortfolioHoldingService {
             UpdateModelPortfolioHoldingRequestDto request
     );
 }
-

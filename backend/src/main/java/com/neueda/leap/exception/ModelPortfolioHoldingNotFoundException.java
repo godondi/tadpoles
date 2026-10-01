@@ -6,4 +6,3 @@ public class ModelPortfolioHoldingNotFoundException extends RuntimeException {
                 + " and instrument " + instrumentId + " was not found.");
     }
 }
-

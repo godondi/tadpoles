@@ -65,4 +65,3 @@ public class ModelPortfolioHoldingController {
         return ModelPortfolioHoldingResponseDto.fromEntity(holding);
     }
 }
-

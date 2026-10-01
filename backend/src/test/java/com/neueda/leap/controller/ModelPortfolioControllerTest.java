@@ -110,4 +110,3 @@ class ModelPortfolioControllerTest {
         return portfolio;
     }
 }
-

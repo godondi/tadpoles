@@ -123,4 +123,3 @@ public class ModelPortfolioHoldingServiceImpl implements ModelPortfolioHoldingSe
         }
     }
 }
-

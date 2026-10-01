@@ -6,4 +6,3 @@ public record UpdateModelPortfolioHoldingRequestDto(
         BigDecimal targetWeightPct
 ) {
 }
-

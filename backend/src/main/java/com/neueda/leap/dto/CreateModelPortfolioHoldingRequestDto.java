@@ -7,4 +7,3 @@ public record CreateModelPortfolioHoldingRequestDto(
         BigDecimal targetWeightPct
 ) {
 }
-

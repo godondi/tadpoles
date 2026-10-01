@@ -93,4 +93,3 @@ public class ModelPortfolioServiceImpl implements ModelPortfolioService {
         }
     }
 }
-

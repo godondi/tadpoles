@@ -6,4 +6,3 @@ public record UpdateModelPortfolioRequestDto(
         Boolean isActive
 ) {
 }
-

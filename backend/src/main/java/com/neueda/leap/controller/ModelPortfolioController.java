@@ -52,4 +52,3 @@ public class ModelPortfolioController {
         return ModelPortfolioResponseDto.fromEntity(modelPortfolio);
     }
 }
-

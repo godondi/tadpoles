@@ -11,4 +11,3 @@ public interface ModelPortfolioService {
     ModelPortfolio createModelPortfolio(CreateModelPortfolioRequestDto request);
     ModelPortfolio updateModelPortfolio(Integer id, UpdateModelPortfolioRequestDto request);
 }
-

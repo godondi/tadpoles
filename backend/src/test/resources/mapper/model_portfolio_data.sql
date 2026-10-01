@@ -12,4 +12,3 @@ VALUES (12, 'Microsoft Corp', 'MSFT', 'USD', 'Equity', 'Stock', TRUE);
 
 INSERT INTO model_portfolio_holdings (model_portfolio_id, instrument_id, target_weight_pct)
 VALUES (5, 11, 60.00);
-

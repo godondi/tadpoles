@@ -105,4 +105,3 @@ class ModelPortfolioHoldingControllerTest {
         return holding;
     }
 }
-

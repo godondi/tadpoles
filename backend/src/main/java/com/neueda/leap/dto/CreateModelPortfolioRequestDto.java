@@ -6,4 +6,3 @@ public record CreateModelPortfolioRequestDto(
         Integer createdByUserId
 ) {
 }
-

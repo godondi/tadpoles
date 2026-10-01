@@ -169,4 +169,3 @@ class ModelPortfolioHoldingServiceImplTest {
         return holding;
     }
 }
-
