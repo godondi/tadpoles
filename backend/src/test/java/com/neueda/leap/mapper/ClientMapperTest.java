@@ -9,6 +9,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.jdbc.Sql;
 
 @MybatisTest
@@ -16,6 +17,8 @@ import org.springframework.test.context.jdbc.Sql;
 class ClientMapperTest {
     @Autowired
     private ClientMapper clientMapper;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     void getClientReturnsClientWithBalance() {
@@ -69,5 +72,39 @@ class ClientMapperTest {
         BigDecimal balance = clientMapper.getClientBalance(7);
         assertEquals(0, new BigDecimal("1200.50").compareTo(balance));
     }
-}
 
+    @Test
+    void listClientsByAdvisorReturnsAssignedRows() {
+        jdbcTemplate.update(
+                "INSERT INTO advisors (advisor_id, advisor_name, user_id) VALUES (?, ?, ?)",
+                4,
+                "Advisor Two",
+                null
+        );
+        jdbcTemplate.update(
+                """
+                INSERT INTO clients (
+                    client_id,
+                    client_name,
+                    advisor_id,
+                    model_portfolio_id,
+                    created_by_user_id,
+                    created_at,
+                    cash_balance
+                )
+                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
+                """,
+                8,
+                "Bob Investor",
+                4,
+                5,
+                1,
+                new BigDecimal("500.00")
+        );
+
+        List<Client> clients = clientMapper.listClientsByAdvisor(3);
+
+        assertEquals(1, clients.size());
+        assertEquals(7, clients.get(0).getClientId());
+    }
+}

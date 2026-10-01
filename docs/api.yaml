@@ -13,6 +13,7 @@ servers:
 tags:
   - name: Authentication
   - name: Users
+  - name: Roles
   - name: Advisors
   - name: Clients
   - name: Portfolios
@@ -95,8 +96,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthTokens'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /auth/logout:
     post:
@@ -113,8 +120,60 @@ paths:
       responses:
         '204':
           description: Token revoked
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /roles:
+    get:
+      tags: [Roles]
+      summary: List platform roles
+      operationId: listRoles
+      x-required-roles: [ADMIN]
+      responses:
+        '200':
+          description: Role list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /roles/{roleId}:
+    parameters:
+      - $ref: '#/components/parameters/RoleId'
+    get:
+      tags: [Roles]
+      summary: Get a role by ID
+      operationId: getRoleById
+      x-required-roles: [ADMIN]
+      responses:
+        '200':
+          description: Role details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /users/me:
     get:
@@ -131,6 +190,12 @@ paths:
                 $ref: '#/components/schemas/UserProfile'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /users:
     get:
@@ -147,6 +212,10 @@ paths:
                 $ref: '#/components/schemas/UserListResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /users/{userId}:
     parameters:
@@ -163,8 +232,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     patch:
       tags: [Users]
       summary: Update a user profile or status
@@ -183,8 +260,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /users/{userId}/roles:
     parameters:
@@ -207,6 +294,97 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{userId}/refresh-tokens:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    get:
+      tags: [Authentication]
+      summary: List refresh tokens issued for a user
+      operationId: listUserRefreshTokens
+      x-required-roles: [ADMIN]
+      responses:
+        '200':
+          description: Refresh token list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshTokenListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [Authentication]
+      summary: Issue a refresh token for a user
+      operationId: issueRefreshToken
+      x-required-roles: [ADMIN]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRefreshTokenRequest'
+      responses:
+        '201':
+          description: Refresh token issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssuedRefreshToken'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /refresh-tokens/{refreshTokenId}:
+    parameters:
+      - $ref: '#/components/parameters/RefreshTokenId'
+    get:
+      tags: [Authentication]
+      summary: Get refresh token metadata by ID
+      operationId: getRefreshTokenById
+      x-required-roles: [ADMIN]
+      responses:
+        '200':
+          description: Refresh token metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshTokenSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /advisors:
     get:
@@ -221,6 +399,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdvisorListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     post:
       tags: [Advisors]
       summary: Create an advisor record
@@ -239,6 +425,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdvisorSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /advisors/{advisorId}:
     parameters:
@@ -255,6 +453,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdvisorSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     patch:
       tags: [Advisors]
       summary: Update advisor metadata
@@ -273,6 +483,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdvisorSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /advisors/{advisorId}/clients:
     parameters:
@@ -289,6 +513,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ClientListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /clients:
     get:
@@ -409,6 +645,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SubscriptionListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     post:
       tags: [Clients]
       summary: Subscribe a client to a model portfolio
@@ -427,6 +673,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SubscriptionSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /clients/{clientId}/holdings:
     parameters:
@@ -500,6 +758,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TradeSuggestionSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /clients/{clientId}/trade-suggestions:
     parameters:
@@ -516,6 +784,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TradeSuggestionListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /trade-suggestions/{suggestionId}:
     parameters:
@@ -537,6 +815,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TradeSuggestionSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     patch:
       tags: [Trade Suggestions]
       summary: Update the status of a trade suggestion
@@ -555,6 +843,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TradeSuggestionSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /model-portfolios:
     get:
@@ -569,6 +867,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ModelPortfolioListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     post:
       tags: [Portfolios]
       summary: Create a model portfolio
@@ -587,10 +893,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ModelPortfolioSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-  /model-portfolios/{portfolioId}:
+  /model-portfolios/{modelPortfolioId}:
     parameters:
-      - $ref: '#/components/parameters/PortfolioId'
+      - $ref: '#/components/parameters/ModelPortfolioId'
     get:
       tags: [Portfolios]
       summary: Get model portfolio details
@@ -603,6 +921,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ModelPortfolioSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     patch:
       tags: [Portfolios]
       summary: Update portfolio metadata
@@ -621,14 +951,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ModelPortfolioSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-  /model-portfolios/{portfolioId}/holdings:
+  /model-portfolios/{modelPortfolioId}/holdings:
     parameters:
-      - $ref: '#/components/parameters/PortfolioId'
+      - $ref: '#/components/parameters/ModelPortfolioId'
     get:
       tags: [Portfolios]
       summary: Get target holdings for a model portfolio
-      operationId: getModelPortfolioHoldings
+      operationId: listModelPortfolioHoldings
       x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
       responses:
         '200':
@@ -636,25 +980,112 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TargetHoldingListResponse'
-    put:
+                $ref: '#/components/schemas/ModelPortfolioHoldingListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
       tags: [Portfolios]
-      summary: Replace target holdings for a model portfolio
-      operationId: setModelPortfolioHoldings
+      summary: Create a target holding for a model portfolio
+      operationId: createModelPortfolioHolding
       x-required-roles: [ADMIN]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TargetHoldingListRequest'
+              $ref: '#/components/schemas/CreateModelPortfolioHoldingRequest'
       responses:
-        '200':
-          description: Holdings updated
+        '201':
+          description: Holding created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TargetHoldingListResponse'
+                $ref: '#/components/schemas/ModelPortfolioHoldingSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /model-portfolios/{modelPortfolioId}/holdings/{instrumentId}:
+    parameters:
+      - $ref: '#/components/parameters/ModelPortfolioId'
+      - $ref: '#/components/parameters/InstrumentId'
+    get:
+      tags: [Portfolios]
+      summary: Get a target holding for a model portfolio
+      operationId: getModelPortfolioHolding
+      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      responses:
+        '200':
+          description: Target holding record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelPortfolioHoldingSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      tags: [Portfolios]
+      summary: Update a target holding for a model portfolio
+      operationId: updateModelPortfolioHolding
+      x-required-roles: [ADMIN]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateModelPortfolioHoldingRequest'
+      responses:
+        '200':
+          description: Holding updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelPortfolioHoldingSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /instruments:
     get:
@@ -783,6 +1214,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuditLogListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /analytics/summary:
     get:
@@ -875,6 +1312,20 @@ components:
       schema:
         type: integer
         format: int64
+    RoleId:
+      name: roleId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    RefreshTokenId:
+      name: refreshTokenId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
     AdvisorId:
       name: advisorId
       in: path
@@ -884,6 +1335,13 @@ components:
         format: int64
     ClientId:
       name: clientId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    ModelPortfolioId:
+      name: modelPortfolioId
       in: path
       required: true
       schema:
@@ -914,14 +1372,65 @@ components:
   responses:
     BadRequest:
       description: Invalid or malformed request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
     Unauthorized:
       description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+    Forbidden:
+      description: Authenticated user does not have permission to access the resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
     NotFound:
       description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
     Conflict:
       description: Duplicate resource or conflicting state
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+    TooManyRequests:
+      description: Too many requests were submitted in a short time window
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+    InternalServerError:
+      description: Unexpected server-side failure
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
 
   schemas:
+    ApiErrorResponse:
+      type: object
+      required: [timestamp, status, error, message, path]
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          format: int32
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+
     LoginRequest:
       type: object
       required: [username, password]
@@ -938,6 +1447,14 @@ components:
       properties:
         refreshToken:
           type: string
+
+    CreateRefreshTokenRequest:
+      type: object
+      properties:
+        expiresInSeconds:
+          type: integer
+          format: int64
+          minimum: 1
 
     RegisterUserRequest:
       type: object
@@ -982,6 +1499,32 @@ components:
           type: integer
           format: int64
 
+    IssuedRefreshToken:
+      type: object
+      required: [refreshTokenId, userId, refreshToken, tokenType, expiresInSeconds, expiresAt]
+      properties:
+        refreshTokenId:
+          type: integer
+          format: int64
+        userId:
+          type: integer
+          format: int64
+        refreshToken:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+        expiresInSeconds:
+          type: integer
+          format: int64
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+
     UserProfile:
       type: object
       properties:
@@ -1009,6 +1552,48 @@ components:
           type: integer
           format: int64
           nullable: true
+
+    RoleSummary:
+      type: object
+      properties:
+        roleId:
+          type: integer
+          format: int64
+        roleName:
+          type: string
+
+    RoleListResponse:
+      type: object
+      properties:
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoleSummary'
+
+    RefreshTokenSummary:
+      type: object
+      properties:
+        refreshTokenId:
+          type: integer
+          format: int64
+        userId:
+          type: integer
+          format: int64
+        tokenHash:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        revokedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        active:
+          type: boolean
 
     UserListResponse:
       type: object
@@ -1209,7 +1794,28 @@ components:
         isActive:
           type: boolean
 
-    TargetHoldingItem:
+    ModelPortfolioHoldingSummary:
+      type: object
+      properties:
+        modelPortfolioId:
+          type: integer
+          format: int64
+        instrumentId:
+          type: integer
+          format: int64
+        targetWeightPct:
+          type: number
+          format: float
+
+    ModelPortfolioHoldingListResponse:
+      type: object
+      properties:
+        holdings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelPortfolioHoldingSummary'
+
+    CreateModelPortfolioHoldingRequest:
       type: object
       required: [instrumentId, targetWeightPct]
       properties:
@@ -1220,25 +1826,12 @@ components:
           type: number
           format: float
 
-    TargetHoldingListRequest:
-      type: object
-      required: [holdings]
-      properties:
-        holdings:
-          type: array
-          items:
-            $ref: '#/components/schemas/TargetHoldingItem'
-
-    TargetHoldingListResponse:
+    UpdateModelPortfolioHoldingRequest:
       type: object
       properties:
-        portfolioId:
-          type: integer
-          format: int64
-        holdings:
-          type: array
-          items:
-            $ref: '#/components/schemas/TargetHoldingItem'
+        targetWeightPct:
+          type: number
+          format: float
 
     InstrumentSummary:
       type: object
@@ -1407,6 +2000,17 @@ components:
         suggestedAt:
           type: string
           format: date-time
+        notes:
+          type: string
+          nullable: true
+
+    RefreshTokenListResponse:
+      type: object
+      properties:
+        refreshTokens:
+          type: array
+          items:
+            $ref: '#/components/schemas/RefreshTokenSummary'
 
     TradeSuggestionListResponse:
       type: object
@@ -1583,4 +2187,3 @@ components:
           items:
             type: object
             additionalProperties: true
-
