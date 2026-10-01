@@ -7,9 +7,8 @@ import com.neueda.leap.dto.ClientResponseDto;
 import com.neueda.leap.dto.CreateClientRequestDto;
 import com.neueda.leap.dto.UpdateClientRequestDto;
 import com.neueda.leap.service.ClientService;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,8 +28,8 @@ public class ClientController {
     }
 
     @GetMapping("/clients")
-    public ClientListResponseDto listClients(@AuthenticationPrincipal Jwt jwt) {
-        SecurityRoleSupport.requireAnyRole(jwt, "ADMIN");
+    @PreAuthorize("hasRole('ADMIN')")
+    public ClientListResponseDto listClients() {
         return ClientListResponseDto.fromEntities(clientService.listClients());
     }
 
