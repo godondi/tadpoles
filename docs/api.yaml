@@ -3,9 +3,11 @@ info:
   title: Tadpoles API Starter
   version: 1.0.0
   description: >-
-    Starter OpenAPI contract for the Tadpoles Spring Boot application.
-    The API assumes JWT authentication, Spring Security authorization,
-    and role-aware responses for Admin, Auditor, Analyst, Advisor, and Client users.
+    OpenAPI contract for the Tadpoles Spring Boot application.
+    The spec includes the currently implemented backend routes (login, register,
+    clients, holdings, trades, instruments) and also retains planned routes that
+    will be implemented later. JWT authentication is required for all protected
+    routes; role checks are applied only where the backend currently enforces them.
 servers:
   - url: /api
     description: Application API root
@@ -46,9 +48,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthTokens'
+                $ref: '#/components/schemas/RegisterUserResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
 
@@ -71,14 +77,16 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthTokens'
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
 
   /auth/refresh:
     post:
       tags: [Authentication]
-      summary: Exchange a refresh token for a new access token
+      summary: "Planned: exchange a refresh token for a new access token"
       operationId: refreshToken
       x-required-roles: []
       security: []
@@ -95,13 +103,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthTokens'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /auth/logout:
     post:
       tags: [Authentication]
-      summary: Revoke the current refresh token
+      summary: "Planned: revoke the current refresh token"
       operationId: logout
       x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
       requestBody:
@@ -113,8 +125,12 @@ paths:
       responses:
         '204':
           description: Token revoked
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /users/me:
     get:
@@ -163,6 +179,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
     patch:
@@ -183,6 +201,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -207,6 +229,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /advisors:
     get:
@@ -221,6 +251,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdvisorListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     post:
       tags: [Advisors]
       summary: Create an advisor record
@@ -239,6 +273,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdvisorSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /advisors/{advisorId}:
     parameters:
@@ -255,6 +295,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdvisorSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     patch:
       tags: [Advisors]
       summary: Update advisor metadata
@@ -273,6 +317,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdvisorSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /advisors/{advisorId}/clients:
     parameters:
@@ -289,13 +341,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ClientListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /clients:
     get:
       tags: [Clients]
       summary: List clients
       operationId: listClients
-      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR]
+      x-required-roles: [ADMIN]
       responses:
         '200':
           description: Client list
@@ -303,11 +359,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ClientListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     post:
       tags: [Clients]
       summary: Create a client record
       operationId: createClient
-      x-required-roles: [ADMIN, ADVISOR]
       requestBody:
         required: true
         content:
@@ -321,6 +380,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ClientSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /clients/{clientId}:
     parameters:
@@ -329,7 +394,6 @@ paths:
       tags: [Clients]
       summary: Get client details
       operationId: getClientById
-      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
       responses:
         '200':
           description: Client summary
@@ -337,11 +401,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ClientSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     patch:
       tags: [Clients]
       summary: Update a client record
       operationId: updateClient
-      x-required-roles: [ADMIN, ADVISOR]
       requestBody:
         required: true
         content:
@@ -355,6 +422,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ClientSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /clients/{clientId}/balance:
     parameters:
@@ -363,7 +436,6 @@ paths:
       tags: [Clients]
       summary: Get the client cash balance
       operationId: getClientBalance
-      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
       responses:
         '200':
           description: Client cash balance
@@ -371,6 +443,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ClientBalanceResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /clients/{clientId}/advisor:
     parameters:
@@ -435,7 +511,6 @@ paths:
       tags: [Clients]
       summary: Get current holdings for a client
       operationId: getClientHoldings
-      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
       responses:
         '200':
           description: Holding list
@@ -443,6 +518,81 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HoldingListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Clients]
+      summary: Create a holding for a client
+      operationId: createClientHolding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClientHoldingRequest'
+      responses:
+        '201':
+          description: Holding created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HoldingSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /clients/{clientId}/holdings/{holdingId}:
+    parameters:
+      - $ref: '#/components/parameters/ClientId'
+      - name: holdingId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      tags: [Clients]
+      summary: Get a holding by ID
+      operationId: getClientHolding
+      responses:
+        '200':
+          description: Holding record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HoldingSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Clients]
+      summary: Update a holding
+      operationId: updateClientHolding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClientHoldingRequest'
+      responses:
+        '200':
+          description: Holding updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HoldingSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /clients/{clientId}/trades:
     parameters:
@@ -451,7 +601,6 @@ paths:
       tags: [Clients]
       summary: List trades for a client
       operationId: listClientTrades
-      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
       responses:
         '200':
           description: Trade history
@@ -459,17 +608,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TradeListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
-      tags: [Trades]
+      tags: [Clients]
       summary: Submit an actual trade for a client
       operationId: createClientTrade
-      x-required-roles: [CLIENT]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TradeRequest'
+              $ref: '#/components/schemas/CreateClientTradeRequest'
       responses:
         '201':
           description: Trade created
@@ -477,6 +629,83 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TradeSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /clients/{clientId}/trades/{tradeId}:
+    parameters:
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/TradeId'
+    get:
+      tags: [Clients]
+      summary: Get a trade by ID for a client
+      operationId: getClientTrade
+      responses:
+        '200':
+          description: Trade summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Clients]
+      summary: Update a client trade
+      operationId: updateClientTrade
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClientTradeRequest'
+      responses:
+        '200':
+          description: Trade updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /clients/{clientId}/trades/{tradeId}/fill:
+    parameters:
+      - $ref: '#/components/parameters/ClientId'
+      - $ref: '#/components/parameters/TradeId'
+    post:
+      tags: [Clients]
+      summary: Fill a client trade order
+      operationId: fillClientTrade
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FillOrderRequest'
+      responses:
+        '200':
+          description: Order filled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderFillResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /advisors/{advisorId}/clients/{clientId}/trade-suggestions:
     parameters:
@@ -569,6 +798,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ModelPortfolioListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     post:
       tags: [Portfolios]
       summary: Create a model portfolio
@@ -587,6 +820,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ModelPortfolioSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /model-portfolios/{portfolioId}:
     parameters:
@@ -603,6 +842,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ModelPortfolioSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     patch:
       tags: [Portfolios]
       summary: Update portfolio metadata
@@ -621,6 +864,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ModelPortfolioSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /model-portfolios/{portfolioId}/holdings:
     parameters:
@@ -637,6 +888,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TargetHoldingListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     put:
       tags: [Portfolios]
       summary: Replace target holdings for a model portfolio
@@ -655,13 +910,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TargetHoldingListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /instruments:
     get:
       tags: [Instruments]
       summary: List instruments
       operationId: listInstruments
-      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
       responses:
         '200':
           description: Instrument list
@@ -669,11 +931,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/InstrumentListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     post:
       tags: [Instruments]
       summary: Create an instrument
       operationId: createInstrument
-      x-required-roles: [ADMIN]
       requestBody:
         required: true
         content:
@@ -687,6 +950,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/InstrumentSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /instruments/{instrumentId}:
     parameters:
@@ -695,7 +964,6 @@ paths:
       tags: [Instruments]
       summary: Get instrument details
       operationId: getInstrumentById
-      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
       responses:
         '200':
           description: Instrument summary
@@ -703,11 +971,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/InstrumentSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     patch:
       tags: [Instruments]
       summary: Update instrument metadata
       operationId: updateInstrument
-      x-required-roles: [ADMIN]
       requestBody:
         required: true
         content:
@@ -721,6 +992,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/InstrumentSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /trades:
     get:
@@ -735,6 +1014,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TradeListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /trades/{tradeId}:
     parameters:
@@ -751,6 +1034,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TradeSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     patch:
       tags: [Trades]
       summary: Review or update trade status
@@ -769,6 +1056,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TradeSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /audit-logs:
     get:
@@ -783,6 +1078,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuditLogListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /analytics/summary:
     get:
@@ -797,6 +1096,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AnalyticsSummaryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /analytics/advisors/{advisorId}:
     parameters:
@@ -813,6 +1116,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AnalyticsSummaryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /analytics/clients/{clientId}:
     parameters:
@@ -829,6 +1138,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AnalyticsSummaryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /analytics/model-portfolios/{portfolioId}:
     parameters:
@@ -845,6 +1160,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AnalyticsSummaryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /dashboard/me:
     get:
@@ -859,6 +1180,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DashboardResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
 components:
   securitySchemes:
@@ -914,12 +1239,34 @@ components:
   responses:
     BadRequest:
       description: Invalid or malformed request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
     Unauthorized:
       description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Authenticated but missing the required role
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
     NotFound:
       description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
     Conflict:
       description: Duplicate resource or conflicting state
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
 
   schemas:
     LoginRequest:
@@ -932,6 +1279,20 @@ components:
           type: string
           format: password
 
+    LoginResponse:
+      type: object
+      required: [token, tokenType, expiresIn]
+      properties:
+        token:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+        expiresIn:
+          type: integer
+          format: int64
+          example: 3600
+
     RefreshTokenRequest:
       type: object
       required: [refreshToken]
@@ -941,28 +1302,44 @@ components:
 
     RegisterUserRequest:
       type: object
-      required: [username, password, displayName]
+      required: [username, password, displayName, roleType]
       properties:
         username:
           type: string
         email:
           type: string
           format: email
+          nullable: true
         password:
           type: string
           format: password
         displayName:
           type: string
-        roles:
-          type: array
-          items:
-            type: string
-          description: Roles assigned at creation time
-        advisorId:
+        roleType:
+          type: string
+          enum: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT, COMPLIANCE, SUPPORT, OPERATIONS, REPORTING, GUEST]
+        advisorName:
+          type: string
+          nullable: true
+        enabled:
+          type: boolean
+          nullable: true
+          default: true
+
+    RegisterUserResponse:
+      type: object
+      required: [userId, username, displayName, role]
+      properties:
+        userId:
           type: integer
           format: int64
-          nullable: true
-        clientId:
+        username:
+          type: string
+        displayName:
+          type: string
+        role:
+          type: string
+        advisorId:
           type: integer
           format: int64
           nullable: true
@@ -981,6 +1358,25 @@ components:
         expiresInSeconds:
           type: integer
           format: int64
+
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+          format: int32
+        error:
+          type: string
+        message:
+          type: string
+          nullable: true
+        path:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+          nullable: true
 
     UserProfile:
       type: object
@@ -1337,6 +1733,14 @@ components:
         instrumentId:
           type: integer
           format: int64
+        submittedByUserId:
+          type: integer
+          format: int64
+          nullable: true
+        approvedByUserId:
+          type: integer
+          format: int64
+          nullable: true
         tradeType:
           type: string
           enum: [BUY, SELL]
@@ -1355,6 +1759,133 @@ components:
           type: string
           format: date-time
           nullable: true
+        reason:
+          type: string
+          nullable: true
+
+    CreateClientHoldingRequest:
+      type: object
+      required: [instrumentId, quantity, asOfDate]
+      properties:
+        instrumentId:
+          type: integer
+          format: int64
+        quantity:
+          type: number
+          format: double
+        asOfDate:
+          type: string
+          format: date
+
+    UpdateClientHoldingRequest:
+      type: object
+      properties:
+        quantity:
+          type: number
+          format: double
+        asOfDate:
+          type: string
+          format: date
+
+    CreateClientTradeRequest:
+      type: object
+      required: [instrumentId, tradeType, quantity, price, tradeDate]
+      properties:
+        instrumentId:
+          type: integer
+          format: int64
+        submittedByUserId:
+          type: integer
+          format: int64
+          nullable: true
+        approvedByUserId:
+          type: integer
+          format: int64
+          nullable: true
+        tradeType:
+          type: string
+          enum: [BUY, SELL]
+        quantity:
+          type: number
+          format: double
+        price:
+          type: number
+          format: double
+        tradeDate:
+          type: string
+          format: date
+        status:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+
+    UpdateClientTradeRequest:
+      type: object
+      properties:
+        submittedByUserId:
+          type: integer
+          format: int64
+          nullable: true
+        approvedByUserId:
+          type: integer
+          format: int64
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        executedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+
+    FillOrderRequest:
+      type: object
+      properties:
+        approvedByUserId:
+          type: integer
+          format: int64
+          nullable: true
+        price:
+          type: number
+          format: double
+          nullable: true
+        executedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+
+    OrderFillResponse:
+      type: object
+      required: [clientId, cashBalance, holdingId, holdingQuantity, tradeId, tradeStatus, executedAt]
+      properties:
+        clientId:
+          type: integer
+          format: int64
+        cashBalance:
+          type: number
+          format: double
+        holdingId:
+          type: integer
+          format: int64
+        holdingQuantity:
+          type: number
+          format: double
+        tradeId:
+          type: integer
+          format: int64
+        tradeStatus:
+          type: string
+        executedAt:
+          type: string
+          format: date-time
 
     TradeSuggestionRequest:
       type: object
