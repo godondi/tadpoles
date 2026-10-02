@@ -7,9 +7,8 @@ import com.neueda.leap.dto.ClientResponseDto;
 import com.neueda.leap.dto.CreateClientRequestDto;
 import com.neueda.leap.dto.UpdateClientRequestDto;
 import com.neueda.leap.service.ClientService;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,25 +28,28 @@ public class ClientController {
     }
 
     @GetMapping("/clients")
-    public ClientListResponseDto listClients(@AuthenticationPrincipal Jwt jwt) {
-        SecurityRoleSupport.requireAnyRole(jwt, "ADMIN");
+    @PreAuthorize("hasRole('ADMIN')")
+    public ClientListResponseDto listClients() {
         return ClientListResponseDto.fromEntities(clientService.listClients());
     }
 
     @PostMapping("/clients")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("isAuthenticated()")
     public ClientResponseDto createClient(@RequestBody CreateClientRequestDto request) {
         Client client = clientService.createClient(request);
         return ClientResponseDto.fromEntity(client);
     }
 
     @GetMapping("/clients/{clientId}")
+    @PreAuthorize("isAuthenticated()")
     public ClientResponseDto getClient(@PathVariable Integer clientId) {
         Client client = clientService.getClient(clientId);
         return ClientResponseDto.fromEntity(client);
     }
 
     @PatchMapping("/clients/{clientId}")
+    @PreAuthorize("isAuthenticated()")
     public ClientResponseDto updateClient(
             @PathVariable Integer clientId,
             @RequestBody UpdateClientRequestDto request
@@ -57,6 +59,7 @@ public class ClientController {
     }
 
     @GetMapping("/clients/{clientId}/balance")
+    @PreAuthorize("isAuthenticated()")
     public ClientBalanceResponseDto getClientBalance(@PathVariable Integer clientId) {
         return new ClientBalanceResponseDto(clientId, clientService.getClientBalance(clientId));
     }

@@ -13,11 +13,11 @@ public class AppUser {
     private String passwordHash;
     private String displayName;
     private Boolean enabled;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
     private List<String> roles;
     private Integer advisorId;
     private Integer clientId;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
     public Integer getUserId() {
         return userId;
     }
@@ -54,18 +54,6 @@ public class AppUser {
     public void setEnabled(Boolean enabled) {
         this.enabled = enabled;
     }
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
     public List<String> getRoles() {
         return roles;
     }
@@ -83,5 +71,17 @@ public class AppUser {
     }
     public void setClientId(Integer clientId) {
         this.clientId = clientId;
+    }
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

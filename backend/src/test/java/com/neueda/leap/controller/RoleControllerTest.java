@@ -1,7 +1,7 @@
 package com.neueda.leap.controller;
 
+import static com.neueda.leap.support.TestSecurityUtils.jwtWithRoles;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -34,7 +34,7 @@ class RoleControllerTest {
         when(roleService.listRoles()).thenReturn(List.of(buildRole()));
 
         mockMvc.perform(get("/api/roles")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN")))))
+                        .with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.roles[0].roleId").value(1))
                 .andExpect(jsonPath("$.roles[0].roleName").value("ADMIN"));
@@ -45,7 +45,7 @@ class RoleControllerTest {
         when(roleService.getRole(1)).thenReturn(buildRole());
 
         mockMvc.perform(get("/api/roles/1")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN")))))
+                        .with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.roleId").value(1))
                 .andExpect(jsonPath("$.roleName").value("ADMIN"));
@@ -54,9 +54,9 @@ class RoleControllerTest {
     @Test
     void listRolesReturnsUnauthorizedWhenAdminRoleMissing() throws Exception {
         mockMvc.perform(get("/api/roles")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("AUDITOR")))))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("ADMIN role required"));
+                        .with(jwtWithRoles("AUDITOR")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Access Denied"));
     }
 
     private Role buildRole() {

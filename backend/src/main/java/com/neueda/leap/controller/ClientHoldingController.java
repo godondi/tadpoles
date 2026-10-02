@@ -7,6 +7,7 @@ import com.neueda.leap.dto.CreateClientHoldingRequestDto;
 import com.neueda.leap.dto.UpdateClientHoldingRequestDto;
 import com.neueda.leap.service.ClientHoldingService;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,12 +27,14 @@ public class ClientHoldingController {
     }
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ClientHoldingListResponseDto listHoldings(@PathVariable Integer clientId) {
         return ClientHoldingListResponseDto.fromEntities(clientHoldingService.listClientHoldings(clientId));
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("isAuthenticated()")
     public ClientHoldingResponseDto createHolding(
             @PathVariable Integer clientId,
             @RequestBody CreateClientHoldingRequestDto request
@@ -41,6 +44,7 @@ public class ClientHoldingController {
     }
 
     @GetMapping("/{holdingId}")
+    @PreAuthorize("isAuthenticated()")
     public ClientHoldingResponseDto getHolding(
             @PathVariable Integer clientId,
             @PathVariable Integer holdingId
@@ -50,6 +54,7 @@ public class ClientHoldingController {
     }
 
     @PatchMapping("/{holdingId}")
+    @PreAuthorize("isAuthenticated()")
     public ClientHoldingResponseDto updateHolding(
             @PathVariable Integer clientId,
             @PathVariable Integer holdingId,
@@ -59,4 +64,3 @@ public class ClientHoldingController {
         return ClientHoldingResponseDto.fromEntity(holding);
     }
 }
-

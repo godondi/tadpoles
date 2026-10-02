@@ -6,6 +6,7 @@ import com.neueda.leap.dto.AppUserResponseDto;
 import com.neueda.leap.dto.SetAppUserRolesRequestDto;
 import com.neueda.leap.dto.UpdateAppUserRequestDto;
 import com.neueda.leap.service.AppUserService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,45 +28,40 @@ public class AppUserController {
     }
 
     @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
     public AppUserResponseDto getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
-        SecurityRoleSupport.requireAuthenticated(jwt);
         return AppUserResponseDto.fromEntity(resolveCurrentUser(jwt));
     }
 
     @GetMapping
-    public AppUserListResponseDto listUsers(@AuthenticationPrincipal Jwt jwt) {
-        SecurityRoleSupport.requireAnyRole(jwt, "ADMIN");
+    @PreAuthorize("hasRole('ADMIN')")
+    public AppUserListResponseDto listUsers() {
         return AppUserListResponseDto.fromEntities(appUserService.listUsers());
     }
 
     @GetMapping("/{userId}")
-    public AppUserResponseDto getUser(
-            @AuthenticationPrincipal Jwt jwt,
-            @PathVariable Integer userId
-    ) {
-        SecurityRoleSupport.requireAnyRole(jwt, "ADMIN");
+    @PreAuthorize("hasRole('ADMIN')")
+    public AppUserResponseDto getUser(@PathVariable Integer userId) {
         AppUser user = appUserService.getUser(userId);
         return AppUserResponseDto.fromEntity(user);
     }
 
     @PatchMapping("/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public AppUserResponseDto updateUser(
-            @AuthenticationPrincipal Jwt jwt,
             @PathVariable Integer userId,
             @RequestBody UpdateAppUserRequestDto request
     ) {
-        SecurityRoleSupport.requireAnyRole(jwt, "ADMIN");
         AppUser user = appUserService.updateUser(userId, request);
         return AppUserResponseDto.fromEntity(user);
     }
 
     @PutMapping("/{userId}/roles")
+    @PreAuthorize("hasRole('ADMIN')")
     public AppUserResponseDto setUserRoles(
-            @AuthenticationPrincipal Jwt jwt,
             @PathVariable Integer userId,
             @RequestBody SetAppUserRolesRequestDto request
     ) {
-        SecurityRoleSupport.requireAnyRole(jwt, "ADMIN");
         AppUser user = appUserService.setUserRoles(userId, request);
         return AppUserResponseDto.fromEntity(user);
     }

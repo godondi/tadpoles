@@ -10,6 +10,7 @@ import com.neueda.leap.dto.UpdateClientTradeRequestDto;
 import com.neueda.leap.service.ClientTradeService;
 import com.neueda.leap.service.OrderFillService;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,12 +32,14 @@ public class ClientTradeController {
     }
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ClientTradeListResponseDto listTrades(@PathVariable Integer clientId) {
         return ClientTradeListResponseDto.fromEntities(clientTradeService.listClientTrades(clientId));
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("isAuthenticated()")
     public ClientTradeResponseDto createTrade(
             @PathVariable Integer clientId,
             @RequestBody CreateClientTradeRequestDto request
@@ -46,6 +49,7 @@ public class ClientTradeController {
     }
 
     @GetMapping("/{tradeId}")
+    @PreAuthorize("isAuthenticated()")
     public ClientTradeResponseDto getTrade(
             @PathVariable Integer clientId,
             @PathVariable Integer tradeId
@@ -55,6 +59,7 @@ public class ClientTradeController {
     }
 
     @PatchMapping("/{tradeId}")
+    @PreAuthorize("isAuthenticated()")
     public ClientTradeResponseDto updateTrade(
             @PathVariable Integer clientId,
             @PathVariable Integer tradeId,
@@ -65,6 +70,7 @@ public class ClientTradeController {
     }
 
     @PostMapping("/{tradeId}/fill")
+    @PreAuthorize("isAuthenticated()")
     public OrderFillResponseDto fillTrade(
             @PathVariable Integer clientId,
             @PathVariable Integer tradeId,
@@ -73,4 +79,3 @@ public class ClientTradeController {
         return orderFillService.fillTrade(clientId, tradeId, request);
     }
 }
-

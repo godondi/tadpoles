@@ -9,8 +9,7 @@ import com.neueda.leap.dto.RefreshTokenRequestDto;
 import com.neueda.leap.dto.RefreshTokenResponseDto;
 import com.neueda.leap.service.RefreshTokenService;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,42 +34,33 @@ public class RefreshTokenController {
 
     @PostMapping("/auth/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void logout(
-            @AuthenticationPrincipal Jwt jwt,
-            @RequestBody RefreshTokenRequestDto request
-    ) {
-        SecurityRoleSupport.requireAuthenticated(jwt);
+    @PreAuthorize("isAuthenticated()")
+    public void logout(@RequestBody RefreshTokenRequestDto request) {
         refreshTokenService.revokeRefreshToken(request);
     }
 
     @GetMapping("/users/{userId}/refresh-tokens")
+    @PreAuthorize("hasRole('ADMIN')")
     public RefreshTokenListResponseDto listUserRefreshTokens(
-            @AuthenticationPrincipal Jwt jwt,
             @PathVariable Integer userId
     ) {
-        SecurityRoleSupport.requireAnyRole(jwt, "ADMIN");
         return RefreshTokenListResponseDto.fromEntities(refreshTokenService.listUserRefreshTokens(userId));
     }
 
     @GetMapping("/refresh-tokens/{refreshTokenId}")
-    public RefreshTokenResponseDto getRefreshToken(
-            @AuthenticationPrincipal Jwt jwt,
-            @PathVariable Integer refreshTokenId
-    ) {
-        SecurityRoleSupport.requireAnyRole(jwt, "ADMIN");
+    @PreAuthorize("hasRole('ADMIN')")
+    public RefreshTokenResponseDto getRefreshToken(@PathVariable Integer refreshTokenId) {
         RefreshToken refreshToken = refreshTokenService.getRefreshToken(refreshTokenId);
         return RefreshTokenResponseDto.fromEntity(refreshToken);
     }
 
     @PostMapping("/users/{userId}/refresh-tokens")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('ADMIN')")
     public IssuedRefreshTokenResponseDto issueRefreshToken(
-            @AuthenticationPrincipal Jwt jwt,
             @PathVariable Integer userId,
             @RequestBody(required = false) CreateRefreshTokenRequestDto request
     ) {
-        SecurityRoleSupport.requireAnyRole(jwt, "ADMIN");
         return refreshTokenService.issueRefreshToken(userId, request);
     }
 }
-

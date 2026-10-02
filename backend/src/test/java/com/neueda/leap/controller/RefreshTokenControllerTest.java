@@ -1,10 +1,10 @@
 package com.neueda.leap.controller;
 
+import static com.neueda.leap.support.TestSecurityUtils.jwtWithRoles;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -63,7 +63,7 @@ class RefreshTokenControllerTest {
         doNothing().when(refreshTokenService).revokeRefreshToken(any());
 
         mockMvc.perform(post("/api/auth/logout")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN"))))
+                        .with(jwtWithRoles("ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -78,7 +78,7 @@ class RefreshTokenControllerTest {
         when(refreshTokenService.listUserRefreshTokens(1)).thenReturn(List.of(buildRefreshToken()));
 
         mockMvc.perform(get("/api/users/1/refresh-tokens")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN")))))
+                        .with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.refreshTokens[0].refreshTokenId").value(21))
                 .andExpect(jsonPath("$.refreshTokens[0].active").value(true));
@@ -89,7 +89,7 @@ class RefreshTokenControllerTest {
         when(refreshTokenService.getRefreshToken(21)).thenReturn(buildRefreshToken());
 
         mockMvc.perform(get("/api/refresh-tokens/21")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN")))))
+                        .with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.refreshTokenId").value(21))
                 .andExpect(jsonPath("$.userId").value(1));
@@ -108,7 +108,7 @@ class RefreshTokenControllerTest {
         ));
 
         mockMvc.perform(post("/api/users/1/refresh-tokens")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN"))))
+                        .with(jwtWithRoles("ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -123,9 +123,9 @@ class RefreshTokenControllerTest {
     @Test
     void listUserRefreshTokensReturnsUnauthorizedWhenAdminRoleMissing() throws Exception {
         mockMvc.perform(get("/api/users/1/refresh-tokens")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("CLIENT")))))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("ADMIN role required"));
+                        .with(jwtWithRoles("CLIENT")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Access Denied"));
     }
 
     private RefreshToken buildRefreshToken() {

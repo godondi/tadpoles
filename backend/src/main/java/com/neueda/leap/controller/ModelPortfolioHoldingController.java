@@ -7,6 +7,7 @@ import com.neueda.leap.dto.ModelPortfolioHoldingResponseDto;
 import com.neueda.leap.dto.UpdateModelPortfolioHoldingRequestDto;
 import com.neueda.leap.service.ModelPortfolioHoldingService;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,7 +27,10 @@ public class ModelPortfolioHoldingController {
     }
 
     @GetMapping
-    public ModelPortfolioHoldingListResponseDto listModelPortfolioHoldings(@PathVariable Integer modelPortfolioId) {
+    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR', 'ANALYST', 'ADVISOR', 'CLIENT')")
+    public ModelPortfolioHoldingListResponseDto listModelPortfolioHoldings(
+            @PathVariable Integer modelPortfolioId
+    ) {
         return ModelPortfolioHoldingListResponseDto.fromEntities(
                 modelPortfolioHoldingService.listModelPortfolioHoldings(modelPortfolioId)
         );
@@ -34,6 +38,7 @@ public class ModelPortfolioHoldingController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('ADMIN')")
     public ModelPortfolioHoldingResponseDto createModelPortfolioHolding(
             @PathVariable Integer modelPortfolioId,
             @RequestBody CreateModelPortfolioHoldingRequestDto request
@@ -43,6 +48,7 @@ public class ModelPortfolioHoldingController {
     }
 
     @GetMapping("/{instrumentId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR', 'ANALYST', 'ADVISOR', 'CLIENT')")
     public ModelPortfolioHoldingResponseDto getModelPortfolioHolding(
             @PathVariable Integer modelPortfolioId,
             @PathVariable Integer instrumentId
@@ -52,6 +58,7 @@ public class ModelPortfolioHoldingController {
     }
 
     @PatchMapping("/{instrumentId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ModelPortfolioHoldingResponseDto updateModelPortfolioHolding(
             @PathVariable Integer modelPortfolioId,
             @PathVariable Integer instrumentId,

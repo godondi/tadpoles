@@ -1,9 +1,9 @@
 package com.neueda.leap.controller;
 
+import static com.neueda.leap.support.TestSecurityUtils.jwtWithRoles;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -41,7 +41,7 @@ class TradeSuggestionControllerTest {
         when(tradeSuggestionService.createTradeSuggestion(eq(3), eq(7), any())).thenReturn(buildSuggestion());
 
         mockMvc.perform(post("/api/advisors/3/clients/7/trade-suggestions")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADVISOR"))))
+                        .with(jwtWithRoles("ADVISOR"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -62,7 +62,7 @@ class TradeSuggestionControllerTest {
         when(tradeSuggestionService.listClientTradeSuggestions(7)).thenReturn(List.of(buildSuggestion()));
 
         mockMvc.perform(get("/api/clients/7/trade-suggestions")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ANALYST")))))
+                        .with(jwtWithRoles("ANALYST")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.suggestions[0].suggestionId").value(15))
                 .andExpect(jsonPath("$.suggestions[0].tradeType").value("BUY"));
@@ -73,7 +73,7 @@ class TradeSuggestionControllerTest {
         when(tradeSuggestionService.getTradeSuggestion(15)).thenReturn(buildSuggestion());
 
         mockMvc.perform(get("/api/trade-suggestions/15")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("CLIENT")))))
+                        .with(jwtWithRoles("CLIENT")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.suggestionId").value(15))
                 .andExpect(jsonPath("$.clientId").value(7));
@@ -87,7 +87,7 @@ class TradeSuggestionControllerTest {
         when(tradeSuggestionService.updateTradeSuggestion(eq(15), any())).thenReturn(updated);
 
         mockMvc.perform(patch("/api/trade-suggestions/15")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("CLIENT"))))
+                        .with(jwtWithRoles("CLIENT"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -103,7 +103,7 @@ class TradeSuggestionControllerTest {
     @Test
     void createTradeSuggestionReturnsUnauthorizedWhenAdvisorRoleMissing() throws Exception {
         mockMvc.perform(post("/api/advisors/3/clients/7/trade-suggestions")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("CLIENT"))))
+                        .with(jwtWithRoles("CLIENT"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -112,8 +112,16 @@ class TradeSuggestionControllerTest {
                                   "quantity": 5.5
                                 }
                                 """))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("ADVISOR role required"));
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Access Denied"));
+    }
+
+    @Test
+    void listClientTradeSuggestionsReturnsUnauthorizedWhenRoleMissing() throws Exception {
+        mockMvc.perform(get("/api/clients/7/trade-suggestions")
+                        .with(jwtWithRoles("GUEST")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Access Denied"));
     }
 
     private TradeSuggestion buildSuggestion() {

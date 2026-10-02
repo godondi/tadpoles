@@ -1,5 +1,6 @@
 package com.neueda.leap.controller;
 
+import static com.neueda.leap.support.TestSecurityUtils.jwtWithRoles;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -9,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.neueda.leap.config.SecurityConfig;
 import com.neueda.leap.domain.ModelPortfolioHolding;
 import com.neueda.leap.exception.GlobalExceptionHandler;
 import com.neueda.leap.service.ModelPortfolioHoldingService;
@@ -16,16 +18,16 @@ import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(ModelPortfolioHoldingController.class)
-@AutoConfigureMockMvc(addFilters = false)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, SecurityConfig.class})
+@TestPropertySource(properties = "jwt.secret=test-jwt-secret-test-jwt-secret-123456")
 class ModelPortfolioHoldingControllerTest {
     @Autowired
     private MockMvc mockMvc;
@@ -37,7 +39,8 @@ class ModelPortfolioHoldingControllerTest {
     void listModelPortfolioHoldingsReturnsJsonResponse() throws Exception {
         when(modelPortfolioHoldingService.listModelPortfolioHoldings(5)).thenReturn(List.of(buildHolding()));
 
-        mockMvc.perform(get("/api/model-portfolios/5/holdings"))
+        mockMvc.perform(get("/api/model-portfolios/5/holdings")
+                        .with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.holdings[0].modelPortfolioId").value(5))
                 .andExpect(jsonPath("$.holdings[0].targetWeightPct").value(60.0));
@@ -48,6 +51,7 @@ class ModelPortfolioHoldingControllerTest {
         when(modelPortfolioHoldingService.createModelPortfolioHolding(eq(5), any())).thenReturn(buildHolding());
 
         mockMvc.perform(post("/api/model-portfolios/5/holdings")
+                        .with(jwtWithRoles("ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -64,7 +68,8 @@ class ModelPortfolioHoldingControllerTest {
     void getModelPortfolioHoldingReturnsJsonResponse() throws Exception {
         when(modelPortfolioHoldingService.getModelPortfolioHolding(5, 11)).thenReturn(buildHolding());
 
-        mockMvc.perform(get("/api/model-portfolios/5/holdings/11"))
+        mockMvc.perform(get("/api/model-portfolios/5/holdings/11")
+                        .with(jwtWithRoles("CLIENT")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.modelPortfolioId").value(5))
                 .andExpect(jsonPath("$.instrumentId").value(11));
@@ -77,6 +82,7 @@ class ModelPortfolioHoldingControllerTest {
         when(modelPortfolioHoldingService.updateModelPortfolioHolding(eq(5), eq(11), any())).thenReturn(updated);
 
         mockMvc.perform(patch("/api/model-portfolios/5/holdings/11")
+                        .with(jwtWithRoles("ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -92,7 +98,8 @@ class ModelPortfolioHoldingControllerTest {
         when(modelPortfolioHoldingService.listModelPortfolioHoldings(0))
                 .thenThrow(new IllegalArgumentException("Model portfolio id must be a positive integer."));
 
-        mockMvc.perform(get("/api/model-portfolios/0/holdings"))
+        mockMvc.perform(get("/api/model-portfolios/0/holdings")
+                        .with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Model portfolio id must be a positive integer."));
     }

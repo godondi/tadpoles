@@ -1,7 +1,7 @@
 package com.neueda.leap.controller;
 
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static com.neueda.leap.support.TestSecurityUtils.jwtWithRoles;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -20,10 +20,12 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(ClientController.class)
 @Import({GlobalExceptionHandler.class, SecurityConfig.class})
+@TestPropertySource(properties = "jwt.secret=test-jwt-secret-test-jwt-secret-123456")
 class ClientControllerTest {
     @Autowired
     private MockMvc mockMvc;
@@ -37,7 +39,7 @@ class ClientControllerTest {
         when(clientService.listClients()).thenReturn(List.of(client));
 
         mockMvc.perform(get("/api/clients")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN")))))
+                        .with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.clients[0].clientId").value(7))
                 .andExpect(jsonPath("$.clients[0].clientName").value("Alice Investor"))
@@ -50,6 +52,7 @@ class ClientControllerTest {
         when(clientService.createClient(org.mockito.ArgumentMatchers.any())).thenReturn(client);
 
         mockMvc.perform(post("/api/clients")
+                        .with(jwtWithRoles("ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -70,7 +73,8 @@ class ClientControllerTest {
         Client client = buildClient();
         when(clientService.getClient(7)).thenReturn(client);
 
-        mockMvc.perform(get("/api/clients/7"))
+        mockMvc.perform(get("/api/clients/7")
+                        .with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.clientId").value(7))
                 .andExpect(jsonPath("$.clientName").value("Alice Investor"))
@@ -87,6 +91,7 @@ class ClientControllerTest {
                 .thenReturn(client);
 
         mockMvc.perform(patch("/api/clients/7")
+                        .with(jwtWithRoles("ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -102,7 +107,8 @@ class ClientControllerTest {
     void getClientBalanceReturnsJsonResponse() throws Exception {
         when(clientService.getClientBalance(7)).thenReturn(new BigDecimal("1200.50"));
 
-        mockMvc.perform(get("/api/clients/7/balance"))
+        mockMvc.perform(get("/api/clients/7/balance")
+                        .with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.clientId").value(7))
                 .andExpect(jsonPath("$.cashBalance").value(1200.5));
@@ -112,7 +118,8 @@ class ClientControllerTest {
     void getClientReturnsBadRequestForInvalidId() throws Exception {
         when(clientService.getClient(0)).thenThrow(new IllegalArgumentException("Client id must be a positive integer."));
 
-        mockMvc.perform(get("/api/clients/0"))
+        mockMvc.perform(get("/api/clients/0")
+                        .with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Client id must be a positive integer."));
     }
