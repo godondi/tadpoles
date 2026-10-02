@@ -25,7 +25,7 @@ pipeline {
         }
         stage('Database Integration Suite') {
             steps {
-                sh 'docker built -t tadpole-testing:latest -f testing/Dockerfile .'
+                sh 'docker build -t tadpole-testing:latest -f testing/Dockerfile .'
                 sh 'docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD":/workspace -w /workspace/testing tadpole-testing:latest mvn -B test'
             }
             post {
