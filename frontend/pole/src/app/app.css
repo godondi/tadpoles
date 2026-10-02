@@ -50,6 +50,21 @@ body {
   font-weight: 700;
   color: var(--primary-green);
   white-space: nowrap;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.logo:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.logo:focus-visible {
+  outline: 3px solid var(--primary-green);
+  outline-offset: 2px;
 }
 
 .search-container {
@@ -111,6 +126,26 @@ body {
   background-color: #6a9419;
 }
 
+.trades-btn {
+  background-color: var(--dark-green);
+  color: var(--white);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.trades-btn:hover {
+  background-color: #004c35;
+}
+
+.trades-btn:focus-visible {
+  outline: 3px solid var(--primary-green);
+  outline-offset: 2px;
+}
+
 .profile-section {
   position: relative;
 }
@@ -168,15 +203,25 @@ body {
 
 .menu-item {
   display: block;
+  width: 100%;
   padding: 0.75rem 1rem;
   color: var(--text-dark);
   text-decoration: none;
   transition: background-color 0.3s;
   font-size: 0.9rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
 }
 
 .menu-item:hover {
   background-color: var(--light-gray);
+}
+
+.menu-item:focus-visible {
+  outline: 2px solid var(--primary-green);
+  outline-offset: -2px;
 }
 
 .menu-item.logout {
@@ -485,6 +530,10 @@ a:focus-visible {
   background-color: #6a9419;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(118, 169, 35, 0.3);
+}
+
+.hidden {
+  display: none;
 }
 
 /* Responsive Design */

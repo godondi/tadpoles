@@ -1,9 +1,16 @@
 <nav class="navbar" role="navigation" aria-label="Main navigation">
   <div class="nav-container">
     <!-- Logo -->
-    <div class="logo" role="banner">
-      Pole Trading
-    </div>
+    <button
+      class="logo"
+      role="button"
+      (click)="goToHome()"
+      aria-label="Pole Trading Dashboard - Home"
+      type="button"
+      title="Go to home page"
+    >
+      📈 Pole Trading
+    </button>
 
     <!-- Search Bar -->
     <div class="search-container">
@@ -31,239 +38,46 @@
     <div class="nav-right">
       <button
         class="place-order-btn"
-        (click)="openOrderModal()"
         aria-label="Open place order dialog"
         type="button"
       >
         Place Order
       </button>
 
-      <!-- Profile -->
-      <div class="profile-section">
-        <button
-          class="profile-btn"
-          (click)="toggleProfileMenu()"
-          [attr.aria-expanded]="showProfileMenu()"
-          aria-haspopup="menu"
-          aria-label="Toggle profile menu"
-          type="button"
-        >
-          <span class="avatar" aria-hidden="true">{{ userProfile().avatar }}</span>
-          <span class="profile-name">{{ userProfile().name }}</span>
-        </button>
+      <button
+        class="trades-btn"
+        (click)="goToTrades()"
+        aria-label="View trades history"
+        type="button"
+      >
+        📊 Trades
+      </button>
 
-        <!-- Profile Dropdown -->
-        @if (showProfileMenu()) {
-          <div class="profile-menu" role="menu">
-            <div class="profile-info" role="menuitem">
-              <div class="profile-email">{{ userProfile().email }}</div>
-            </div>
-            <hr style="margin: 0.5rem 0; border: none; border-top: 1px solid #ddd;" aria-hidden="true" />
-            <a href="#" class="menu-item" role="menuitem">Account Settings</a>
-            <a href="#" class="menu-item" role="menuitem">Portfolio</a>
-            <a href="#" class="menu-item" role="menuitem">Help & Support</a>
-            <hr style="margin: 0.5rem 0; border: none; border-top: 1px solid #ddd;" aria-hidden="true" />
-            <a href="#" class="menu-item logout" role="menuitem">Logout</a>
-          </div>
-        }
+      <!-- Profile Button -->
+      <button
+        class="profile-btn"
+        (click)="toggleProfileMenu()"
+        aria-label="User profile and account menu"
+        type="button"
+      >
+        👤
+      </button>
+
+      <!-- Profile Dropdown -->
+      <div class="profile-menu" role="menu" [class.hidden]="!showProfileMenu()">
+        <div class="profile-info" role="menuitem">
+          <div class="profile-email">{{ userProfile().email }}</div>
+        </div>
+        <hr style="margin: 0.5rem 0; border: none; border-top: 1px solid #ddd;" aria-hidden="true" />
+        <button class="menu-item" role="menuitem" (click)="goToProfile()" type="button">View Profile</button>
+        <a href="#" class="menu-item" role="menuitem">Account Settings</a>
+        <a href="#" class="menu-item" role="menuitem">Portfolio</a>
+        <a href="#" class="menu-item" role="menuitem">Help & Support</a>
+        <hr style="margin: 0.5rem 0; border: none; border-top: 1px solid #ddd;" aria-hidden="true" />
+        <a href="#" class="menu-item logout" role="menuitem">Logout</a>
       </div>
     </div>
   </div>
 </nav>
-
-<!-- Main Content -->
-<div class="main-container" role="main">
-  <!-- Top Stats Section -->
-  <div class="stats-section" aria-labelledby="stats-heading">
-    <h2 id="stats-heading" class="sr-only">Account Summary</h2>
-    <div class="stat-card">
-      <div class="stat-label">Account Value</div>
-      <div class="stat-value">{{ formatCurrency(accountValue()) }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Today's Change</div>
-      <div
-        class="stat-value"
-        [class.positive]="dayChange() > 0"
-        [class.negative]="dayChange() < 0"
-        [attr.aria-label]="'Today change: ' + formatCurrency(dayChange()) + ' (' + (dayChangePercent() > 0 ? '+' : '') + dayChangePercent() + '%)'"
-      >
-        {{ getChangeSign(dayChange()) }}{{ formatCurrency(dayChange()) }}
-        <span class="percent">({{ getChangeSign(dayChangePercent()) }}{{ dayChangePercent() }}%)</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Charts Section -->
-  <div class="charts-section" aria-labelledby="charts-heading">
-    <h2 id="charts-heading" class="sr-only">Portfolio Charts</h2>
-
-    <!-- Line Chart -->
-    <div class="chart-container chart-line">
-      <h3 class="chart-title">Account Value Over Time</h3>
-      <canvas
-        #lineCanvas
-        role="img"
-        aria-label="Line chart showing account value over time"
-      ></canvas>
-    </div>
-
-    <!-- Pie Chart -->
-    <div class="chart-container chart-pie">
-      <h3 class="chart-title">Current Holdings</h3>
-      <canvas
-        #pieCanvas
-        role="img"
-        aria-label="Pie chart showing current portfolio holdings breakdown"
-      ></canvas>
-    </div>
-  </div>
-
-  <!-- Holdings Table -->
-  <div class="holdings-section">
-    <h2 class="section-title">Your Holdings</h2>
-    <div class="table-wrapper">
-      <table class="holdings-table" role="table" aria-label="Portfolio holdings details">
-        <thead>
-          <tr>
-            <th scope="col">Symbol</th>
-            <th scope="col">Company</th>
-            <th scope="col">Shares</th>
-            <th scope="col">Price</th>
-            <th scope="col">Value</th>
-            <th scope="col">% of Portfolio</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (holding of holdings(); track holding.symbol) {
-            <tr>
-              <td class="symbol">{{ holding.symbol }}</td>
-              <td class="company">{{ holding.name }}</td>
-              <td class="number">{{ holding.shares }}</td>
-              <td class="number">{{ formatCurrency(holding.price) }}</td>
-              <td class="number">{{ formatCurrency(holding.value) }}</td>
-              <td class="number">{{ holding.percent.toFixed(2) }}%</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-<!-- Place Order Modal -->
-@if (showOrderModal()) {
-  <div
-    class="modal-overlay"
-    (click)="closeOrderModal()"
-    role="presentation"
-    aria-label="Modal overlay"
-  >
-    <div
-      class="modal-content"
-      (click)="$event.stopPropagation()"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="order-modal-title"
-    >
-      <div class="modal-header">
-        <h2 id="order-modal-title">Place Order</h2>
-        <button
-          class="close-btn"
-          (click)="closeOrderModal()"
-          aria-label="Close place order dialog"
-          type="button"
-        >
-          ✖
-        </button>
-      </div>
-
-      <div class="form-group">
-        <label for="symbol-input">Symbol</label>
-        <input
-          id="symbol-input"
-          type="text"
-          placeholder="Enter symbol (e.g., AAPL)"
-          #symbolInput
-          [value]="orderForm().symbol"
-          (input)="updateOrderForm('symbol', symbolInput.value)"
-          aria-required="true"
-        />
-      </div>
-
-      <div class="form-group">
-        <label for="quantity-input">Quantity</label>
-        <input
-          id="quantity-input"
-          type="number"
-          placeholder="Number of shares"
-          #quantityInput
-          [value]="orderForm().quantity"
-          (input)="updateOrderForm('quantity', quantityInput.value)"
-          aria-required="true"
-        />
-      </div>
-
-      <div class="form-group">
-        <label for="order-type-select">Order Type</label>
-        <select
-          id="order-type-select"
-          #orderTypeSelect
-          [value]="orderForm().orderType"
-          (change)="updateOrderForm('orderType', orderTypeSelect.value)"
-        >
-          <option>Market Order</option>
-          <option>Limit Order</option>
-          <option>Stop Loss</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <fieldset>
-          <legend>Action</legend>
-          <div style="display: flex; gap: 1rem;">
-            <label style="display: flex; align-items: center; cursor: pointer;">
-              <input
-                type="radio"
-                name="action"
-                value="buy"
-                [checked]="orderForm().action === 'buy'"
-                (change)="updateOrderForm('action', 'buy')"
-              />
-              Buy
-            </label>
-            <label style="display: flex; align-items: center; cursor: pointer;">
-              <input
-                type="radio"
-                name="action"
-                value="sell"
-                [checked]="orderForm().action === 'sell'"
-                (change)="updateOrderForm('action', 'sell')"
-              />
-              Sell
-            </label>
-          </div>
-        </fieldset>
-      </div>
-
-      <div class="modal-footer">
-        <button
-          class="btn-cancel"
-          (click)="closeOrderModal()"
-          type="button"
-        >
-          Cancel
-        </button>
-        <button
-          class="btn-submit"
-          (click)="submitOrder()"
-          type="button"
-        >
-          Place Order
-        </button>
-      </div>
-    </div>
-  </div>
-}
 
 <router-outlet />
