@@ -1,7 +1,7 @@
 package com.neueda.leap.controller;
 
+import static com.neueda.leap.support.TestSecurityUtils.jwtWithRoles;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -35,7 +35,7 @@ class AuditLogControllerTest {
         when(auditLogService.listAuditLogs()).thenReturn(List.of(buildAuditLog()));
 
         mockMvc.perform(get("/api/audit-logs")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("AUDITOR")))))
+                        .with(jwtWithRoles("AUDITOR")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.auditLogs[0].auditLogId").value(31))
                 .andExpect(jsonPath("$.auditLogs[0].entityName").value("client_subscriptions"))
@@ -52,9 +52,9 @@ class AuditLogControllerTest {
     @Test
     void listAuditLogsReturnsUnauthorizedWhenRoleMissing() throws Exception {
         mockMvc.perform(get("/api/audit-logs")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("CLIENT")))))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("ADMIN or AUDITOR role required"));
+                        .with(jwtWithRoles("CLIENT")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Access Denied"));
     }
 
     private AuditLog buildAuditLog() {

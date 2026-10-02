@@ -1,7 +1,7 @@
 package com.neueda.leap.controller;
 
+import static com.neueda.leap.support.TestSecurityUtils.jwtWithRoles;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -37,7 +37,7 @@ class ClientSubscriptionControllerTest {
         when(clientSubscriptionService.listClientSubscriptions(7)).thenReturn(List.of(buildSubscription()));
 
         mockMvc.perform(get("/api/clients/7/subscriptions")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("CLIENT")))))
+                        .with(jwtWithRoles("CLIENT")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.subscriptions[0].subscriptionId").value(9))
                 .andExpect(jsonPath("$.subscriptions[0].modelPortfolioId").value(5))
@@ -50,7 +50,7 @@ class ClientSubscriptionControllerTest {
                 .thenReturn(buildSubscription());
 
         mockMvc.perform(post("/api/clients/7/subscriptions")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADVISOR"))))
+                        .with(jwtWithRoles("ADVISOR"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -70,7 +70,7 @@ class ClientSubscriptionControllerTest {
                 .thenThrow(new IllegalArgumentException("Client id must be a positive integer."));
 
         mockMvc.perform(get("/api/clients/0/subscriptions")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("CLIENT")))))
+                        .with(jwtWithRoles("CLIENT")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Client id must be a positive integer."));
     }

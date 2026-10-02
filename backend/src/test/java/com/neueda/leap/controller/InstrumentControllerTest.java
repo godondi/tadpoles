@@ -1,5 +1,6 @@
 package com.neueda.leap.controller;
 
+import static com.neueda.leap.support.TestSecurityUtils.jwtWithRoles;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -7,22 +8,23 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.neueda.leap.config.SecurityConfig;
 import com.neueda.leap.domain.Instrument;
 import com.neueda.leap.exception.GlobalExceptionHandler;
 import com.neueda.leap.service.InstrumentService;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(InstrumentController.class)
-@AutoConfigureMockMvc(addFilters = false)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, SecurityConfig.class})
+@TestPropertySource(properties = "jwt.secret=test-jwt-secret-test-jwt-secret-123456")
 class InstrumentControllerTest {
     @Autowired
     private MockMvc mockMvc;
@@ -35,7 +37,8 @@ class InstrumentControllerTest {
         Instrument instrument = buildInstrument();
         when(instrumentService.listInstruments()).thenReturn(List.of(instrument));
 
-        mockMvc.perform(get("/api/instruments"))
+        mockMvc.perform(get("/api/instruments")
+                        .with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.instruments[0].instrumentId").value(11))
                 .andExpect(jsonPath("$.instruments[0].ticker").value("AAPL"));
@@ -47,6 +50,7 @@ class InstrumentControllerTest {
         when(instrumentService.createInstrument(org.mockito.ArgumentMatchers.any())).thenReturn(instrument);
 
         mockMvc.perform(post("/api/instruments")
+                        .with(jwtWithRoles("ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -67,7 +71,8 @@ class InstrumentControllerTest {
         Instrument instrument = buildInstrument();
         when(instrumentService.getInstrument(11)).thenReturn(instrument);
 
-        mockMvc.perform(get("/api/instruments/11"))
+        mockMvc.perform(get("/api/instruments/11")
+                        .with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.instrumentId").value(11))
                 .andExpect(jsonPath("$.ticker").value("AAPL"));
@@ -81,6 +86,7 @@ class InstrumentControllerTest {
                 .thenReturn(instrument);
 
         mockMvc.perform(patch("/api/instruments/11")
+                        .with(jwtWithRoles("ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -96,7 +102,8 @@ class InstrumentControllerTest {
         when(instrumentService.getInstrument(0))
                 .thenThrow(new IllegalArgumentException("Instrument id must be a positive integer."));
 
-        mockMvc.perform(get("/api/instruments/0"))
+        mockMvc.perform(get("/api/instruments/0")
+                        .with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Instrument id must be a positive integer."));
     }

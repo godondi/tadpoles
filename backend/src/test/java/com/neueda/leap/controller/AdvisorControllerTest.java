@@ -1,7 +1,7 @@
 package com.neueda.leap.controller;
 
+import static com.neueda.leap.support.TestSecurityUtils.jwtWithRoles;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -39,7 +39,7 @@ class AdvisorControllerTest {
         when(advisorService.listAdvisors()).thenReturn(List.of(buildAdvisor()));
 
         mockMvc.perform(get("/api/advisors")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN")))))
+                        .with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.advisors[0].advisorId").value(3))
                 .andExpect(jsonPath("$.advisors[0].advisorName").value("Advisor One"))
@@ -51,7 +51,7 @@ class AdvisorControllerTest {
         when(advisorService.createAdvisor(org.mockito.ArgumentMatchers.any())).thenReturn(buildAdvisor());
 
         mockMvc.perform(post("/api/advisors")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN"))))
+                        .with(jwtWithRoles("ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -69,7 +69,7 @@ class AdvisorControllerTest {
         when(advisorService.getAdvisor(3)).thenReturn(buildAdvisor());
 
         mockMvc.perform(get("/api/advisors/3")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN")))))
+                        .with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.advisorId").value(3))
                 .andExpect(jsonPath("$.advisorName").value("Advisor One"))
@@ -84,7 +84,7 @@ class AdvisorControllerTest {
                 .thenReturn(advisor);
 
         mockMvc.perform(patch("/api/advisors/3")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN"))))
+                        .with(jwtWithRoles("ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -100,7 +100,7 @@ class AdvisorControllerTest {
         when(advisorService.listAdvisorClients(3)).thenReturn(List.of(buildClient()));
 
         mockMvc.perform(get("/api/advisors/3/clients")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADVISOR")))))
+                        .with(jwtWithRoles("ADVISOR")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.clients[0].clientId").value(7))
                 .andExpect(jsonPath("$.clients[0].clientName").value("Alice Investor"))
@@ -113,7 +113,7 @@ class AdvisorControllerTest {
                 .thenThrow(new IllegalArgumentException("Advisor id must be a positive integer."));
 
         mockMvc.perform(get("/api/advisors/0")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN")))))
+                        .with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Advisor id must be a positive integer."));
     }

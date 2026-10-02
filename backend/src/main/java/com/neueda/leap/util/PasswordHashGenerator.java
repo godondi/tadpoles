@@ -46,4 +46,3 @@ public class PasswordHashGenerator {
         System.out.println(");");
     }
 }
-

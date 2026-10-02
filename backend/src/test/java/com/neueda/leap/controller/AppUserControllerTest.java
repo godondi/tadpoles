@@ -1,9 +1,10 @@
 package com.neueda.leap.controller;
 
+import static com.neueda.leap.support.TestSecurityUtils.jwtWithRoles;
+import static com.neueda.leap.support.TestSecurityUtils.jwtWithSubjectAndRoles;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -41,7 +42,7 @@ class AppUserControllerTest {
         when(appUserService.getUserByUsername("admin01")).thenReturn(buildUser(List.of("ADMIN")));
 
         mockMvc.perform(get("/api/users/me")
-                        .with(jwt().jwt(token -> token.subject("admin01").claim("roles", List.of("ADMIN")))))
+                        .with(jwtWithSubjectAndRoles("admin01", "ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.userId").value(1))
                 .andExpect(jsonPath("$.username").value("admin01"))
@@ -53,7 +54,7 @@ class AppUserControllerTest {
         when(appUserService.listUsers()).thenReturn(List.of(buildUser(List.of("ADMIN"))));
 
         mockMvc.perform(get("/api/users")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN")))))
+                        .with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.users[0].userId").value(1))
                 .andExpect(jsonPath("$.users[0].displayName").value("Admin User"));
@@ -64,7 +65,7 @@ class AppUserControllerTest {
         when(appUserService.getUser(1)).thenReturn(buildUser(List.of("ADMIN")));
 
         mockMvc.perform(get("/api/users/1")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN")))))
+                        .with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.userId").value(1))
                 .andExpect(jsonPath("$.email").value("admin01@tadpoles.dev"));
@@ -78,7 +79,7 @@ class AppUserControllerTest {
         when(appUserService.updateUser(eq(1), any())).thenReturn(updatedUser);
 
         mockMvc.perform(patch("/api/users/1")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN"))))
+                        .with(jwtWithRoles("ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -97,7 +98,7 @@ class AppUserControllerTest {
         when(appUserService.setUserRoles(eq(1), any(SetAppUserRolesRequestDto.class))).thenReturn(updatedUser);
 
         mockMvc.perform(put("/api/users/1/roles")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN"))))
+                        .with(jwtWithRoles("ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -119,9 +120,9 @@ class AppUserControllerTest {
     @Test
     void listUsersReturnsUnauthorizedWhenAdminRoleMissing() throws Exception {
         mockMvc.perform(get("/api/users")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("AUDITOR")))))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("ADMIN role required"));
+                        .with(jwtWithRoles("AUDITOR")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Access Denied"));
     }
 
     @Test
@@ -129,7 +130,7 @@ class AppUserControllerTest {
         when(appUserService.getUser(0)).thenThrow(new IllegalArgumentException("User id must be a positive integer."));
 
         mockMvc.perform(get("/api/users/0")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN")))))
+                        .with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("User id must be a positive integer."));
     }

@@ -1,9 +1,9 @@
 package com.neueda.leap.controller;
 
+import static com.neueda.leap.support.TestSecurityUtils.jwtWithRoles;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -40,7 +40,7 @@ class ModelPortfolioHoldingControllerTest {
         when(modelPortfolioHoldingService.listModelPortfolioHoldings(5)).thenReturn(List.of(buildHolding()));
 
         mockMvc.perform(get("/api/model-portfolios/5/holdings")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN")))))
+                        .with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.holdings[0].modelPortfolioId").value(5))
                 .andExpect(jsonPath("$.holdings[0].targetWeightPct").value(60.0));
@@ -51,7 +51,7 @@ class ModelPortfolioHoldingControllerTest {
         when(modelPortfolioHoldingService.createModelPortfolioHolding(eq(5), any())).thenReturn(buildHolding());
 
         mockMvc.perform(post("/api/model-portfolios/5/holdings")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN"))))
+                        .with(jwtWithRoles("ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -69,7 +69,7 @@ class ModelPortfolioHoldingControllerTest {
         when(modelPortfolioHoldingService.getModelPortfolioHolding(5, 11)).thenReturn(buildHolding());
 
         mockMvc.perform(get("/api/model-portfolios/5/holdings/11")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("CLIENT")))))
+                        .with(jwtWithRoles("CLIENT")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.modelPortfolioId").value(5))
                 .andExpect(jsonPath("$.instrumentId").value(11));
@@ -82,7 +82,7 @@ class ModelPortfolioHoldingControllerTest {
         when(modelPortfolioHoldingService.updateModelPortfolioHolding(eq(5), eq(11), any())).thenReturn(updated);
 
         mockMvc.perform(patch("/api/model-portfolios/5/holdings/11")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN"))))
+                        .with(jwtWithRoles("ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -99,7 +99,7 @@ class ModelPortfolioHoldingControllerTest {
                 .thenThrow(new IllegalArgumentException("Model portfolio id must be a positive integer."));
 
         mockMvc.perform(get("/api/model-portfolios/0/holdings")
-                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN")))))
+                        .with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Model portfolio id must be a positive integer."));
     }
