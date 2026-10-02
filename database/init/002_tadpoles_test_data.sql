@@ -1,5 +1,5 @@
 -- Seed data for the revised Tadpoles schema.
--- This is intended for local/dev test databases and follows database/schema/001_revised_schema.sql.
+-- This is intended for local/dev test databases and follows database/schema/tadpoles_schema.sql.
 
 BEGIN;
 
