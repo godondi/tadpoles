@@ -1,11 +1,13 @@
 package com.neueda.leap.controller;
 
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.neueda.leap.config.SecurityConfig;
 import com.neueda.leap.domain.ClientSubscription;
 import com.neueda.leap.exception.GlobalExceptionHandler;
 import com.neueda.leap.service.ClientSubscriptionService;
@@ -13,16 +15,16 @@ import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(ClientSubscriptionController.class)
-@AutoConfigureMockMvc(addFilters = false)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, SecurityConfig.class})
+@TestPropertySource(properties = "jwt.secret=test-jwt-secret-test-jwt-secret-123456")
 class ClientSubscriptionControllerTest {
     @Autowired
     private MockMvc mockMvc;
@@ -34,7 +36,8 @@ class ClientSubscriptionControllerTest {
     void listClientSubscriptionsReturnsJsonResponse() throws Exception {
         when(clientSubscriptionService.listClientSubscriptions(7)).thenReturn(List.of(buildSubscription()));
 
-        mockMvc.perform(get("/api/clients/7/subscriptions"))
+        mockMvc.perform(get("/api/clients/7/subscriptions")
+                        .with(jwt().jwt(token -> token.claim("roles", List.of("CLIENT")))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.subscriptions[0].subscriptionId").value(9))
                 .andExpect(jsonPath("$.subscriptions[0].modelPortfolioId").value(5))
@@ -47,6 +50,7 @@ class ClientSubscriptionControllerTest {
                 .thenReturn(buildSubscription());
 
         mockMvc.perform(post("/api/clients/7/subscriptions")
+                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADVISOR"))))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -65,7 +69,8 @@ class ClientSubscriptionControllerTest {
         when(clientSubscriptionService.listClientSubscriptions(0))
                 .thenThrow(new IllegalArgumentException("Client id must be a positive integer."));
 
-        mockMvc.perform(get("/api/clients/0/subscriptions"))
+        mockMvc.perform(get("/api/clients/0/subscriptions")
+                        .with(jwt().jwt(token -> token.claim("roles", List.of("CLIENT")))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Client id must be a positive integer."));
     }

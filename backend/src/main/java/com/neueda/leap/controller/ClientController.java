@@ -35,18 +35,21 @@ public class ClientController {
 
     @PostMapping("/clients")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("isAuthenticated()")
     public ClientResponseDto createClient(@RequestBody CreateClientRequestDto request) {
         Client client = clientService.createClient(request);
         return ClientResponseDto.fromEntity(client);
     }
 
     @GetMapping("/clients/{clientId}")
+    @PreAuthorize("isAuthenticated()")
     public ClientResponseDto getClient(@PathVariable Integer clientId) {
         Client client = clientService.getClient(clientId);
         return ClientResponseDto.fromEntity(client);
     }
 
     @PatchMapping("/clients/{clientId}")
+    @PreAuthorize("isAuthenticated()")
     public ClientResponseDto updateClient(
             @PathVariable Integer clientId,
             @RequestBody UpdateClientRequestDto request
@@ -56,6 +59,7 @@ public class ClientController {
     }
 
     @GetMapping("/clients/{clientId}/balance")
+    @PreAuthorize("isAuthenticated()")
     public ClientBalanceResponseDto getClientBalance(@PathVariable Integer clientId) {
         return new ClientBalanceResponseDto(clientId, clientService.getClientBalance(clientId));
     }

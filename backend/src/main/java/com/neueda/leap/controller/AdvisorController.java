@@ -8,6 +8,7 @@ import com.neueda.leap.dto.CreateAdvisorRequestDto;
 import com.neueda.leap.dto.UpdateAdvisorRequestDto;
 import com.neueda.leap.service.AdvisorService;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,24 +28,28 @@ public class AdvisorController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR', 'ANALYST')")
     public AdvisorListResponseDto listAdvisors() {
         return AdvisorListResponseDto.fromEntities(advisorService.listAdvisors());
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('ADMIN')")
     public AdvisorResponseDto createAdvisor(@RequestBody CreateAdvisorRequestDto request) {
         Advisor advisor = advisorService.createAdvisor(request);
         return AdvisorResponseDto.fromEntity(advisor);
     }
 
     @GetMapping("/{advisorId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR', 'ANALYST', 'ADVISOR')")
     public AdvisorResponseDto getAdvisor(@PathVariable Integer advisorId) {
         Advisor advisor = advisorService.getAdvisor(advisorId);
         return AdvisorResponseDto.fromEntity(advisor);
     }
 
     @PatchMapping("/{advisorId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public AdvisorResponseDto updateAdvisor(
             @PathVariable Integer advisorId,
             @RequestBody UpdateAdvisorRequestDto request
@@ -54,6 +59,7 @@ public class AdvisorController {
     }
 
     @GetMapping("/{advisorId}/clients")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADVISOR')")
     public ClientListResponseDto listAdvisorClients(@PathVariable Integer advisorId) {
         return ClientListResponseDto.fromEntities(advisorService.listAdvisorClients(advisorId));
     }

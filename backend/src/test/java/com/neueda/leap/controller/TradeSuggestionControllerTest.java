@@ -116,6 +116,14 @@ class TradeSuggestionControllerTest {
                 .andExpect(jsonPath("$.message").value("ADVISOR role required"));
     }
 
+    @Test
+    void listClientTradeSuggestionsReturnsUnauthorizedWhenRoleMissing() throws Exception {
+        mockMvc.perform(get("/api/clients/7/trade-suggestions")
+                        .with(jwt().jwt(token -> token.claim("roles", List.of("GUEST")))))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("ADMIN or AUDITOR or ANALYST or ADVISOR or CLIENT role required"));
+    }
+
     private TradeSuggestion buildSuggestion() {
         TradeSuggestion suggestion = new TradeSuggestion();
         suggestion.setSuggestionId(15);

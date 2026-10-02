@@ -50,6 +50,7 @@ class ClientControllerTest {
         when(clientService.createClient(org.mockito.ArgumentMatchers.any())).thenReturn(client);
 
         mockMvc.perform(post("/api/clients")
+                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN"))))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -70,7 +71,8 @@ class ClientControllerTest {
         Client client = buildClient();
         when(clientService.getClient(7)).thenReturn(client);
 
-        mockMvc.perform(get("/api/clients/7"))
+        mockMvc.perform(get("/api/clients/7")
+                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN")))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.clientId").value(7))
                 .andExpect(jsonPath("$.clientName").value("Alice Investor"))
@@ -87,6 +89,7 @@ class ClientControllerTest {
                 .thenReturn(client);
 
         mockMvc.perform(patch("/api/clients/7")
+                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN"))))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -102,7 +105,8 @@ class ClientControllerTest {
     void getClientBalanceReturnsJsonResponse() throws Exception {
         when(clientService.getClientBalance(7)).thenReturn(new BigDecimal("1200.50"));
 
-        mockMvc.perform(get("/api/clients/7/balance"))
+        mockMvc.perform(get("/api/clients/7/balance")
+                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN")))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.clientId").value(7))
                 .andExpect(jsonPath("$.cashBalance").value(1200.5));
@@ -112,7 +116,8 @@ class ClientControllerTest {
     void getClientReturnsBadRequestForInvalidId() throws Exception {
         when(clientService.getClient(0)).thenThrow(new IllegalArgumentException("Client id must be a positive integer."));
 
-        mockMvc.perform(get("/api/clients/0"))
+        mockMvc.perform(get("/api/clients/0")
+                        .with(jwt().jwt(token -> token.claim("roles", List.of("ADMIN")))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Client id must be a positive integer."));
     }

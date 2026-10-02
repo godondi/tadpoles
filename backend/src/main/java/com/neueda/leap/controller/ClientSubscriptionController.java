@@ -6,6 +6,7 @@ import com.neueda.leap.dto.ClientSubscriptionResponseDto;
 import com.neueda.leap.dto.CreateClientSubscriptionRequestDto;
 import com.neueda.leap.service.ClientSubscriptionService;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,7 +25,10 @@ public class ClientSubscriptionController {
     }
 
     @GetMapping
-    public ClientSubscriptionListResponseDto listClientSubscriptions(@PathVariable Integer clientId) {
+    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR', 'ANALYST', 'ADVISOR', 'CLIENT')")
+    public ClientSubscriptionListResponseDto listClientSubscriptions(
+            @PathVariable Integer clientId
+    ) {
         return ClientSubscriptionListResponseDto.fromEntities(
                 clientSubscriptionService.listClientSubscriptions(clientId)
         );
@@ -32,6 +36,7 @@ public class ClientSubscriptionController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('ADMIN', 'ADVISOR')")
     public ClientSubscriptionResponseDto createClientSubscription(
             @PathVariable Integer clientId,
             @RequestBody CreateClientSubscriptionRequestDto request
