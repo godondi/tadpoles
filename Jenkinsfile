@@ -67,7 +67,6 @@ pipeline {
                     docker run -d \
                       --name tadpole-smoke-app \
                       --network tadpole-smoke \
-                      -p 8080:8080 \
                       -e DB_URL=jdbc:postgresql://tadpole-smoke-db:5432/tadpoles \
                       -e DB_USERNAME=postgres \
                       -e DB_PASSWORD=postgres \
