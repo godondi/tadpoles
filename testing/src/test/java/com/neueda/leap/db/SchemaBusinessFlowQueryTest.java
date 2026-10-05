@@ -20,7 +20,7 @@ class SchemaBusinessFlowQueryTest extends AbstractPostgresIntegrationTest {
 
         List<String> rows = new ArrayList<>();
         String sql = """
-                SELECT c.client_name, a.adviosr_name, mp.model_name
+                SELECT c.client_name, a.advisor_name, mp.model_name
                 FROM clients c
                 JOIN advisors a ON c.advisor_id = a.advisor_id
                 JOIN model_portfolios mp ON c.model_portfolio_id = mp.model_portfolio_id
@@ -104,7 +104,7 @@ class SchemaBusinessFlowQueryTest extends AbstractPostgresIntegrationTest {
     }
 
     private void seedRealisticData() throws SQLException {
-        execute("INSERT INTO advisors (advisor_id, adviosr_name) VALUES (1, 'Alice Advisor'), (2, 'Bob Advisor')");
+        execute("INSERT INTO advisors (advisor_id, advisor_name) VALUES (1, 'Alice Advisor'), (2, 'Bob Advisor')");
         execute("INSERT INTO model_portfolios (model_portfolio_id, model_name) VALUES (1, 'Conservative'), (2, 'Growth')");
         execute(
                 "INSERT INTO clients (client_id, client_name, advisor_id, model_portfolio_id) VALUES " +
