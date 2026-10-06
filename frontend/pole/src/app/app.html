@@ -1,83 +1,85 @@
-<nav class="navbar" role="navigation" aria-label="Main navigation">
-  <div class="nav-container">
-    <!-- Logo -->
-    <button
-      class="logo"
-      role="button"
-      (click)="goToHome()"
-      aria-label="Pole Trading Dashboard - Home"
-      type="button"
-      title="Go to home page"
-    >
-      📈 Pole Trading
-    </button>
-
-    <!-- Search Bar -->
-    <div class="search-container">
-      <input
-        type="text"
-        class="search-input"
-        placeholder="Search stocks, ETFs..."
-        #searchInput
-        [value]="searchQuery()"
-        (input)="updateSearchQuery(searchInput.value)"
-        (keyup.enter)="handleSearch()"
-        aria-label="Search for stocks or ETFs"
-      />
+@if (!isLoginPage()) {
+  <nav class="navbar" role="navigation" aria-label="Main navigation">
+    <div class="nav-container">
+      <!-- Logo -->
       <button
-        class="search-btn"
-        (click)="handleSearch()"
-        aria-label="Submit search"
+        class="logo"
+        role="button"
+        (click)="goToHome()"
+        aria-label="Pole Trading Dashboard - Home"
         type="button"
+        title="Go to home page"
       >
-        🔍
-      </button>
-    </div>
-
-    <!-- Right Section -->
-    <div class="nav-right">
-      <button
-        class="place-order-btn"
-        aria-label="Open place order dialog"
-        type="button"
-      >
-        Place Order
+        📈 Pole Trading
       </button>
 
-      <button
-        class="trades-btn"
-        (click)="goToTrades()"
-        aria-label="View trades history"
-        type="button"
-      >
-        📊 Trades
-      </button>
+      <!-- Search Bar -->
+      <div class="search-container">
+        <input
+          type="text"
+          class="search-input"
+          placeholder="Search stocks, ETFs..."
+          #searchInput
+          [value]="searchQuery()"
+          (input)="updateSearchQuery(searchInput.value)"
+          (keyup.enter)="handleSearch()"
+          aria-label="Search for stocks or ETFs"
+        />
+        <button
+          class="search-btn"
+          (click)="handleSearch()"
+          aria-label="Submit search"
+          type="button"
+        >
+          🔍
+        </button>
+      </div>
 
-      <!-- Profile Button -->
-      <button
-        class="profile-btn"
-        (click)="toggleProfileMenu()"
-        aria-label="User profile and account menu"
-        type="button"
-      >
-        👤
-      </button>
+      <!-- Right Section -->
+      <div class="nav-right">
+        <button
+          class="place-order-btn"
+          aria-label="Open place order dialog"
+          type="button"
+        >
+          Place Order
+        </button>
 
-      <!-- Profile Dropdown -->
-      <div class="profile-menu" role="menu" [class.hidden]="!showProfileMenu()">
-        <div class="profile-info" role="menuitem">
-          <div class="profile-email">{{ userProfile().email }}</div>
+        <button
+          class="trades-btn"
+          (click)="goToTrades()"
+          aria-label="View trades history"
+          type="button"
+        >
+          📊 Trades
+        </button>
+
+        <!-- Profile Button -->
+        <button
+          class="profile-btn"
+          (click)="toggleProfileMenu()"
+          aria-label="User profile and account menu"
+          type="button"
+        >
+          👤
+        </button>
+
+        <!-- Profile Dropdown -->
+        <div class="profile-menu" role="menu" [class.hidden]="!showProfileMenu()">
+          <div class="profile-info" role="menuitem">
+            <div class="profile-email">{{ userProfile().email }}</div>
+          </div>
+          <hr style="margin: 0.5rem 0; border: none; border-top: 1px solid #ddd;" aria-hidden="true" />
+          <button class="menu-item" role="menuitem" (click)="goToProfile()" type="button">View Profile</button>
+          <a href="#" class="menu-item" role="menuitem">Account Settings</a>
+          <a href="#" class="menu-item" role="menuitem">Portfolio</a>
+          <a href="#" class="menu-item" role="menuitem">Help & Support</a>
+          <hr style="margin: 0.5rem 0; border: none; border-top: 1px solid #ddd;" aria-hidden="true" />
+          <a href="#" class="menu-item logout" role="menuitem">Logout</a>
         </div>
-        <hr style="margin: 0.5rem 0; border: none; border-top: 1px solid #ddd;" aria-hidden="true" />
-        <button class="menu-item" role="menuitem" (click)="goToProfile()" type="button">View Profile</button>
-        <a href="#" class="menu-item" role="menuitem">Account Settings</a>
-        <a href="#" class="menu-item" role="menuitem">Portfolio</a>
-        <a href="#" class="menu-item" role="menuitem">Help & Support</a>
-        <hr style="margin: 0.5rem 0; border: none; border-top: 1px solid #ddd;" aria-hidden="true" />
-        <a href="#" class="menu-item logout" role="menuitem">Logout</a>
       </div>
     </div>
-  </div>
-</nav>
+  </nav>
+}
 
 <router-outlet />
