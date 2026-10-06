@@ -13,8 +13,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import javax.crypto.spec.SecretKeySpec;
-import java.nio.charset.StandardCharsets;
+import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.List;
 
@@ -23,15 +22,15 @@ public class AuthServiceImpl implements AuthService {
 
     private static final long TOKEN_EXPIRATION_MS = 3600000; // 1 hour
     private final UserMapper userMapper;
-    private final String jwtSecret;
+    private final SecretKey jwtSigningKey;
     private final BCryptPasswordEncoder passwordEncoder;
 
     public AuthServiceImpl(
             UserMapper userMapper,
-            @Value("${jwt.secret}") String jwtSecret
+            SecretKey jwtSigningKey
     ) {
         this.userMapper = userMapper;
-        this.jwtSecret = jwtSecret;
+        this.jwtSigningKey = jwtSigningKey;
         this.passwordEncoder = new BCryptPasswordEncoder();
     }
 
@@ -66,17 +65,12 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private String generateToken(String username, List<String> roles) {
-        SecretKeySpec keySpec = new SecretKeySpec(
-                jwtSecret.getBytes(StandardCharsets.UTF_8),
-                SignatureAlgorithm.HS256.getJcaName()
-        );
-
         return Jwts.builder()
                 .subject(username)
                 .claim("roles", roles)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + TOKEN_EXPIRATION_MS))
-                .signWith(keySpec, SignatureAlgorithm.HS256)
+                .signWith(jwtSigningKey, SignatureAlgorithm.HS256)
                 .compact();
     }
 }
