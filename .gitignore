@@ -4,4 +4,3 @@ testing/target/
 target/
 auth-stub/node_modules
 .env
-backend/src/main/resources/application.yml
