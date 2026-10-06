@@ -27,6 +27,15 @@ class AppUserMapperTest {
     }
 
     @Test
+    void getUserReturnsClientIdWhenLinked() {
+        AppUser user = appUserMapper.getUser(14);
+
+        assertNotNull(user);
+        assertEquals("client01", user.getUsername());
+        assertEquals(7, user.getClientId());
+    }
+
+    @Test
     void getUserByUsernameReturnsUser() {
         AppUser user = appUserMapper.getUserByUsername("admin01");
 

@@ -35,7 +35,6 @@ paths:
       summary: Register a new application user
       operationId: registerUser
       x-required-roles: [ADMIN]
-      security: []
       requestBody:
         required: true
         content:
@@ -57,6 +56,39 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/register/client:
+    post:
+      tags: [Authentication]
+      summary: Register a new client account
+      operationId: registerClient
+      x-required-roles: []
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientRegistrationRequest'
+      responses:
+        '201':
+          description: Client account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientRegistrationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /auth/login:
     post:
@@ -82,6 +114,10 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /auth/refresh:
     post:
@@ -1302,14 +1338,13 @@ components:
 
     RegisterUserRequest:
       type: object
-      required: [username, password, displayName, roleType]
+      required: [username, email, password, displayName, roleType]
       properties:
         username:
           type: string
         email:
           type: string
           format: email
-          nullable: true
         password:
           type: string
           format: password
@@ -1325,6 +1360,23 @@ components:
           type: boolean
           nullable: true
           default: true
+
+    ClientRegistrationRequest:
+      type: object
+      required: [username, email, password, displayName, clientName]
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        displayName:
+          type: string
+        clientName:
+          type: string
 
     RegisterUserResponse:
       type: object
@@ -1343,6 +1395,24 @@ components:
           type: integer
           format: int64
           nullable: true
+
+    ClientRegistrationResponse:
+      type: object
+      required: [userId, username, displayName, role, clientId]
+      properties:
+        userId:
+          type: integer
+          format: int64
+        username:
+          type: string
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [CLIENT]
+        clientId:
+          type: integer
+          format: int64
 
     AuthTokens:
       type: object
@@ -1482,6 +1552,10 @@ components:
         clientId:
           type: integer
           format: int64
+        userId:
+          type: integer
+          format: int64
+          nullable: true
         clientName:
           type: string
         advisorId:
@@ -2114,4 +2188,3 @@ components:
           items:
             type: object
             additionalProperties: true
-

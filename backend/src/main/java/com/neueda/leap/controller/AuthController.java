@@ -1,5 +1,7 @@
 package com.neueda.leap.controller;
 
+import com.neueda.leap.dto.ClientRegistrationRequestDto;
+import com.neueda.leap.dto.ClientRegistrationResponseDto;
 import com.neueda.leap.dto.CreateUserRequestDto;
 import com.neueda.leap.dto.CreateUserResponseDto;
 import com.neueda.leap.dto.LoginRequestDto;
@@ -36,5 +38,11 @@ public class AuthController {
     @PreAuthorize("hasRole('ADMIN')")
     public CreateUserResponseDto register(@RequestBody CreateUserRequestDto request) {
         return userService.registerUser(request);
+    }
+
+    @PostMapping("/register/client")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ClientRegistrationResponseDto registerClient(@RequestBody ClientRegistrationRequestDto request) {
+        return userService.registerClient(request);
     }
 }

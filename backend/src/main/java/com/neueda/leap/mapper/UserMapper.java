@@ -26,6 +26,20 @@ public interface UserMapper {
     AppUser findByUsername(@Param("username") String username);
 
     @Select("""
+            SELECT user_id AS userId,
+                   username,
+                   email,
+                   password_hash AS passwordHash,
+                   display_name AS displayName,
+                   enabled,
+                   created_at AS createdAt,
+                   updated_at AS updatedAt
+            FROM users
+            WHERE email = #{email}
+            """)
+    AppUser findByEmail(@Param("email") String email);
+
+    @Select("""
             SELECT role_name
             FROM roles
             WHERE role_id IN (
@@ -47,4 +61,3 @@ public interface UserMapper {
             """)
     int assignRole(@Param("userId") Integer userId, @Param("roleName") String roleName);
 }
-

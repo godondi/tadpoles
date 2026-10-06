@@ -21,10 +21,13 @@ public interface AppUserMapper {
                    u.enabled AS enabled,
                    u.created_at AS createdAt,
                    u.updated_at AS updatedAt,
-                   a.advisor_id AS advisorId
+                   a.advisor_id AS advisorId,
+                   c.client_id AS clientId
             FROM users u
             LEFT JOIN advisors a
               ON a.user_id = u.user_id
+            LEFT JOIN clients c
+              ON c.user_id = u.user_id
             WHERE u.user_id = #{id}
             """)
     AppUser getUser(@Param("id") Integer id);
@@ -38,10 +41,13 @@ public interface AppUserMapper {
                    u.enabled AS enabled,
                    u.created_at AS createdAt,
                    u.updated_at AS updatedAt,
-                   a.advisor_id AS advisorId
+                   a.advisor_id AS advisorId,
+                   c.client_id AS clientId
             FROM users u
             LEFT JOIN advisors a
               ON a.user_id = u.user_id
+            LEFT JOIN clients c
+              ON c.user_id = u.user_id
             WHERE u.username = #{username}
             """)
     AppUser getUserByUsername(@Param("username") String username);
@@ -55,10 +61,13 @@ public interface AppUserMapper {
                    u.enabled AS enabled,
                    u.created_at AS createdAt,
                    u.updated_at AS updatedAt,
-                   a.advisor_id AS advisorId
+                   a.advisor_id AS advisorId,
+                   c.client_id AS clientId
             FROM users u
             LEFT JOIN advisors a
               ON a.user_id = u.user_id
+            LEFT JOIN clients c
+              ON c.user_id = u.user_id
             ORDER BY u.user_id
             """)
     List<AppUser> listUsers();

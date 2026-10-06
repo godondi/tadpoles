@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
  */
 public class Client {
     private Integer clientId;
+    private Integer userId;
     private String clientName;
     private Integer advisorId;
     private Integer modelPortfolioId;
@@ -19,6 +20,12 @@ public class Client {
     }
     public void setClientId(Integer clientId) {
         this.clientId = clientId;
+    }
+    public Integer getUserId() {
+        return userId;
+    }
+    public void setUserId(Integer userId) {
+        this.userId = userId;
     }
     public String getClientName() {
         return clientName;

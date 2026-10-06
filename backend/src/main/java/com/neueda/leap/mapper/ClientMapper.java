@@ -16,6 +16,7 @@ import org.apache.ibatis.annotations.UpdateProvider;
 public interface ClientMapper {
     @Select("""
             SELECT client_id AS clientId,
+                   user_id AS userId,
                    client_name AS clientName,
                    advisor_id AS advisorId,
                    model_portfolio_id AS modelPortfolioId,
@@ -29,6 +30,7 @@ public interface ClientMapper {
 
     @Select("""
             SELECT client_id AS clientId,
+                   user_id AS userId,
                    client_name AS clientName,
                    advisor_id AS advisorId,
                    model_portfolio_id AS modelPortfolioId,
@@ -43,6 +45,7 @@ public interface ClientMapper {
 
     @Select("""
             SELECT client_id AS clientId,
+                   user_id AS userId,
                    client_name AS clientName,
                    advisor_id AS advisorId,
                    model_portfolio_id AS modelPortfolioId,
@@ -56,6 +59,7 @@ public interface ClientMapper {
 
     @Select("""
             SELECT client_id AS clientId,
+                   user_id AS userId,
                    client_name AS clientName,
                    advisor_id AS advisorId,
                    model_portfolio_id AS modelPortfolioId,
@@ -71,6 +75,7 @@ public interface ClientMapper {
     @Insert("""
             INSERT INTO clients (
                 client_name,
+                user_id,
                 advisor_id,
                 model_portfolio_id,
                 created_by_user_id,
@@ -78,6 +83,7 @@ public interface ClientMapper {
             )
             VALUES (
                 #{clientName},
+                #{userId},
                 #{advisorId},
                 #{modelPortfolioId},
                 #{createdByUserId},

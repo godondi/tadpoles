@@ -35,8 +35,8 @@ VALUES
     (11, 'Apple Inc', 'AAPL', 'USD', 'Equity', 'Stock', TRUE),
     (12, 'Microsoft Corp', 'MSFT', 'USD', 'Equity', 'Stock', TRUE);
 
-INSERT INTO clients (client_id, client_name, advisor_id, model_portfolio_id, created_by_user_id, created_at, cash_balance)
-VALUES (7, 'Alice Investor', 3, 5, 1, TIMESTAMP '2026-09-24 10:00:00', 1200.50);
+INSERT INTO clients (client_id, user_id, client_name, advisor_id, model_portfolio_id, created_by_user_id, created_at, cash_balance)
+VALUES (7, 14, 'Alice Investor', 3, 5, 1, TIMESTAMP '2026-09-24 10:00:00', 1200.50);
 
 INSERT INTO client_subscriptions (subscription_id, client_id, model_portfolio_id, subscribed_date, ended_date, status, approved_by_user_id)
 VALUES (9, 7, 5, DATE '2026-09-24', NULL, 'ACTIVE', 1);

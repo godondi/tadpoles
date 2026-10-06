@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 
 public record ClientResponseDto(
         Integer clientId,
+        Integer userId,
         String clientName,
         Integer advisorId,
         Integer modelPortfolioId,
@@ -13,6 +14,7 @@ public record ClientResponseDto(
     public static ClientResponseDto fromEntity(Client client) {
         return new ClientResponseDto(
                 client.getClientId(),
+                client.getUserId(),
                 client.getClientName(),
                 client.getAdvisorId(),
                 client.getModelPortfolioId(),
@@ -20,5 +22,4 @@ public record ClientResponseDto(
         );
     }
 }
-
 
