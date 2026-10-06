@@ -1,4 +1,4 @@
-import { Component, signal, inject, effect } from '@angular/core';
+import { Component, signal, inject, effect, computed } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
 import { UserService } from './user.service';
 
@@ -20,6 +20,7 @@ export class App {
   readonly showProfileMenu = signal(false);
   readonly searchQuery = signal('');
   readonly userProfile = this.userService.getProfile();
+  readonly isLoginPage = computed(() => this.router.url === '/login');
 
   constructor() {
     effect(() => {

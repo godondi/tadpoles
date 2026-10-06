@@ -82,17 +82,21 @@ interface LoginForm {
     :host {
       display: block;
       width: 100%;
-      min-height: 100vh;
+      height: 100vh;
       background: linear-gradient(135deg, #006044 0%, #76A923 100%);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
     }
 
     .login-container {
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 100vh;
-      padding: 2rem 1rem;
+      width: 100%;
+      height: 100%;
+      padding: 0;
     }
 
     .login-box {
@@ -102,6 +106,7 @@ interface LoginForm {
       width: 100%;
       max-width: 400px;
       padding: 2.5rem;
+      margin: 0 1rem;
     }
 
     .login-header {
