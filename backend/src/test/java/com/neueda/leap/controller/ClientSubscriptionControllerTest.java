@@ -1,6 +1,7 @@
 package com.neueda.leap.controller;
 
 import static com.neueda.leap.support.TestSecurityUtils.jwtWithRoles;
+import static com.neueda.leap.support.TestSecurityUtils.jwtWithSubjectAndRoles;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -8,10 +9,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.neueda.leap.config.SecurityConfig;
+import com.neueda.leap.domain.AppUser;
 import com.neueda.leap.domain.ClientSubscription;
 import com.neueda.leap.exception.GlobalExceptionHandler;
+import com.neueda.leap.service.AppUserService;
 import com.neueda.leap.service.ClientSubscriptionService;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,13 +35,16 @@ class ClientSubscriptionControllerTest {
 
     @MockBean
     private ClientSubscriptionService clientSubscriptionService;
+    @MockBean
+    private AppUserService appUserService;
 
     @Test
     void listClientSubscriptionsReturnsJsonResponse() throws Exception {
         when(clientSubscriptionService.listClientSubscriptions(7)).thenReturn(List.of(buildSubscription()));
+        when(appUserService.getUserByUsername("client01")).thenReturn(buildCurrentUser(7));
 
         mockMvc.perform(get("/api/clients/7/subscriptions")
-                        .with(jwtWithRoles("CLIENT")))
+                        .with(jwtWithSubjectAndRoles("client01", "CLIENT")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.subscriptions[0].subscriptionId").value(9))
                 .andExpect(jsonPath("$.subscriptions[0].modelPortfolioId").value(5))
@@ -65,14 +72,13 @@ class ClientSubscriptionControllerTest {
     }
 
     @Test
-    void listClientSubscriptionsReturnsBadRequestForInvalidClientId() throws Exception {
-        when(clientSubscriptionService.listClientSubscriptions(0))
-                .thenThrow(new IllegalArgumentException("Client id must be a positive integer."));
+    void listClientSubscriptionsReturnsForbiddenWhenClientRequestsAnotherClientsSubscriptions() throws Exception {
+        when(appUserService.getUserByUsername("client01")).thenReturn(buildCurrentUser(7));
 
-        mockMvc.perform(get("/api/clients/0/subscriptions")
-                        .with(jwtWithRoles("CLIENT")))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Client id must be a positive integer."));
+        mockMvc.perform(get("/api/clients/8/subscriptions")
+                        .with(jwtWithSubjectAndRoles("client01", "CLIENT")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Clients may only access their own records."));
     }
 
     private ClientSubscription buildSubscription() {
@@ -85,5 +91,18 @@ class ClientSubscriptionControllerTest {
         subscription.setStatus("ACTIVE");
         subscription.setApprovedByUserId(1);
         return subscription;
+    }
+
+    private AppUser buildCurrentUser(Integer clientId) {
+        AppUser user = new AppUser();
+        user.setUserId(14);
+        user.setUsername("client01");
+        user.setEmail("client01@tadpoles.dev");
+        user.setDisplayName("Client User");
+        user.setEnabled(true);
+        user.setClientId(clientId);
+        user.setCreatedAt(LocalDateTime.of(2026, 9, 24, 8, 20));
+        user.setUpdatedAt(LocalDateTime.of(2026, 9, 24, 8, 20));
+        return user;
     }
 }

@@ -1,5 +1,7 @@
 package com.neueda.leap.controller;
 
+import com.neueda.leap.domain.AppUser;
+import com.neueda.leap.service.AppUserService;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
@@ -25,7 +27,35 @@ final class SecurityRoleSupport {
         }
     }
 
-    private static boolean hasAnyRole(Jwt jwt, String... requiredRoles) {
+    static void requireClientOwnership(Jwt jwt, AppUserService appUserService, Integer clientId) {
+        requireAuthenticated(jwt);
+        if (!hasAnyRole(jwt, "CLIENT")) {
+            return;
+        }
+
+        AppUser currentUser = resolveCurrentUser(jwt, appUserService);
+        if (currentUser.getClientId() == null || !currentUser.getClientId().equals(clientId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Clients may only access their own records.");
+        }
+    }
+
+    static AppUser resolveCurrentUser(Jwt jwt, AppUserService appUserService) {
+        requireAuthenticated(jwt);
+
+        Integer userId = resolvePositiveIntegerClaim(jwt, "userId");
+        if (userId != null) {
+            return appUserService.getUser(userId);
+        }
+
+        String subject = jwt.getSubject();
+        if (subject != null && !subject.isBlank()) {
+            return appUserService.getUserByUsername(subject.trim());
+        }
+
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unable to resolve authenticated user");
+    }
+
+    static boolean hasAnyRole(Jwt jwt, String... requiredRoles) {
         Set<String> normalizedRequiredRoles = new HashSet<>();
         Arrays.stream(requiredRoles)
                 .map(SecurityRoleSupport::normalizeRole)
@@ -48,6 +78,23 @@ final class SecurityRoleSupport {
 
     private static String buildRoleMessage(String... requiredRoles) {
         return String.join(" or ", requiredRoles) + " role required";
+    }
+
+    private static Integer resolvePositiveIntegerClaim(Jwt jwt, String claimName) {
+        Object claimValue = jwt.getClaims().get(claimName);
+        if (claimValue instanceof Number number) {
+            int value = number.intValue();
+            return value > 0 ? value : null;
+        }
+        if (claimValue instanceof String stringValue && !stringValue.isBlank()) {
+            try {
+                int value = Integer.parseInt(stringValue.trim());
+                return value > 0 ? value : null;
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
     }
 
     private static String normalizeRole(String role) {

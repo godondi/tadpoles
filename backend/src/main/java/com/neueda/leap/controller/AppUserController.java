@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/users")
@@ -30,7 +29,7 @@ public class AppUserController {
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
     public AppUserResponseDto getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
-        return AppUserResponseDto.fromEntity(resolveCurrentUser(jwt));
+        return AppUserResponseDto.fromEntity(SecurityRoleSupport.resolveCurrentUser(jwt, appUserService));
     }
 
     @GetMapping
@@ -64,39 +63,5 @@ public class AppUserController {
     ) {
         AppUser user = appUserService.setUserRoles(userId, request);
         return AppUserResponseDto.fromEntity(user);
-    }
-
-    private AppUser resolveCurrentUser(Jwt jwt) {
-        Integer userId = resolvePositiveIntegerClaim(jwt, "userId");
-        if (userId != null) {
-            return appUserService.getUser(userId);
-        }
-
-        String subject = jwt.getSubject();
-        if (subject != null && !subject.isBlank()) {
-            return appUserService.getUserByUsername(subject.trim());
-        }
-
-        throw new ResponseStatusException(
-                org.springframework.http.HttpStatus.UNAUTHORIZED,
-                "Unable to resolve authenticated user"
-        );
-    }
-
-    private Integer resolvePositiveIntegerClaim(Jwt jwt, String claimName) {
-        Object claimValue = jwt.getClaims().get(claimName);
-        if (claimValue instanceof Number number) {
-            int value = number.intValue();
-            return value > 0 ? value : null;
-        }
-        if (claimValue instanceof String stringValue && !stringValue.isBlank()) {
-            try {
-                int value = Integer.parseInt(stringValue.trim());
-                return value > 0 ? value : null;
-            } catch (NumberFormatException ignored) {
-                return null;
-            }
-        }
-        return null;
     }
 }

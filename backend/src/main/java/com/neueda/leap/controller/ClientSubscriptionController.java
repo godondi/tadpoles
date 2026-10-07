@@ -4,9 +4,12 @@ import com.neueda.leap.domain.ClientSubscription;
 import com.neueda.leap.dto.ClientSubscriptionListResponseDto;
 import com.neueda.leap.dto.ClientSubscriptionResponseDto;
 import com.neueda.leap.dto.CreateClientSubscriptionRequestDto;
+import com.neueda.leap.service.AppUserService;
 import com.neueda.leap.service.ClientSubscriptionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,17 +21,24 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/clients/{clientId}/subscriptions")
 public class ClientSubscriptionController {
+    private final AppUserService appUserService;
     private final ClientSubscriptionService clientSubscriptionService;
 
-    public ClientSubscriptionController(ClientSubscriptionService clientSubscriptionService) {
+    public ClientSubscriptionController(
+            AppUserService appUserService,
+            ClientSubscriptionService clientSubscriptionService
+    ) {
+        this.appUserService = appUserService;
         this.clientSubscriptionService = clientSubscriptionService;
     }
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR', 'ANALYST', 'ADVISOR', 'CLIENT')")
     public ClientSubscriptionListResponseDto listClientSubscriptions(
-            @PathVariable Integer clientId
+            @PathVariable Integer clientId,
+            @AuthenticationPrincipal Jwt jwt
     ) {
+        SecurityRoleSupport.requireClientOwnership(jwt, appUserService, clientId);
         return ClientSubscriptionListResponseDto.fromEntities(
                 clientSubscriptionService.listClientSubscriptions(clientId)
         );

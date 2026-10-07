@@ -1,6 +1,7 @@
 package com.neueda.leap.controller;
 
 import static com.neueda.leap.support.TestSecurityUtils.jwtWithRoles;
+import static com.neueda.leap.support.TestSecurityUtils.jwtWithSubjectAndRoles;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -11,8 +12,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.neueda.leap.config.SecurityConfig;
+import com.neueda.leap.domain.AppUser;
 import com.neueda.leap.domain.TradeSuggestion;
 import com.neueda.leap.exception.GlobalExceptionHandler;
+import com.neueda.leap.service.AppUserService;
 import com.neueda.leap.service.TradeSuggestionService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -35,6 +38,8 @@ class TradeSuggestionControllerTest {
 
     @MockBean
     private TradeSuggestionService tradeSuggestionService;
+    @MockBean
+    private AppUserService appUserService;
 
     @Test
     void createTradeSuggestionReturnsCreatedResponseForAdvisor() throws Exception {
@@ -71,9 +76,10 @@ class TradeSuggestionControllerTest {
     @Test
     void getTradeSuggestionReturnsJsonResponseForAuthorizedUser() throws Exception {
         when(tradeSuggestionService.getTradeSuggestion(15)).thenReturn(buildSuggestion());
+        when(appUserService.getUserByUsername("client01")).thenReturn(buildCurrentUser(7));
 
         mockMvc.perform(get("/api/trade-suggestions/15")
-                        .with(jwtWithRoles("CLIENT")))
+                        .with(jwtWithSubjectAndRoles("client01", "CLIENT")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.suggestionId").value(15))
                 .andExpect(jsonPath("$.clientId").value(7));
@@ -84,10 +90,12 @@ class TradeSuggestionControllerTest {
         TradeSuggestion updated = buildSuggestion();
         updated.setStatus("ACCEPTED");
         updated.setNotes("Client approved");
+        when(tradeSuggestionService.getTradeSuggestion(15)).thenReturn(buildSuggestion());
         when(tradeSuggestionService.updateTradeSuggestion(eq(15), any())).thenReturn(updated);
+        when(appUserService.getUserByUsername("client01")).thenReturn(buildCurrentUser(7));
 
         mockMvc.perform(patch("/api/trade-suggestions/15")
-                        .with(jwtWithRoles("CLIENT"))
+                        .with(jwtWithSubjectAndRoles("client01", "CLIENT"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -98,6 +106,16 @@ class TradeSuggestionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ACCEPTED"))
                 .andExpect(jsonPath("$.notes").value("Client approved"));
+    }
+
+    @Test
+    void listClientTradeSuggestionsReturnsForbiddenWhenClientRequestsAnotherClientsSuggestions() throws Exception {
+        when(appUserService.getUserByUsername("client01")).thenReturn(buildCurrentUser(7));
+
+        mockMvc.perform(get("/api/clients/8/trade-suggestions")
+                        .with(jwtWithSubjectAndRoles("client01", "CLIENT")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Clients may only access their own records."));
     }
 
     @Test
@@ -138,5 +156,17 @@ class TradeSuggestionControllerTest {
         suggestion.setNotes("Increase technology exposure");
         return suggestion;
     }
-}
 
+    private AppUser buildCurrentUser(Integer clientId) {
+        AppUser user = new AppUser();
+        user.setUserId(14);
+        user.setUsername("client01");
+        user.setEmail("client01@tadpoles.dev");
+        user.setDisplayName("Client User");
+        user.setEnabled(true);
+        user.setClientId(clientId);
+        user.setCreatedAt(LocalDateTime.of(2026, 9, 24, 8, 20));
+        user.setUpdatedAt(LocalDateTime.of(2026, 9, 24, 8, 20));
+        return user;
+    }
+}
