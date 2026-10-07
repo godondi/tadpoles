@@ -40,6 +40,7 @@ CREATE TABLE model_portfolios (
 
 CREATE TABLE clients (
     client_id           SERIAL PRIMARY KEY,
+    user_id             INTEGER UNIQUE REFERENCES users(user_id),
     client_name         TEXT NOT NULL,
     advisor_id          INTEGER REFERENCES advisors(advisor_id),
     model_portfolio_id  INTEGER REFERENCES model_portfolios(model_portfolio_id),
@@ -131,4 +132,3 @@ CREATE TABLE audit_logs (
     new_values      JSONB,
     created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-

@@ -1,0 +1,172 @@
+package com.neueda.leap.controller;
+
+import static com.neueda.leap.support.TestSecurityUtils.jwtWithRoles;
+import static com.neueda.leap.support.TestSecurityUtils.jwtWithSubjectAndRoles;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.neueda.leap.config.SecurityConfig;
+import com.neueda.leap.domain.AppUser;
+import com.neueda.leap.domain.TradeSuggestion;
+import com.neueda.leap.exception.GlobalExceptionHandler;
+import com.neueda.leap.service.AppUserService;
+import com.neueda.leap.service.TradeSuggestionService;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
+
+@WebMvcTest(TradeSuggestionController.class)
+@Import({GlobalExceptionHandler.class, SecurityConfig.class})
+@TestPropertySource(properties = "jwt.secret=test-jwt-secret-test-jwt-secret-123456")
+class TradeSuggestionControllerTest {
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockBean
+    private TradeSuggestionService tradeSuggestionService;
+    @MockBean
+    private AppUserService appUserService;
+
+    @Test
+    void createTradeSuggestionReturnsCreatedResponseForAdvisor() throws Exception {
+        when(tradeSuggestionService.createTradeSuggestion(eq(3), eq(7), any())).thenReturn(buildSuggestion());
+
+        mockMvc.perform(post("/api/advisors/3/clients/7/trade-suggestions")
+                        .with(jwtWithRoles("ADVISOR"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "instrumentId": 11,
+                                  "tradeType": "BUY",
+                                  "quantity": 5.5,
+                                  "proposedPrice": 189.25,
+                                  "notes": "Increase technology exposure"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.suggestionId").value(15))
+                .andExpect(jsonPath("$.status").value("SUGGESTED"));
+    }
+
+    @Test
+    void listClientTradeSuggestionsReturnsJsonResponseForAuthorizedUser() throws Exception {
+        when(tradeSuggestionService.listClientTradeSuggestions(7)).thenReturn(List.of(buildSuggestion()));
+
+        mockMvc.perform(get("/api/clients/7/trade-suggestions")
+                        .with(jwtWithRoles("ANALYST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.suggestions[0].suggestionId").value(15))
+                .andExpect(jsonPath("$.suggestions[0].tradeType").value("BUY"));
+    }
+
+    @Test
+    void getTradeSuggestionReturnsJsonResponseForAuthorizedUser() throws Exception {
+        when(tradeSuggestionService.getTradeSuggestion(15)).thenReturn(buildSuggestion());
+        when(appUserService.getUserByUsername("client01")).thenReturn(buildCurrentUser(7));
+
+        mockMvc.perform(get("/api/trade-suggestions/15")
+                        .with(jwtWithSubjectAndRoles("client01", "CLIENT")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.suggestionId").value(15))
+                .andExpect(jsonPath("$.clientId").value(7));
+    }
+
+    @Test
+    void updateTradeSuggestionReturnsJsonResponseForClient() throws Exception {
+        TradeSuggestion updated = buildSuggestion();
+        updated.setStatus("ACCEPTED");
+        updated.setNotes("Client approved");
+        when(tradeSuggestionService.getTradeSuggestion(15)).thenReturn(buildSuggestion());
+        when(tradeSuggestionService.updateTradeSuggestion(eq(15), any())).thenReturn(updated);
+        when(appUserService.getUserByUsername("client01")).thenReturn(buildCurrentUser(7));
+
+        mockMvc.perform(patch("/api/trade-suggestions/15")
+                        .with(jwtWithSubjectAndRoles("client01", "CLIENT"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "ACCEPTED",
+                                  "notes": "Client approved"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACCEPTED"))
+                .andExpect(jsonPath("$.notes").value("Client approved"));
+    }
+
+    @Test
+    void listClientTradeSuggestionsReturnsForbiddenWhenClientRequestsAnotherClientsSuggestions() throws Exception {
+        when(appUserService.getUserByUsername("client01")).thenReturn(buildCurrentUser(7));
+
+        mockMvc.perform(get("/api/clients/8/trade-suggestions")
+                        .with(jwtWithSubjectAndRoles("client01", "CLIENT")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Clients may only access their own records."));
+    }
+
+    @Test
+    void createTradeSuggestionReturnsUnauthorizedWhenAdvisorRoleMissing() throws Exception {
+        mockMvc.perform(post("/api/advisors/3/clients/7/trade-suggestions")
+                        .with(jwtWithRoles("CLIENT"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "instrumentId": 11,
+                                  "tradeType": "BUY",
+                                  "quantity": 5.5
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Access Denied"));
+    }
+
+    @Test
+    void listClientTradeSuggestionsReturnsUnauthorizedWhenRoleMissing() throws Exception {
+        mockMvc.perform(get("/api/clients/7/trade-suggestions")
+                        .with(jwtWithRoles("GUEST")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Access Denied"));
+    }
+
+    private TradeSuggestion buildSuggestion() {
+        TradeSuggestion suggestion = new TradeSuggestion();
+        suggestion.setSuggestionId(15);
+        suggestion.setAdvisorId(3);
+        suggestion.setClientId(7);
+        suggestion.setInstrumentId(11);
+        suggestion.setTradeType("BUY");
+        suggestion.setQuantity(new BigDecimal("5.500000"));
+        suggestion.setProposedPrice(new BigDecimal("189.25"));
+        suggestion.setSuggestedAt(LocalDateTime.of(2026, 9, 24, 11, 0));
+        suggestion.setStatus("SUGGESTED");
+        suggestion.setNotes("Increase technology exposure");
+        return suggestion;
+    }
+
+    private AppUser buildCurrentUser(Integer clientId) {
+        AppUser user = new AppUser();
+        user.setUserId(14);
+        user.setUsername("client01");
+        user.setEmail("client01@tadpoles.dev");
+        user.setDisplayName("Client User");
+        user.setEnabled(true);
+        user.setClientId(clientId);
+        user.setCreatedAt(LocalDateTime.of(2026, 9, 24, 8, 20));
+        user.setUpdatedAt(LocalDateTime.of(2026, 9, 24, 8, 20));
+        return user;
+    }
+}

@@ -7,6 +7,7 @@ import com.neueda.leap.dto.InstrumentResponseDto;
 import com.neueda.leap.dto.UpdateInstrumentRequestDto;
 import com.neueda.leap.service.InstrumentService;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,24 +27,28 @@ public class InstrumentController {
     }
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public InstrumentListResponseDto listInstruments() {
         return InstrumentListResponseDto.fromEntities(instrumentService.listInstruments());
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("isAuthenticated()")
     public InstrumentResponseDto createInstrument(@RequestBody CreateInstrumentRequestDto request) {
         Instrument instrument = instrumentService.createInstrument(request);
         return InstrumentResponseDto.fromEntity(instrument);
     }
 
     @GetMapping("/{instrumentId}")
+    @PreAuthorize("isAuthenticated()")
     public InstrumentResponseDto getInstrument(@PathVariable Integer instrumentId) {
         Instrument instrument = instrumentService.getInstrument(instrumentId);
         return InstrumentResponseDto.fromEntity(instrument);
     }
 
     @PatchMapping("/{instrumentId}")
+    @PreAuthorize("isAuthenticated()")
     public InstrumentResponseDto updateInstrument(
             @PathVariable Integer instrumentId,
             @RequestBody UpdateInstrumentRequestDto request

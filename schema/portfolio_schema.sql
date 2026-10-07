@@ -10,8 +10,9 @@ CREATE TABLE model_portfolios (
 
 CREATE TABLE clients (
 	client_id			SERIAL PRIMARY KEY,
-	client_name			TEXT NOT NULL, 
-	advisor_id			INTEGER REFERENCES advisors(advisor_id),
+	user_id INTEGER UNIQUE REFERENCES users(user_id),
+	client_name TEXT NOT NULL,
+	advisor_id INTEGER REFERENCES advisors(advisor_id),
 	model_portfolio_id 	INTEGER REFERENCES model_portfolios(model_portfolio_id)
 ); 
 

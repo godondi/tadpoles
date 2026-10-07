@@ -9,7 +9,7 @@ but can be customized to your liking.
 Connect to that database and run the following SQL files found in the `/database` directory to create the necessary 
 tables:
 
-- `/schema/001_revised_schema.sql` - This file contains the schema for the database, including tables, columns, and 
+- `/schema/tadpoles_schema.sql` - This file contains the schema for the database, including tables, columns, and 
 constraints.
 - `/test_data/002_tadpoles_test_data.sql` - This file contains test data to populate the database for testing purposes.
 
