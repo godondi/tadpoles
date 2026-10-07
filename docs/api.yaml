@@ -1036,6 +1036,36 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /quotes/{symbol}:
+    parameters:
+      - $ref: '#/components/parameters/FauxnanceSymbol'
+    get:
+      tags: [Market Data]
+      summary: Retrieve the latest Fauxnance quote
+      description: >-
+        Proxies the configured Fauxnance latest-quote endpoint and returns the
+        quote envelope expected by the marketplace contract.
+      operationId: getQuote
+      responses:
+        '200':
+          description: Quote response in Fauxnance envelope format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FauxnanceQuoteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          description: Fauxnance upstream is unavailable or returned an unusable response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /trades:
     get:
       tags: [Trades]
@@ -1841,6 +1871,97 @@ components:
           type: string
           format: date
           nullable: true
+
+    FauxnanceQuote:
+      type: object
+      required:
+        - symbol
+        - price
+        - bid
+        - ask
+        - spreadBps
+        - currency
+        - change
+        - changePercent
+        - previousClose
+        - asOf
+        - marketState
+      properties:
+        symbol:
+          type: string
+          example: AAPL
+        price:
+          type: number
+          exclusiveMinimum: 0
+          example: 313.53
+        bid:
+          type: number
+          exclusiveMinimum: 0
+          example: 313.5
+        ask:
+          type: number
+          exclusiveMinimum: 0
+          example: 313.56
+        spreadBps:
+          type: number
+          minimum: 0
+          example: 1.8587
+        currency:
+          type: string
+          nullable: true
+          example: USD
+        change:
+          type: number
+          nullable: true
+          example: 3.63
+        changePercent:
+          type: number
+          nullable: true
+          example: 1.1713
+        previousClose:
+          type: number
+          nullable: true
+          example: 309.9
+        asOf:
+          type: string
+          format: date-time
+          example: 2026-08-26T16:13:24Z
+        marketState:
+          type: string
+          enum: [open, closed, pre, post, unknown]
+          example: open
+
+    FauxnanceQuoteMeta:
+      type: object
+      required: [asOf, disclaimer, symbol, source, spreadSource, stale]
+      properties:
+        asOf:
+          type: string
+          format: date-time
+        disclaimer:
+          type: string
+          example: Educational data. Not for investment use.
+        symbol:
+          type: string
+          example: AAPL
+        source:
+          type: string
+          example: cache
+        spreadSource:
+          type: string
+          enum: [modelled]
+          example: modelled
+        stale:
+          type: boolean
+
+    FauxnanceQuoteResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          $ref: '#/components/schemas/FauxnanceQuote'
+        meta:
+          $ref: '#/components/schemas/FauxnanceQuoteMeta'
 
     FauxnanceCandlesResponse:
       type: object
