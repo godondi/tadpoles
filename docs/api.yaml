@@ -93,7 +93,7 @@ paths:
   /auth/login:
     post:
       tags: [Authentication]
-      summary: Authenticate a user and return JWT tokens
+      summary: Authenticate a user and start a revocable session
       operationId: login
       x-required-roles: []
       security: []
@@ -109,7 +109,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoginResponse'
+                $ref: '#/components/schemas/AuthTokens'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -122,7 +122,7 @@ paths:
   /auth/refresh:
     post:
       tags: [Authentication]
-      summary: "Planned: exchange a refresh token for a new access token"
+      summary: Exchange a refresh token for a rotated session token pair
       operationId: refreshToken
       x-required-roles: []
       security: []
@@ -149,7 +149,7 @@ paths:
   /auth/logout:
     post:
       tags: [Authentication]
-      summary: "Planned: revoke the current refresh token"
+      summary: Revoke the current session refresh token
       operationId: logout
       x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
       requestBody:
@@ -167,6 +167,26 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+
+  /users/{userId}/refresh-tokens/revoke-all:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    post:
+      tags: [Authentication]
+      summary: Revoke all active refresh tokens for a user
+      operationId: revokeUserRefreshTokens
+      x-required-roles: [ADMIN]
+      responses:
+        '204':
+          description: All active refresh tokens revoked
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /users/me:
     get:
@@ -439,6 +459,8 @@ paths:
                 $ref: '#/components/schemas/ClientSummary'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
     patch:
@@ -462,6 +484,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -481,6 +505,8 @@ paths:
                 $ref: '#/components/schemas/ClientBalanceResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -521,6 +547,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SubscriptionListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       tags: [Clients]
       summary: Subscribe a client to a model portfolio
@@ -556,6 +588,8 @@ paths:
                 $ref: '#/components/schemas/HoldingListResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
     post:
@@ -579,6 +613,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -604,6 +640,8 @@ paths:
                 $ref: '#/components/schemas/HoldingSummary'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
     patch:
@@ -627,6 +665,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -646,6 +686,8 @@ paths:
                 $ref: '#/components/schemas/TradeListResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
     post:
@@ -669,6 +711,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -712,6 +756,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -781,6 +827,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TradeSuggestionListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /trade-suggestions/{suggestionId}:
     parameters:
@@ -802,6 +854,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TradeSuggestionSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
     patch:
       tags: [Trade Suggestions]
       summary: Update the status of a trade suggestion
@@ -820,6 +878,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TradeSuggestionSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /model-portfolios:
     get:
@@ -1314,20 +1380,6 @@ components:
         password:
           type: string
           format: password
-
-    LoginResponse:
-      type: object
-      required: [token, tokenType, expiresIn]
-      properties:
-        token:
-          type: string
-        tokenType:
-          type: string
-          example: Bearer
-        expiresIn:
-          type: integer
-          format: int64
-          example: 3600
 
     RefreshTokenRequest:
       type: object
