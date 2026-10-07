@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.neueda.leap.config.SecurityConfig;
+import com.neueda.leap.dto.AuthTokensResponseDto;
 import com.neueda.leap.dto.ClientRegistrationResponseDto;
 import com.neueda.leap.dto.CreateUserResponseDto;
 import com.neueda.leap.exception.GlobalExceptionHandler;
@@ -34,6 +35,29 @@ class AuthControllerTest {
 
     @MockBean
     private UserService userService;
+
+    @Test
+    void loginReturnsAccessAndRefreshTokens() throws Exception {
+        when(authService.login(any())).thenReturn(new AuthTokensResponseDto(
+                "access-token",
+                "refresh-token",
+                "Bearer",
+                3600L
+        ));
+
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "client01",
+                                  "password": "client-password"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("access-token"))
+                .andExpect(jsonPath("$.refreshToken").value("refresh-token"))
+                .andExpect(jsonPath("$.expiresInSeconds").value(3600));
+    }
 
     @Test
     void registerClientAllowsAnonymousRegistration() throws Exception {

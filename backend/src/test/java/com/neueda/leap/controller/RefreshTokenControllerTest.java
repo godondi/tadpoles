@@ -121,6 +121,15 @@ class RefreshTokenControllerTest {
     }
 
     @Test
+    void revokeAllRefreshTokensReturnsNoContentForAdmin() throws Exception {
+        doNothing().when(refreshTokenService).revokeUserRefreshTokens(1);
+
+        mockMvc.perform(post("/api/users/1/refresh-tokens/revoke-all")
+                        .with(jwtWithRoles("ADMIN")))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
     void listUserRefreshTokensReturnsUnauthorizedWhenAdminRoleMissing() throws Exception {
         mockMvc.perform(get("/api/users/1/refresh-tokens")
                         .with(jwtWithRoles("CLIENT")))
@@ -138,4 +147,3 @@ class RefreshTokenControllerTest {
         return refreshToken;
     }
 }
-

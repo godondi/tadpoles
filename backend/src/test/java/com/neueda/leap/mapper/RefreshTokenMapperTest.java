@@ -69,5 +69,20 @@ class RefreshTokenMapperTest {
         RefreshToken stored = refreshTokenMapper.getRefreshToken(21);
         assertEquals(revokedAt, stored.getRevokedAt());
     }
-}
 
+    @Test
+    void revokeUserRefreshTokensRevokesEveryActiveTokenForUser() {
+        RefreshToken refreshToken = new RefreshToken();
+        refreshToken.setUserId(1);
+        refreshToken.setTokenHash("second-token-hash");
+        refreshToken.setExpiresAt(LocalDateTime.of(2026, 10, 31, 8, 0));
+        refreshTokenMapper.insertRefreshToken(refreshToken);
+
+        LocalDateTime revokedAt = LocalDateTime.of(2026, 9, 30, 12, 0);
+        int rows = refreshTokenMapper.revokeUserRefreshTokens(1, revokedAt);
+
+        assertEquals(2, rows);
+        assertEquals(revokedAt, refreshTokenMapper.getRefreshToken(21).getRevokedAt());
+        assertEquals(revokedAt, refreshTokenMapper.getRefreshToken(refreshToken.getRefreshTokenId()).getRevokedAt());
+    }
+}

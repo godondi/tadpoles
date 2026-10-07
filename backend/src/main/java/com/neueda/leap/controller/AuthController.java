@@ -5,7 +5,7 @@ import com.neueda.leap.dto.ClientRegistrationResponseDto;
 import com.neueda.leap.dto.CreateUserRequestDto;
 import com.neueda.leap.dto.CreateUserResponseDto;
 import com.neueda.leap.dto.LoginRequestDto;
-import com.neueda.leap.dto.LoginResponseDto;
+import com.neueda.leap.dto.AuthTokensResponseDto;
 import com.neueda.leap.service.AuthService;
 import com.neueda.leap.service.UserService;
 import org.springframework.http.HttpStatus;
@@ -29,7 +29,7 @@ public class AuthController {
 
     @PostMapping("/login")
     @ResponseStatus(HttpStatus.OK)
-    public LoginResponseDto login(@RequestBody LoginRequestDto request) {
+    public AuthTokensResponseDto login(@RequestBody LoginRequestDto request) {
         return authService.login(request);
     }
 
