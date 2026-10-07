@@ -68,7 +68,7 @@ public class ClientTradeServiceImpl implements ClientTradeService {
         validateStatus(request.status());
 
         clientService.getClient(clientId);
-        instrumentService.getInstrument(request.instrumentId());
+        validateSupportedInstrument(instrumentService.getInstrument(request.instrumentId()));
 
         ClientTrade trade = new ClientTrade();
         trade.setClientId(clientId);
@@ -167,6 +167,12 @@ public class ClientTradeServiceImpl implements ClientTradeService {
         }
     }
 
+    private void validateSupportedInstrument(com.neueda.leap.domain.Instrument instrument) {
+        if (Boolean.FALSE.equals(instrument.getIsActive())) {
+            throw new IllegalArgumentException("Inactive instruments cannot be traded.");
+        }
+    }
+
     private String normalizeStatus(String status, String defaultValue) {
         return status == null ? defaultValue : status.trim().toUpperCase();
     }
@@ -179,5 +185,4 @@ public class ClientTradeServiceImpl implements ClientTradeService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 }
-
 

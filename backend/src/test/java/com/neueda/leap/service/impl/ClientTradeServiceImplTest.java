@@ -2,8 +2,10 @@ package com.neueda.leap.service.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.neueda.leap.domain.Client;
@@ -154,6 +156,33 @@ class ClientTradeServiceImplTest {
     }
 
     @Test
+    void createTradeThrowsOnInactiveInstrument() {
+        CreateClientTradeRequestDto request = new CreateClientTradeRequestDto(
+                11,
+                14,
+                null,
+                "BUY",
+                new BigDecimal("2.5"),
+                new BigDecimal("110.25"),
+                LocalDate.of(2026, 9, 24),
+                null,
+                null
+        );
+        Instrument inactiveInstrument = buildInstrument();
+        inactiveInstrument.setIsActive(false);
+        when(clientService.getClient(7)).thenReturn(buildClient());
+        when(instrumentService.getInstrument(11)).thenReturn(inactiveInstrument);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> clientTradeService.createTrade(7, request)
+        );
+
+        assertTrue(exception.getMessage().contains("Inactive instruments cannot be traded."));
+        verifyNoInteractions(clientTradeMapper);
+    }
+
+    @Test
     void updateTradeThrowsWhenNoFieldsProvided() {
         UpdateClientTradeRequestDto request = new UpdateClientTradeRequestDto(null, null, null, null, null);
 
@@ -192,5 +221,4 @@ class ClientTradeServiceImplTest {
         return trade;
     }
 }
-
 
