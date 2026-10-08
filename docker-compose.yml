@@ -23,6 +23,19 @@ services:
       - database
       - auth-stub
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: tadpole-frontend:latest
+    container_name: tadpole-frontend
+    env_file:
+      - .env
+    environment:
+      PORT: ${FRONTEND_CONTAINER_PORT}
+    ports:
+      - "${FRONTEND_HOST_PORT}:${FRONTEND_CONTAINER_PORT}"
+
   database:
     image: postgres:15
     container_name: tadpole-database
