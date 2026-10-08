@@ -7,12 +7,11 @@ import com.neueda.leap.dto.LoginRequestDto;
 import com.neueda.leap.mapper.UserMapper;
 import com.neueda.leap.service.AuthService;
 import com.neueda.leap.service.RefreshTokenService;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.util.List;
 
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -42,27 +41,21 @@ public class AuthServiceImpl implements AuthService {
         if (user == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password");
         }
-
         if (!Boolean.TRUE.equals(user.getEnabled())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User account is disabled");
         }
-
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password");
         }
 
         List<String> roles = userMapper.findRolesByUserId(user.getUserId());
-        IssuedRefreshTokenResponseDto issuedRefreshToken = refreshTokenService.issueRefreshToken(user.getUserId(), null);
-        String accessToken = accessTokenService.generateAccessToken(
-                user,
-                roles,
-                issuedRefreshToken.refreshTokenId()
-        );
+        IssuedRefreshTokenResponseDto refreshToken = refreshTokenService.issueRefreshToken(user.getUserId(), null);
+        String accessToken = accessTokenService.generateAccessToken(user, roles, refreshToken.refreshTokenId());
 
         return new AuthTokensResponseDto(
                 accessToken,
-                issuedRefreshToken.refreshToken(),
-                issuedRefreshToken.tokenType(),
+                refreshToken.refreshToken(),
+                refreshToken.tokenType(),
                 accessTokenService.getAccessTokenTtlSeconds()
         );
     }

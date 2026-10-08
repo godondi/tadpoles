@@ -36,6 +36,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Configuration
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
+    private static final int MIN_HMAC_SECRET_BYTES = 32;
+
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
@@ -62,9 +64,17 @@ public class SecurityConfig {
     }
 
     @Bean
-    public JwtDecoder jwtDecoder(@Value("${jwt.secret}") String secret) {
-        SecretKey key = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-        return NimbusJwtDecoder.withSecretKey(key).build();
+    public SecretKey jwtSigningKey(@Value("${jwt.secret}") String secret) {
+        byte[] secretBytes = secret.getBytes(StandardCharsets.UTF_8);
+        if (secretBytes.length < MIN_HMAC_SECRET_BYTES) {
+            throw new IllegalStateException("JWT secret must be at least 32 bytes (256 bits) for HS256. Set JWT_SECRET to a longer value.");
+        }
+        return new SecretKeySpec(secretBytes, "HmacSHA256");
+    }
+
+    @Bean
+    public JwtDecoder jwtDecoder(SecretKey jwtSigningKey) {
+        return NimbusJwtDecoder.withSecretKey(jwtSigningKey).build();
     }
 
     @Bean
