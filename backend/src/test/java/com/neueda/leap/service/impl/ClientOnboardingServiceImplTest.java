@@ -55,12 +55,15 @@ class ClientOnboardingServiceImplTest {
 
         ClientOnboardingResponseDto response = clientOnboardingService.completeOnboarding(currentUser, request);
 
+        ArgumentCaptor<Client> clientCaptor = ArgumentCaptor.forClass(Client.class);
         ArgumentCaptor<ClientProfile> profileCaptor = ArgumentCaptor.forClass(ClientProfile.class);
+        verify(clientMapper).insertClient(clientCaptor.capture());
         verify(clientProfileMapper).insertClientProfile(profileCaptor.capture());
 
         assertEquals(7, response.clientId());
         assertEquals("Client One Household", response.clientName());
         assertEquals(true, response.onboardingComplete());
+        assertEquals(BigDecimal.ZERO, clientCaptor.getValue().getCashBalance());
         assertEquals(Integer.valueOf(7), profileCaptor.getValue().getClientId());
         assertEquals(new BigDecimal("250000.00"), profileCaptor.getValue().getNetWorth());
     }

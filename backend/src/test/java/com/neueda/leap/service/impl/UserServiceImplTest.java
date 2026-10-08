@@ -87,6 +87,7 @@ class UserServiceImplTest {
         assertTrue(userCaptor.getValue().getPasswordHash().startsWith("$2"));
         assertEquals(Integer.valueOf(14), clientCaptor.getValue().getUserId());
         assertEquals("Client Fourteen", clientCaptor.getValue().getClientName());
+        assertEquals(java.math.BigDecimal.ZERO, clientCaptor.getValue().getCashBalance());
     }
 
     @Test

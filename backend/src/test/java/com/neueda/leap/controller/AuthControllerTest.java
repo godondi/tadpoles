@@ -25,7 +25,10 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(AuthController.class)
 @Import({GlobalExceptionHandler.class, SecurityConfig.class})
-@TestPropertySource(properties = "jwt.secret=test-jwt-secret-test-jwt-secret-123456")
+@TestPropertySource(properties = {
+        "jwt.secret=test-jwt-secret-test-jwt-secret-123456",
+        "server.port=0"
+})
 class AuthControllerTest {
     @Autowired
     private MockMvc mockMvc;
