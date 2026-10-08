@@ -1,5 +1,4 @@
-import { Component, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TradesService } from './trades.service';
 
@@ -7,20 +6,6 @@ import { TradesService } from './trades.service';
   selector: 'app-trades',
   template: `
     <div class="trades-container">
-      <nav class="navbar" role="navigation" aria-label="Site navigation">
-        <div class="navbar-content">
-          <a routerLink="/" class="navbar-brand" aria-label="Pole Trading Dashboard">
-            <span class="brand-icon">📈</span>
-            <span class="brand-name">Pole</span>
-          </a>
-          <div class="navbar-right">
-            <a routerLink="/" class="back-button" aria-label="Back to dashboard">
-              ← Dashboard
-            </a>
-          </div>
-        </div>
-      </nav>
-
       <main class="trades-main" role="main">
         <div class="trades-header">
           <h1>Trade History</h1>
@@ -85,10 +70,10 @@ import { TradesService } from './trades.service';
                         {{ trade.action | uppercase }}
                       </span>
                     </td>
-                    <td class="text-right">{{ trade.quantity }}</td>
-                    <td class="text-right">{{ formatCurrency(trade.price) }}</td>
-                    <td class="text-right"><strong>{{ formatCurrency(trade.total) }}</strong></td>
-                    <td class="text-muted">{{ trade.date }}<br/>{{ trade.time }}</td>
+                     <td class="text-right mono-value">{{ trade.quantity }}</td>
+                     <td class="text-right mono-value">{{ formatCurrency(trade.price) }}</td>
+                     <td class="text-right mono-value"><strong>{{ formatCurrency(trade.total) }}</strong></td>
+                     <td class="text-muted mono-value">{{ trade.date }}<br/>{{ trade.time }}</td>
                     <td>
                       <span [class.status-completed]="trade.status === 'completed'"
                             [class.status-pending]="trade.status === 'pending'"
@@ -124,78 +109,6 @@ import { TradesService } from './trades.service';
       width: 100%;
       display: flex;
       flex-direction: column;
-    }
-
-    .navbar {
-      background-color: #006044;
-      border-bottom: 3px solid #76A923;
-      padding: 1rem 2rem;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .navbar-content {
-      max-width: 1400px;
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .navbar-brand {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      color: white;
-      text-decoration: none;
-      font-size: 1.5rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: opacity 0.2s ease;
-    }
-
-    .navbar-brand:hover {
-      opacity: 0.8;
-    }
-
-    .navbar-brand:focus-visible {
-      outline: 3px solid #76A923;
-      outline-offset: 2px;
-      border-radius: 4px;
-    }
-
-    .brand-icon {
-      font-size: 1.75rem;
-    }
-
-    .brand-name {
-      color: white;
-    }
-
-    .navbar-right {
-      display: flex;
-      gap: 1.5rem;
-      align-items: center;
-    }
-
-    .back-button {
-      color: white;
-      text-decoration: none;
-      padding: 0.5rem 1rem;
-      border-radius: 4px;
-      transition: background-color 0.2s ease;
-      cursor: pointer;
-    }
-
-    .back-button:hover {
-      background-color: rgba(118, 169, 35, 0.2);
-    }
-
-    .back-button:focus-visible {
-      outline: 3px solid #76A923;
-      outline-offset: 2px;
     }
 
     .trades-main {
@@ -249,6 +162,7 @@ import { TradesService } from './trades.service';
       color: #006044;
       font-size: 1.75rem;
       font-weight: 700;
+       font-family: Consolas, 'SFMono-Regular', Menlo, Monaco, monospace;
     }
 
     .trades-card {
@@ -434,27 +348,14 @@ import { TradesService } from './trades.service';
       th, td {
         padding: 0.75rem 0.5rem;
       }
-
-      .navbar {
-        padding: 1rem;
-      }
-
-      .navbar-content {
-        flex-direction: column;
-        gap: 1rem;
-      }
     }
   `],
-  imports: [RouterLink, CommonModule],
+  imports: [CommonModule],
 })
 export class TradesComponent {
   private tradesService = inject(TradesService);
 
   selectedFilter = signal<'all' | 'completed' | 'pending' | 'cancelled'>('all');
-
-  getTrades() {
-    return this.tradesService.getTrades();
-  }
 
   getTotalCommissions() {
     return this.tradesService.getTotalCommissions();
@@ -494,4 +395,3 @@ export class TradesComponent {
   }
 }
 
-import { signal } from '@angular/core';

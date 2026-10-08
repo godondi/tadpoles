@@ -1,0 +1,57 @@
+<nav class="top-nav">
+  <div class="nav-container">
+    <div class="brand" aria-label="Tadpoles brand">Tadpoles</div>
+
+    <div class="nav-actions">
+      <form class="search-form" (submit)="preventSearch($event)" aria-label="Search stub">
+        <label class="sr-only" for="global-search">Search</label>
+        <input
+          id="global-search"
+          type="search"
+          class="search-input"
+          placeholder="Search"
+          [value]="searchQuery()"
+          (input)="updateSearchQuery(searchInput.value)"
+          #searchInput
+        />
+        <button class="search-button" type="submit">
+          Search
+        </button>
+      </form>
+
+      <div class="profile-section">
+        <button
+          class="profile-btn"
+          type="button"
+          (click)="toggleProfileMenu()"
+          [attr.aria-expanded]="isMenuOpen()"
+          aria-haspopup="menu"
+          aria-controls="account-menu"
+        >
+          <span class="profile-avatar" aria-hidden="true">{{ userInitials() }}</span>
+          <span class="profile-label">Account</span>
+        </button>
+
+        @if (isMenuOpen()) {
+          <div id="account-menu" class="profile-menu" role="menu" aria-label="Account menu">
+            <div class="profile-summary">
+              <div class="profile-summary__label">Signed in as</div>
+              <div class="profile-summary__email mono-value">{{ userProfile().email }}</div>
+            </div>
+
+            <button class="menu-item" type="button" role="menuitem" (click)="openProfile()">
+              Profile
+            </button>
+            <button class="menu-item" type="button" role="menuitem" (click)="openTrades()">
+              Trade History
+            </button>
+            <button class="menu-item menu-item--logout" type="button" role="menuitem" (click)="logout()">
+              Log Out
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</nav>
+

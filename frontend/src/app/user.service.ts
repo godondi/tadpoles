@@ -45,7 +45,7 @@ export class UserService {
     accountNumber: 'PA-2024-1234567',
     memberSince: 'January 15, 2024',
     verificationStatus: 'Verified',
-    avatar: '👤',
+    avatar: 'JA',
     address: '1234 Investment Ave',
     city: 'New York',
     state: 'NY',

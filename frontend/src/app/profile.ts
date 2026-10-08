@@ -1,5 +1,4 @@
-import { Component, signal, computed, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UserService } from './user.service';
@@ -8,20 +7,6 @@ import { UserService } from './user.service';
   selector: 'app-profile',
   template: `
     <div class="profile-container">
-      <nav class="navbar" role="navigation" aria-label="Site navigation">
-        <div class="navbar-content">
-          <a routerLink="/" class="navbar-brand" aria-label="Pole Trading Dashboard">
-            <span class="brand-icon">📈</span>
-            <span class="brand-name">Pole</span>
-          </a>
-          <div class="navbar-right">
-            <a routerLink="/" class="back-button" aria-label="Back to dashboard">
-              ← Dashboard
-            </a>
-          </div>
-        </div>
-      </nav>
-
       <main class="profile-main" role="main">
         <div class="profile-header">
           <div class="header-content">
@@ -44,11 +29,11 @@ import { UserService } from './user.service';
               </div>
               <div class="info-item">
                 <label>Email</label>
-                <p>{{ profile().email }}</p>
+                <p class="mono-value">{{ profile().email }}</p>
               </div>
               <div class="info-item">
                 <label>Phone</label>
-                <p>{{ profile().phone }}</p>
+                <p class="mono-value">{{ profile().phone }}</p>
               </div>
               <div class="info-item">
                 <label>Date of Birth</label>
@@ -60,7 +45,7 @@ import { UserService } from './user.service';
               </div>
               <div class="info-item">
                 <label>Account Number</label>
-                <p>{{ profile().accountNumber }}</p>
+                <p class="mono-value">{{ profile().accountNumber }}</p>
               </div>
             </div>
           </div>
@@ -166,78 +151,6 @@ import { UserService } from './user.service';
       flex-direction: column;
     }
 
-    .navbar {
-      background-color: #006044;
-      border-bottom: 3px solid #76A923;
-      padding: 1rem 2rem;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .navbar-content {
-      max-width: 1400px;
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .navbar-brand {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      color: white;
-      text-decoration: none;
-      font-size: 1.5rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: opacity 0.2s ease;
-    }
-
-    .navbar-brand:hover {
-      opacity: 0.8;
-    }
-
-    .navbar-brand:focus-visible {
-      outline: 3px solid #76A923;
-      outline-offset: 2px;
-      border-radius: 4px;
-    }
-
-    .brand-icon {
-      font-size: 1.75rem;
-    }
-
-    .brand-name {
-      color: white;
-    }
-
-    .navbar-right {
-      display: flex;
-      gap: 1.5rem;
-      align-items: center;
-    }
-
-    .back-button {
-      color: white;
-      text-decoration: none;
-      padding: 0.5rem 1rem;
-      border-radius: 4px;
-      transition: background-color 0.2s ease;
-      cursor: pointer;
-    }
-
-    .back-button:hover {
-      background-color: rgba(118, 169, 35, 0.2);
-    }
-
-    .back-button:focus-visible {
-      outline: 3px solid #76A923;
-      outline-offset: 2px;
-    }
-
     .profile-main {
       flex: 1;
       padding: 2rem;
@@ -261,7 +174,9 @@ import { UserService } from './user.service';
     }
 
     .avatar-large {
-      font-size: 3.5rem;
+       font-size: 2rem;
+       font-weight: 700;
+       letter-spacing: 0.12em;
       width: 100px;
       height: 100px;
       display: flex;
@@ -276,6 +191,7 @@ import { UserService } from './user.service';
       color: #006044;
       margin: 0;
       font-size: 1.75rem;
+       font-weight: 700;
     }
 
     .email-text {
@@ -329,7 +245,7 @@ import { UserService } from './user.service';
       color: #006044;
       font-size: 1rem;
       margin: 0;
-      font-weight: 500;
+        font-weight: 500;
       line-height: 1.5;
     }
 
@@ -439,23 +355,14 @@ import { UserService } from './user.service';
         grid-template-columns: 1fr;
       }
 
-      .navbar {
-        padding: 1rem;
-      }
-
-      .navbar-content {
-        flex-direction: column;
-        gap: 1rem;
-      }
-
       .avatar-large {
         width: 80px;
         height: 80px;
-        font-size: 3rem;
+        font-size: 1.6rem;
       }
     }
   `],
-  imports: [RouterLink, CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule],
 })
 export class ProfileComponent {
   private userService = inject(UserService);
@@ -503,7 +410,7 @@ export class ProfileComponent {
     }
 
     this.passwordError.set('');
-    this.passwordSuccess.set('✓ Password updated successfully!');
+    this.passwordSuccess.set('Password updated successfully.');
     this.passwordForm.set({
       currentPassword: '',
       newPassword: '',
