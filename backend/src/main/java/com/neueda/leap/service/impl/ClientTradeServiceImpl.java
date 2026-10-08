@@ -4,6 +4,7 @@ import com.neueda.leap.domain.ClientTrade;
 import com.neueda.leap.dto.CreateClientTradeRequestDto;
 import com.neueda.leap.dto.UpdateClientTradeRequestDto;
 import com.neueda.leap.exception.ClientTradeNotFoundException;
+import com.neueda.leap.mapper.ClientHoldingMapper;
 import com.neueda.leap.mapper.ClientTradeMapper;
 import com.neueda.leap.service.ClientService;
 import com.neueda.leap.service.ClientTradeService;
@@ -17,15 +18,18 @@ public class ClientTradeServiceImpl implements ClientTradeService {
     private static final Set<String> VALID_TRADE_TYPES = Set.of("BUY", "SELL");
     private static final Set<String> VALID_STATUSES = Set.of("PENDING", "APPROVED", "REJECTED", "EXECUTED");
 
+    private final ClientHoldingMapper clientHoldingMapper;
     private final ClientTradeMapper clientTradeMapper;
     private final ClientService clientService;
     private final InstrumentService instrumentService;
 
     public ClientTradeServiceImpl(
+            ClientHoldingMapper clientHoldingMapper,
             ClientTradeMapper clientTradeMapper,
             ClientService clientService,
             InstrumentService instrumentService
     ) {
+        this.clientHoldingMapper = clientHoldingMapper;
         this.clientTradeMapper = clientTradeMapper;
         this.clientService = clientService;
         this.instrumentService = instrumentService;
@@ -67,9 +71,6 @@ public class ClientTradeServiceImpl implements ClientTradeService {
         }
         validateStatus(request.status());
 
-        clientService.getClient(clientId);
-        validateSupportedInstrument(instrumentService.getInstrument(request.instrumentId()));
-
         ClientTrade trade = new ClientTrade();
         trade.setClientId(clientId);
         trade.setInstrumentId(request.instrumentId());
@@ -81,6 +82,11 @@ public class ClientTradeServiceImpl implements ClientTradeService {
         trade.setTradeDate(request.tradeDate());
         trade.setStatus(normalizeStatus(request.status(), "PENDING"));
         trade.setReason(trimToNull(request.reason()));
+
+        com.neueda.leap.domain.Client client = clientService.getClient(clientId);
+        com.neueda.leap.domain.Instrument instrument = instrumentService.getInstrument(request.instrumentId());
+        com.neueda.leap.domain.ClientHolding holding = clientHoldingMapper.getLatestHolding(clientId, request.instrumentId());
+        validateAcceptedTrade(client, holding, instrument, trade);
 
         clientTradeMapper.insertClientTrade(trade);
         return getTrade(clientId, trade.getTradeId());
@@ -167,10 +173,22 @@ public class ClientTradeServiceImpl implements ClientTradeService {
         }
     }
 
-    private void validateSupportedInstrument(com.neueda.leap.domain.Instrument instrument) {
-        if (Boolean.FALSE.equals(instrument.getIsActive())) {
-            throw new IllegalArgumentException("Inactive instruments cannot be traded.");
-        }
+    private void validateAcceptedTrade(
+            com.neueda.leap.domain.Client client,
+            com.neueda.leap.domain.ClientHolding holding,
+            com.neueda.leap.domain.Instrument instrument,
+            ClientTrade trade
+    ) {
+        TradingRuleSupport.evaluateTrade(
+                client,
+                holding,
+                instrument,
+                trade,
+                trade.getPrice(),
+                "Inactive instruments cannot be traded.",
+                "Client does not have enough cash to accept this trade.",
+                "Client does not have enough holdings to accept this trade."
+        );
     }
 
     private String normalizeStatus(String status, String defaultValue) {
@@ -185,4 +203,3 @@ public class ClientTradeServiceImpl implements ClientTradeService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 }
-

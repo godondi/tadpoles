@@ -13,7 +13,6 @@ import com.neueda.leap.mapper.ClientMapper;
 import com.neueda.leap.mapper.ClientTradeMapper;
 import com.neueda.leap.mapper.InstrumentMapper;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
@@ -67,33 +66,23 @@ public class OrderFillServiceImpl implements com.neueda.leap.service.OrderFillSe
         if (instrument == null) {
             throw new InstrumentNotFoundException(trade.getInstrumentId());
         }
-        if (Boolean.FALSE.equals(instrument.getIsActive())) {
-            throw new IllegalArgumentException("Inactive instruments cannot be filled.");
-        }
-
         BigDecimal executionPrice = request != null && request.price() != null ? request.price() : trade.getPrice();
         LocalDateTime executedAt = request != null && request.executedAt() != null ? request.executedAt() : LocalDateTime.now();
         String reason = request != null && request.reason() != null ? request.reason().trim() : trade.getReason();
-        BigDecimal cashDelta = trade.getQuantity().multiply(executionPrice).setScale(2, RoundingMode.HALF_UP);
 
         ClientHolding holding = clientHoldingMapper.getLatestHoldingForUpdate(clientId, trade.getInstrumentId());
-        BigDecimal currentQuantity = holding == null ? BigDecimal.ZERO : holding.getQuantity();
-        BigDecimal newQuantity;
-        BigDecimal newCashBalance;
-
-        if ("BUY".equals(trade.getTradeType())) {
-            if (client.getCashBalance().compareTo(cashDelta) < 0) {
-                throw new IllegalArgumentException("Client does not have enough cash to fill this trade.");
-            }
-            newQuantity = currentQuantity.add(trade.getQuantity());
-            newCashBalance = client.getCashBalance().subtract(cashDelta);
-        } else {
-            if (currentQuantity.compareTo(trade.getQuantity()) < 0) {
-                throw new IllegalArgumentException("Client does not have enough holdings to fill this trade.");
-            }
-            newQuantity = currentQuantity.subtract(trade.getQuantity());
-            newCashBalance = client.getCashBalance().add(cashDelta);
-        }
+        TradingRuleEvaluation evaluation = TradingRuleSupport.evaluateTrade(
+                client,
+                holding,
+                instrument,
+                trade,
+                executionPrice,
+                "Inactive instruments cannot be filled.",
+                "Client does not have enough cash to fill this trade.",
+                "Client does not have enough holdings to fill this trade."
+        );
+        BigDecimal newQuantity = evaluation.newHoldingQuantity();
+        BigDecimal newCashBalance = evaluation.newCashBalance();
 
         LocalDate asOfDate = executedAt.toLocalDate();
         if (holding == null) {
@@ -140,5 +129,4 @@ public class OrderFillServiceImpl implements com.neueda.leap.service.OrderFillSe
         }
     }
 }
-
 

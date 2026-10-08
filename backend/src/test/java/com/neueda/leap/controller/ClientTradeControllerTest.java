@@ -103,6 +103,28 @@ class ClientTradeControllerTest {
     }
 
     @Test
+    void createTradeReturnsBadRequestWhenCashIsInsufficient() throws Exception {
+        when(clientTradeService.createTrade(org.mockito.ArgumentMatchers.eq(7), org.mockito.ArgumentMatchers.any()))
+                .thenThrow(new IllegalArgumentException("Client does not have enough cash to accept this trade."));
+
+        mockMvc.perform(post("/api/clients/7/trades")
+                        .with(jwtWithRoles("ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "instrumentId": 11,
+                                  "submittedByUserId": 14,
+                                  "tradeType": "BUY",
+                                  "quantity": 2.5,
+                                  "price": 110.25,
+                                  "tradeDate": "2026-09-24"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Client does not have enough cash to accept this trade."));
+    }
+
+    @Test
     void getTradeReturnsJsonResponse() throws Exception {
         when(clientTradeService.getTrade(7, 21)).thenReturn(buildTrade());
 

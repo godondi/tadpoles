@@ -76,6 +76,14 @@ class ClientHoldingMapperTest {
     }
 
     @Test
+    void getLatestHoldingReturnsMostRecentHolding() {
+        ClientHolding holding = clientHoldingMapper.getLatestHolding(7, 11);
+
+        assertNotNull(holding);
+        assertEquals(13, holding.getHoldingId());
+    }
+
+    @Test
     void deleteClientHoldingRemovesRow() {
         int rows = clientHoldingMapper.deleteClientHolding(7, 13);
 
@@ -83,4 +91,3 @@ class ClientHoldingMapperTest {
         assertEquals(0, clientHoldingMapper.listClientHoldings(7).size());
     }
 }
-

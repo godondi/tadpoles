@@ -9,11 +9,13 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.neueda.leap.domain.Client;
+import com.neueda.leap.domain.ClientHolding;
 import com.neueda.leap.domain.ClientTrade;
 import com.neueda.leap.domain.Instrument;
 import com.neueda.leap.dto.CreateClientTradeRequestDto;
 import com.neueda.leap.dto.UpdateClientTradeRequestDto;
 import com.neueda.leap.exception.ClientTradeNotFoundException;
+import com.neueda.leap.mapper.ClientHoldingMapper;
 import com.neueda.leap.mapper.ClientTradeMapper;
 import com.neueda.leap.service.ClientService;
 import com.neueda.leap.service.InstrumentService;
@@ -31,6 +33,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class ClientTradeServiceImplTest {
     @Mock
+    private ClientHoldingMapper clientHoldingMapper;
+    @Mock
     private ClientTradeMapper clientTradeMapper;
     @Mock
     private ClientService clientService;
@@ -41,7 +45,7 @@ class ClientTradeServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        clientTradeService = new ClientTradeServiceImpl(clientTradeMapper, clientService, instrumentService);
+        clientTradeService = new ClientTradeServiceImpl(clientHoldingMapper, clientTradeMapper, clientService, instrumentService);
     }
 
     @Test
@@ -81,6 +85,7 @@ class ClientTradeServiceImplTest {
         );
         when(clientService.getClient(7)).thenReturn(buildClient());
         when(instrumentService.getInstrument(11)).thenReturn(buildInstrument());
+        when(clientHoldingMapper.getLatestHolding(7, 11)).thenReturn(buildHolding("7.000000"));
         when(clientTradeMapper.insertClientTrade(any())).thenAnswer(invocation -> {
             ClientTrade trade = invocation.getArgument(0, ClientTrade.class);
             trade.setTradeId(21);
@@ -172,6 +177,7 @@ class ClientTradeServiceImplTest {
         inactiveInstrument.setIsActive(false);
         when(clientService.getClient(7)).thenReturn(buildClient());
         when(instrumentService.getInstrument(11)).thenReturn(inactiveInstrument);
+        when(clientHoldingMapper.getLatestHolding(7, 11)).thenReturn(buildHolding("7.000000"));
 
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
@@ -183,6 +189,58 @@ class ClientTradeServiceImplTest {
     }
 
     @Test
+    void createTradeThrowsWhenCashIsInsufficientAtAcceptance() {
+        CreateClientTradeRequestDto request = new CreateClientTradeRequestDto(
+                11,
+                14,
+                null,
+                "BUY",
+                new BigDecimal("2.5"),
+                new BigDecimal("110.25"),
+                LocalDate.of(2026, 9, 24),
+                null,
+                null
+        );
+        when(clientService.getClient(7)).thenReturn(buildClient("50.00"));
+        when(instrumentService.getInstrument(11)).thenReturn(buildInstrument());
+        when(clientHoldingMapper.getLatestHolding(7, 11)).thenReturn(buildHolding("7.000000"));
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> clientTradeService.createTrade(7, request)
+        );
+
+        assertEquals("Client does not have enough cash to accept this trade.", exception.getMessage());
+        verifyNoInteractions(clientTradeMapper);
+    }
+
+    @Test
+    void createTradeThrowsWhenHoldingsAreInsufficientAtAcceptance() {
+        CreateClientTradeRequestDto request = new CreateClientTradeRequestDto(
+                11,
+                14,
+                null,
+                "SELL",
+                new BigDecimal("8.0"),
+                new BigDecimal("110.25"),
+                LocalDate.of(2026, 9, 24),
+                null,
+                null
+        );
+        when(clientService.getClient(7)).thenReturn(buildClient());
+        when(instrumentService.getInstrument(11)).thenReturn(buildInstrument());
+        when(clientHoldingMapper.getLatestHolding(7, 11)).thenReturn(buildHolding("7.000000"));
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> clientTradeService.createTrade(7, request)
+        );
+
+        assertEquals("Client does not have enough holdings to accept this trade.", exception.getMessage());
+        verifyNoInteractions(clientTradeMapper);
+    }
+
+    @Test
     void updateTradeThrowsWhenNoFieldsProvided() {
         UpdateClientTradeRequestDto request = new UpdateClientTradeRequestDto(null, null, null, null, null);
 
@@ -190,10 +248,25 @@ class ClientTradeServiceImplTest {
     }
 
     private Client buildClient() {
+        return buildClient("1000.00");
+    }
+
+    private Client buildClient(String cashBalance) {
         Client client = new Client();
         client.setClientId(7);
         client.setClientName("Alice Investor");
+        client.setCashBalance(new BigDecimal(cashBalance));
         return client;
+    }
+
+    private ClientHolding buildHolding(String quantity) {
+        ClientHolding holding = new ClientHolding();
+        holding.setHoldingId(13);
+        holding.setClientId(7);
+        holding.setInstrumentId(11);
+        holding.setQuantity(new BigDecimal(quantity));
+        holding.setAsOfDate(LocalDate.of(2026, 9, 23));
+        return holding;
     }
 
     private Instrument buildInstrument() {
@@ -221,4 +294,3 @@ class ClientTradeServiceImplTest {
         return trade;
     }
 }
-

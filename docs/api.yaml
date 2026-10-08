@@ -708,7 +708,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TradeSummary'
         '400':
-          description: Invalid trade request, including inactive or unsupported instruments
+          description: Invalid trade request, including inactive instruments or failed trading-rule checks such as insufficient cash or holdings
           content:
             application/json:
               schema:
@@ -1361,6 +1361,12 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
     NotFound:
       description: Resource not found
       content:
@@ -1369,6 +1375,12 @@ components:
             $ref: '#/components/schemas/ErrorResponse'
     Conflict:
       description: Duplicate resource or conflicting state
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalServerError:
+      description: Unexpected server error
       content:
         application/json:
           schema:
