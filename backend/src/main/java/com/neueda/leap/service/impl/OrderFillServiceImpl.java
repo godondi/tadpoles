@@ -3,6 +3,8 @@ package com.neueda.leap.service.impl;
 import com.neueda.leap.domain.Client;
 import com.neueda.leap.domain.ClientHolding;
 import com.neueda.leap.domain.ClientTrade;
+import com.neueda.leap.domain.FauxnanceQuote;
+import com.neueda.leap.domain.FauxnanceQuoteResponse;
 import com.neueda.leap.domain.Instrument;
 import com.neueda.leap.dto.FillOrderRequestDto;
 import com.neueda.leap.dto.OrderFillResponseDto;
@@ -12,6 +14,7 @@ import com.neueda.leap.mapper.ClientHoldingMapper;
 import com.neueda.leap.mapper.ClientMapper;
 import com.neueda.leap.mapper.ClientTradeMapper;
 import com.neueda.leap.mapper.InstrumentMapper;
+import com.neueda.leap.service.FauxnanceQuoteService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -24,17 +27,20 @@ public class OrderFillServiceImpl implements com.neueda.leap.service.OrderFillSe
     private final ClientTradeMapper clientTradeMapper;
     private final ClientHoldingMapper clientHoldingMapper;
     private final InstrumentMapper instrumentMapper;
+    private final FauxnanceQuoteService fauxnanceQuoteService;
 
     public OrderFillServiceImpl(
             ClientMapper clientMapper,
             ClientTradeMapper clientTradeMapper,
             ClientHoldingMapper clientHoldingMapper,
-            InstrumentMapper instrumentMapper
+            InstrumentMapper instrumentMapper,
+            FauxnanceQuoteService fauxnanceQuoteService
     ) {
         this.clientMapper = clientMapper;
         this.clientTradeMapper = clientTradeMapper;
         this.clientHoldingMapper = clientHoldingMapper;
         this.instrumentMapper = instrumentMapper;
+        this.fauxnanceQuoteService = fauxnanceQuoteService;
     }
 
     @Override
@@ -66,7 +72,8 @@ public class OrderFillServiceImpl implements com.neueda.leap.service.OrderFillSe
         if (instrument == null) {
             throw new InstrumentNotFoundException(trade.getInstrumentId());
         }
-        BigDecimal executionPrice = request != null && request.price() != null ? request.price() : trade.getPrice();
+        BigDecimal limitPrice = request != null && request.price() != null ? request.price() : trade.getPrice();
+        BigDecimal executionPrice = resolveExecutionPrice(trade, instrument, limitPrice);
         LocalDateTime executedAt = request != null && request.executedAt() != null ? request.executedAt() : LocalDateTime.now();
         String reason = request != null && request.reason() != null ? request.reason().trim() : trade.getReason();
 
@@ -128,5 +135,40 @@ public class OrderFillServiceImpl implements com.neueda.leap.service.OrderFillSe
             throw new IllegalArgumentException(message);
         }
     }
-}
 
+    private BigDecimal resolveExecutionPrice(ClientTrade trade, Instrument instrument, BigDecimal limitPrice) {
+        if (instrument.getTicker() == null || instrument.getTicker().isBlank()) {
+            throw new IllegalArgumentException("Instrument ticker is required to price the trade.");
+        }
+
+        FauxnanceQuoteResponse quoteResponse = fauxnanceQuoteService.getQuote(instrument.getTicker());
+        if (quoteResponse.getMeta() == null || Boolean.TRUE.equals(quoteResponse.getMeta().getStale())) {
+            throw new IllegalArgumentException("Current market quote is unavailable for execution.");
+        }
+
+        FauxnanceQuote quote = quoteResponse.getData();
+        if (quote == null) {
+            throw new IllegalArgumentException("Current market quote is unavailable for execution.");
+        }
+
+        if ("BUY".equals(trade.getTradeType())) {
+            BigDecimal ask = quote.getAsk();
+            if (ask == null || ask.signum() <= 0) {
+                throw new IllegalArgumentException("Current ask quote is unavailable for execution.");
+            }
+            if (limitPrice.compareTo(ask) < 0) {
+                throw new IllegalArgumentException("Current ask price exceeds the order limit.");
+            }
+            return ask;
+        }
+
+        BigDecimal bid = quote.getBid();
+        if (bid == null || bid.signum() <= 0) {
+            throw new IllegalArgumentException("Current bid quote is unavailable for execution.");
+        }
+        if (limitPrice.compareTo(bid) > 0) {
+            throw new IllegalArgumentException("Current bid price is below the order limit.");
+        }
+        return bid;
+    }
+}
