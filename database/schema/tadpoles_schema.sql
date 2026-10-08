@@ -49,6 +49,30 @@ CREATE TABLE clients (
     cash_balance        NUMERIC(18,2) NOT NULL DEFAULT 0.00
 );
 
+CREATE TABLE client_profiles (
+    client_profile_id           SERIAL PRIMARY KEY,
+    user_id                     INTEGER NOT NULL UNIQUE REFERENCES users(user_id) ON DELETE CASCADE,
+    client_id                   INTEGER UNIQUE REFERENCES clients(client_id) ON DELETE CASCADE,
+    phone                       TEXT,
+    date_of_birth               DATE,
+    address_line_1              TEXT,
+    address_line_2              TEXT,
+    city                        TEXT,
+    state                       TEXT,
+    postal_code                 TEXT,
+    country                     TEXT,
+    employment_status           TEXT,
+    net_worth                   NUMERIC(18,2),
+    risk_tolerance              TEXT,
+    investment_objective        TEXT,
+    preferred_contact_method    TEXT,
+    paperless_statements        BOOLEAN NOT NULL DEFAULT TRUE,
+    marketing_opt_in            BOOLEAN NOT NULL DEFAULT FALSE,
+    onboarding_complete         BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at                  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at                  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE instruments (
     instrument_id       SERIAL PRIMARY KEY,
     instrument_name     TEXT NOT NULL UNIQUE,

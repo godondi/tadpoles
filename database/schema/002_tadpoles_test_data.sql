@@ -101,6 +101,40 @@ INSERT INTO clients (client_id, user_id, client_name, advisor_id, model_portfoli
 (9,  22, 'Iron Gate Capital',       9,  9,  1,  '2026-03-09 10:00:00', 500.00),
 (10, 23, 'Juniper Growth Group',   10, 10,  1,  '2026-03-10 10:00:00', 500.00);
 
+INSERT INTO client_profiles (
+	client_profile_id,
+	user_id,
+	client_id,
+	phone,
+	date_of_birth,
+	address_line_1,
+	address_line_2,
+	city,
+	state,
+	postal_code,
+	country,
+	employment_status,
+	net_worth,
+	risk_tolerance,
+	investment_objective,
+	preferred_contact_method,
+	paperless_statements,
+	marketing_opt_in,
+	onboarding_complete,
+	created_at,
+	updated_at
+) VALUES
+(1, 14, 1,  '+1-555-100-0001', '1985-03-15', '100 Main Street', 'Suite 1', 'New York',      'NY', '10001', 'United States', 'Employed',      250000.00, 'Moderate',     'Long-term growth',      'Email', TRUE, FALSE, TRUE, '2026-03-01 10:05:00', '2026-09-24 08:00:00'),
+(2, 15, 2,  '+1-555-100-0002', '1986-04-16', '200 Main Street', 'Suite 2', 'Chicago',       'IL', '60601', 'United States', 'Self-employed', 420000.00, 'Moderately High', 'Retirement income',   'Phone', TRUE, TRUE,  TRUE, '2026-03-02 10:05:00', '2026-09-24 08:00:00'),
+(3, 16, 3,  '+1-555-100-0003', '1987-05-17', '300 Main Street', 'Suite 3', 'Austin',        'TX', '73301', 'United States', 'Employed',      180000.00, 'Conservative', 'Capital preservation', 'Email', TRUE, FALSE, TRUE, '2026-03-03 10:05:00', '2026-09-24 08:00:00'),
+(4, 17, 4,  '+1-555-100-0004', '1988-06-18', '400 Main Street', 'Suite 4', 'Seattle',       'WA', '98101', 'United States', 'Employed',      510000.00, 'Aggressive',   'Wealth accumulation',  'SMS',   TRUE, TRUE,  TRUE, '2026-03-04 10:05:00', '2026-09-24 08:00:00'),
+(5, 18, 5,  '+1-555-100-0005', '1989-07-19', '500 Main Street', 'Suite 5', 'Denver',        'CO', '80202', 'United States', 'Retired',       950000.00, 'Moderate',     'Income',               'Email', TRUE, FALSE, TRUE, '2026-03-05 10:05:00', '2026-09-24 08:00:00'),
+(6, 19, 6,  '+1-555-100-0006', '1990-08-20', '600 Main Street', 'Suite 6', 'Miami',         'FL', '33101', 'United States', 'Business Owner', 760000.00, 'Moderately High', 'Balanced growth',     'Phone', TRUE, TRUE,  TRUE, '2026-03-06 10:05:00', '2026-09-24 08:00:00'),
+(7, 20, 7,  '+1-555-100-0007', '1991-09-21', '700 Main Street', 'Suite 7', 'Boston',        'MA', '02108', 'United States', 'Employed',      340000.00, 'Moderate',     'Long-term growth',      'Email', TRUE, FALSE, TRUE, '2026-03-07 10:05:00', '2026-09-24 08:00:00'),
+(8, 21, 8,  '+1-555-100-0008', '1992-10-22', '800 Main Street', 'Suite 8', 'San Francisco', 'CA', '94105', 'United States', 'Employed',      870000.00, 'Aggressive',   'Growth',               'Email', TRUE, TRUE,  TRUE, '2026-03-08 10:05:00', '2026-09-24 08:00:00'),
+(9, 22, 9,  '+1-555-100-0009', '1993-11-23', '900 Main Street', 'Suite 9', 'Atlanta',       'GA', '30303', 'United States', 'Self-employed', 290000.00, 'Conservative', 'Capital preservation', 'SMS',   TRUE, FALSE, TRUE, '2026-03-09 10:05:00', '2026-09-24 08:00:00'),
+(10, 23, 10, '+1-555-100-0010', '1994-12-24', '1000 Main Street', 'Suite 10', 'Phoenix',    'AZ', '85004', 'United States', 'Employed',      610000.00, 'Moderate',     'Retirement income',   'Phone', TRUE, TRUE,  TRUE, '2026-03-10 10:05:00', '2026-09-24 08:00:00');
+
 INSERT INTO instruments (instrument_id, instrument_name, ticker, currency, asset_class, security_type, is_active) VALUES
 (1,  'Apple Inc.',                 'AAPL',  'USD', 'Equity',     'COMMON_STOCK', TRUE),
 (2,  'Microsoft Corp.',            'MSFT',  'USD', 'Equity',     'COMMON_STOCK', TRUE),
@@ -207,6 +241,7 @@ SELECT setval(pg_get_serial_sequence('roles', 'role_id'), 10, true);
 SELECT setval(pg_get_serial_sequence('advisors', 'advisor_id'), 10, true);
 SELECT setval(pg_get_serial_sequence('model_portfolios', 'model_portfolio_id'), 10, true);
 SELECT setval(pg_get_serial_sequence('clients', 'client_id'), 10, true);
+SELECT setval(pg_get_serial_sequence('client_profiles', 'client_profile_id'), 10, true);
 SELECT setval(pg_get_serial_sequence('instruments', 'instrument_id'), 15, true);
 SELECT setval(pg_get_serial_sequence('client_subscriptions', 'subscription_id'), 10, true);
 SELECT setval(pg_get_serial_sequence('trade_suggestions', 'suggestion_id'), 10, true);

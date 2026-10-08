@@ -38,6 +38,53 @@ VALUES
 INSERT INTO clients (client_id, user_id, client_name, advisor_id, model_portfolio_id, created_by_user_id, created_at, cash_balance)
 VALUES (7, 14, 'Alice Investor', 3, 5, 1, TIMESTAMP '2026-09-24 10:00:00', 1200.50);
 
+INSERT INTO client_profiles (
+    client_profile_id,
+    user_id,
+    client_id,
+    phone,
+    date_of_birth,
+    address_line_1,
+    address_line_2,
+    city,
+    state,
+    postal_code,
+    country,
+    employment_status,
+    net_worth,
+    risk_tolerance,
+    investment_objective,
+    preferred_contact_method,
+    paperless_statements,
+    marketing_opt_in,
+    onboarding_complete,
+    created_at,
+    updated_at
+)
+VALUES (
+    11,
+    14,
+    7,
+    '+1-555-111-0007',
+    DATE '1992-03-15',
+    '100 Main Street',
+    'Unit 9',
+    'New York',
+    'NY',
+    '10001',
+    'United States',
+    'Employed',
+    250000.00,
+    'Moderate',
+    'Long-term growth',
+    'Email',
+    TRUE,
+    FALSE,
+    TRUE,
+    TIMESTAMP '2026-09-24 10:05:00',
+    TIMESTAMP '2026-09-24 10:05:00'
+);
+
 INSERT INTO client_subscriptions (subscription_id, client_id, model_portfolio_id, subscribed_date, ended_date, status, approved_by_user_id)
 VALUES (9, 7, 5, DATE '2026-09-24', NULL, 'ACTIVE', 1);
 
