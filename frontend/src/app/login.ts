@@ -1,6 +1,7 @@
 import { Component, signal, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { AuthService } from './core/auth/auth.service';
 
 interface LoginForm {
   email: string;
@@ -14,8 +15,8 @@ interface LoginForm {
     <div class="login-container">
       <div class="login-box">
         <div class="login-header">
-          <h1 class="login-title">📈 Pole Trading</h1>
-          <p class="login-subtitle">Professional Trading Platform</p>
+          <h1 class="login-title">Tadpoles</h1>
+          <p class="login-subtitle">Sign in to view your account dashboard.</p>
         </div>
 
         <form class="login-form" (ngSubmit)="handleLogin()">
@@ -84,7 +85,7 @@ interface LoginForm {
       width: 100%;
       height: 100vh;
       background: linear-gradient(135deg, #006044 0%, #76A923 100%);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
       margin: 0;
       padding: 0;
       overflow: hidden;
@@ -100,11 +101,11 @@ interface LoginForm {
     }
 
     .login-box {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      background: rgba(255, 255, 255, 0.98);
+      border-radius: 20px;
+      box-shadow: 0 24px 50px rgba(0, 0, 0, 0.18);
       width: 100%;
-      max-width: 400px;
+      max-width: 420px;
       padding: 2.5rem;
       margin: 0 1rem;
     }
@@ -119,11 +120,12 @@ interface LoginForm {
       font-weight: 700;
       color: #006044;
       margin: 0 0 0.5rem 0;
+      letter-spacing: 0.01em;
     }
 
     .login-subtitle {
       font-size: 0.95rem;
-      color: #666;
+      color: #51606f;
       margin: 0;
     }
 
@@ -276,6 +278,8 @@ interface LoginForm {
 })
 export class LoginComponent {
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly authService = inject(AuthService);
 
   readonly loginForm = signal<LoginForm>({
     email: '',
@@ -295,14 +299,15 @@ export class LoginComponent {
 
   handleLogin(): void {
     const form = this.loginForm();
-    
-    if (!form.email || !form.password) {
+    const trimmedEmail = form.email.trim();
+
+    if (!trimmedEmail || !form.password) {
       this.errorMessage.set('Please enter both email and password');
       setTimeout(() => this.errorMessage.set(''), 4000);
       return;
     }
 
-    if (!this.isValidEmail(form.email)) {
+    if (!this.isValidEmail(trimmedEmail)) {
       this.errorMessage.set('Please enter a valid email address');
       setTimeout(() => this.errorMessage.set(''), 4000);
       return;
@@ -314,11 +319,10 @@ export class LoginComponent {
       return;
     }
 
-    // Simulate successful login
-    console.log('Login attempt:', { email: form.email, rememberMe: form.rememberMe });
-    
-    // Navigate to home/dashboard
-    this.router.navigate(['']);
+    this.authService.login(trimmedEmail);
+
+    const redirectTarget = this.route.snapshot.queryParamMap.get('redirectTo') || '/';
+    void this.router.navigateByUrl(redirectTarget);
   }
 
   private isValidEmail(email: string): boolean {

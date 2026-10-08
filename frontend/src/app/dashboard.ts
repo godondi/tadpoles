@@ -2,7 +2,6 @@ import { Component, signal, ViewChild, ElementRef, AfterViewInit, effect, PLATFO
 import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, CategoryScale, LinearScale, PointElement, LineElement, LineController, DoughnutController, Title, Tooltip, Legend, ArcElement, Filler } from 'chart.js';
-import { UserService } from './user.service';
 
 Chart.register(CategoryScale, LinearScale, PointElement, LineElement, LineController, DoughnutController, Title, Tooltip, Legend, ArcElement, Filler);
 
@@ -41,18 +40,12 @@ export class DashboardComponent implements AfterViewInit {
   @ViewChild('pieCanvas', { static: false }) pieCanvas!: ElementRef<HTMLCanvasElement>;
 
   private readonly platformId = inject(PLATFORM_ID);
-  private readonly userService = inject(UserService);
 
   readonly accountValue = signal(125430.50);
   readonly dayChange = signal(2145.50);
   readonly dayChangePercent = signal(1.74);
 
   readonly showOrderModal = signal(false);
-  readonly showProfileMenu = signal(false);
-
-  readonly searchQuery = signal('');
-
-  readonly userProfile = this.userService.getProfile();
 
   readonly holdings = signal<Holding[]>([
     { symbol: 'AAPL', name: 'Apple', shares: 50, price: 240, value: 12000, percent: 9.5 },
@@ -217,10 +210,6 @@ export class DashboardComponent implements AfterViewInit {
     return num > 0 ? '+' : '';
   }
 
-  toggleProfileMenu(): void {
-    this.showProfileMenu.update(v => !v);
-  }
-
   openOrderModal(): void {
     this.showOrderModal.set(true);
   }
@@ -250,14 +239,4 @@ export class DashboardComponent implements AfterViewInit {
     }
   }
 
-  updateSearchQuery(value: string): void {
-    this.searchQuery.set(value);
-  }
-
-  handleSearch(): void {
-    const query = this.searchQuery();
-    if (query) {
-      alert(`Searching for: ${query}`);
-    }
-  }
 }

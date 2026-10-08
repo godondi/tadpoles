@@ -1,5 +1,22 @@
 <!-- Main Content -->
 <div class="main-container" role="main">
+  <div class="page-header">
+    <div>
+      <p class="eyebrow">Account Dashboard</p>
+      <h1 class="page-title">Portfolio overview</h1>
+      <p class="page-description">Track your account value, current holdings, and portfolio allocation in one place.</p>
+    </div>
+
+    <button
+      class="place-order-btn"
+      (click)="openOrderModal()"
+      aria-label="Open place order dialog"
+      type="button"
+    >
+      Place Order
+    </button>
+  </div>
+
   <!-- Top Stats Section -->
   <div class="stats-section" aria-labelledby="stats-heading">
     <h2 id="stats-heading" class="sr-only">Account Summary</h2>
@@ -101,7 +118,7 @@
         aria-label="Close place order dialog"
         type="button"
       >
-        ✖
+        Close
       </button>
     </div>
 
