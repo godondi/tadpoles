@@ -13,9 +13,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.neueda.leap.config.SecurityConfig;
 import com.neueda.leap.domain.AppUser;
+import com.neueda.leap.dto.ClientOnboardingResponseDto;
 import com.neueda.leap.dto.SetAppUserRolesRequestDto;
 import com.neueda.leap.exception.GlobalExceptionHandler;
 import com.neueda.leap.service.AppUserService;
+import com.neueda.leap.service.ClientOnboardingService;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -36,6 +40,9 @@ class AppUserControllerTest {
 
     @MockBean
     private AppUserService appUserService;
+
+    @MockBean
+    private ClientOnboardingService clientOnboardingService;
 
     @Test
     void getCurrentUserReturnsJsonResponse() throws Exception {
@@ -58,6 +65,74 @@ class AppUserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.users[0].userId").value(1))
                 .andExpect(jsonPath("$.users[0].displayName").value("Admin User"));
+    }
+
+    @Test
+    void getCurrentClientProfileReturnsProfileForAuthenticatedClient() throws Exception {
+        AppUser clientUser = buildUser(List.of("CLIENT"));
+        clientUser.setUserId(14);
+        clientUser.setUsername("client01@tadpoles.dev");
+        clientUser.setEmail("client01@tadpoles.dev");
+        clientUser.setDisplayName("Client One");
+
+        when(appUserService.getUserByUsername("client01@tadpoles.dev")).thenReturn(clientUser);
+        when(clientOnboardingService.getCurrentProfile(clientUser)).thenReturn(buildOnboardingResponse());
+
+        mockMvc.perform(get("/api/users/me/profile")
+                        .with(jwtWithSubjectAndRoles("client01@tadpoles.dev", "CLIENT")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.clientId").value(7))
+                .andExpect(jsonPath("$.clientName").value("Client One Household"))
+                .andExpect(jsonPath("$.onboardingComplete").value(true));
+    }
+
+    @Test
+    void completeOnboardingRequiresAuthentication() throws Exception {
+        mockMvc.perform(put("/api/users/me/onboarding")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Missing token"));
+    }
+
+    @Test
+    void completeOnboardingStoresProfileDataForClient() throws Exception {
+        AppUser clientUser = buildUser(List.of("CLIENT"));
+        clientUser.setUserId(14);
+        clientUser.setUsername("client01@tadpoles.dev");
+        clientUser.setEmail("client01@tadpoles.dev");
+        clientUser.setDisplayName("Client One");
+
+        when(appUserService.getUserByUsername("client01@tadpoles.dev")).thenReturn(clientUser);
+        when(clientOnboardingService.completeOnboarding(eq(clientUser), any())).thenReturn(buildOnboardingResponse());
+
+        mockMvc.perform(put("/api/users/me/onboarding")
+                        .with(jwtWithSubjectAndRoles("client01@tadpoles.dev", "CLIENT"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "clientName": "Client One Household",
+                                  "phone": "+1-555-222-1111",
+                                  "dateOfBirth": "1992-03-15",
+                                  "addressLine1": "100 Main Street",
+                                  "addressLine2": "Unit 9",
+                                  "city": "New York",
+                                  "state": "NY",
+                                  "postalCode": "10001",
+                                  "country": "United States",
+                                  "employmentStatus": "Employed",
+                                  "netWorth": 250000,
+                                  "riskTolerance": "Moderate",
+                                  "investmentObjective": "Long-term growth",
+                                  "preferredContactMethod": "Email",
+                                  "paperlessStatements": true,
+                                  "marketingOptIn": false
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.clientId").value(7))
+                .andExpect(jsonPath("$.city").value("New York"))
+                .andExpect(jsonPath("$.onboardingComplete").value(true));
     }
 
     @Test
@@ -147,5 +222,31 @@ class AppUserControllerTest {
         user.setUpdatedAt(LocalDateTime.of(2026, 9, 24, 8, 0));
         user.setRoles(roles);
         return user;
+    }
+
+    private ClientOnboardingResponseDto buildOnboardingResponse() {
+        return new ClientOnboardingResponseDto(
+                14,
+                7,
+                "client01@tadpoles.dev",
+                "Client One",
+                "Client One Household",
+                "+1-555-222-1111",
+                LocalDate.of(1992, 3, 15),
+                "100 Main Street",
+                "Unit 9",
+                "New York",
+                "NY",
+                "10001",
+                "United States",
+                "Employed",
+                new BigDecimal("250000.00"),
+                "Moderate",
+                "Long-term growth",
+                "Email",
+                true,
+                false,
+                true
+        );
     }
 }

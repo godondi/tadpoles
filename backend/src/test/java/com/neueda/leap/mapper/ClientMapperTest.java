@@ -30,6 +30,15 @@ class ClientMapperTest {
     }
 
     @Test
+    void getClientByUserIdReturnsLinkedClient() {
+        Client client = clientMapper.getClientByUserId(2);
+
+        assertNotNull(client);
+        assertEquals(7, client.getClientId());
+        assertEquals("Alice Investor", client.getClientName());
+    }
+
+    @Test
     void listClientsReturnsRows() {
         List<Client> clients = clientMapper.listClients();
         assertEquals(1, clients.size());

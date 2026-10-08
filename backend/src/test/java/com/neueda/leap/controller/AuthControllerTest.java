@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.neueda.leap.config.SecurityConfig;
 import com.neueda.leap.dto.ClientRegistrationResponseDto;
 import com.neueda.leap.dto.CreateUserResponseDto;
+import com.neueda.leap.dto.SignupResponseDto;
 import com.neueda.leap.exception.GlobalExceptionHandler;
 import com.neueda.leap.service.AuthService;
 import com.neueda.leap.service.UserService;
@@ -36,6 +37,27 @@ class AuthControllerTest {
     private UserService userService;
 
     @Test
+    void signupAllowsAnonymousRegistration() throws Exception {
+        when(authService.signup(any())).thenReturn(
+                new SignupResponseDto(24, "jane@example.com", "Jane Doe", "CLIENT", null, false, "jwt-token", "Bearer", 3600)
+        );
+
+        mockMvc.perform(post("/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "jane@example.com",
+                                  "password": "StrongPassword123!",
+                                  "displayName": "Jane Doe"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.userId").value(24))
+                .andExpect(jsonPath("$.token").value("jwt-token"))
+                .andExpect(jsonPath("$.onboardingComplete").value(false));
+    }
+
+    @Test
     void registerClientAllowsAnonymousRegistration() throws Exception {
         when(userService.registerClient(any())).thenReturn(
                 new ClientRegistrationResponseDto(14, "client14", "Client Fourteen", "CLIENT", 7)
@@ -46,7 +68,7 @@ class AuthControllerTest {
                         .content("""
                                 {
                                   "username": "client14",
-                                  "password": "client-password",
+                                  "password": "ClientPassword123!",
                                   "email": "client14@tadpoles.dev",
                                   "displayName": "Client Fourteen",
                                   "clientName": "Client Fourteen"
@@ -70,7 +92,7 @@ class AuthControllerTest {
                         .content("""
                                 {
                                   "username": "admin01",
-                                  "password": "password123",
+                                  "password": "Password123!",
                                   "email": "admin01@tadpoles.dev",
                                   "displayName": "Admin User",
                                   "roleType": "ADMIN"

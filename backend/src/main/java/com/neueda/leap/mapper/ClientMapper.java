@@ -38,6 +38,20 @@ public interface ClientMapper {
                    created_at AS createdAt,
                    cash_balance AS cashBalance
             FROM clients
+            WHERE user_id = #{userId}
+            """)
+    Client getClientByUserId(@Param("userId") Integer userId);
+
+    @Select("""
+            SELECT client_id AS clientId,
+                   user_id AS userId,
+                   client_name AS clientName,
+                   advisor_id AS advisorId,
+                   model_portfolio_id AS modelPortfolioId,
+                   created_by_user_id AS createdByUserId,
+                   created_at AS createdAt,
+                   cash_balance AS cashBalance
+            FROM clients
             WHERE client_id = #{id}
             FOR UPDATE
             """)
