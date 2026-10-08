@@ -49,7 +49,7 @@ services:
       - "${POSTGRES_HOST_PORT}:5432"
     volumes:
       - tadpole-db-data:/var/lib/postgresql/data
-      - ./database/init:/docker-entrypoint-initdb.d:ro
+      - ./database/schema:/docker-entrypoint-initdb.d:ro
 
   auth-stub:
     build:
