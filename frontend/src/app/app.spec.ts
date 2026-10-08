@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
 import { vi } from 'vitest';
 import { App } from './app';
 import { routes } from './app.routes';
-import { AuthService } from './core/auth/auth.service';
 
 describe('App routing and shell', () => {
   let getContextSpy: ReturnType<typeof vi.spyOn>;
@@ -14,7 +15,7 @@ describe('App routing and shell', () => {
 
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideRouter(routes)],
+      providers: [provideRouter(routes), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
   });
 
@@ -23,12 +24,44 @@ describe('App routing and shell', () => {
     getContextSpy.mockRestore();
   });
 
-  async function renderAt(url: string, authenticated = false) {
-    const authService = TestBed.inject(AuthService);
+  async function renderAt(url: string, session?: { onboardingComplete: boolean }) {
     const router = TestBed.inject(Router);
 
-    if (authenticated) {
-      authService.login('casey@example.com');
+    if (session) {
+      localStorage.setItem('tadpoles.auth.session', JSON.stringify({
+        token: 'stored-token',
+        tokenType: 'Bearer',
+        expiresIn: 3600,
+        userId: 14,
+        email: 'casey@example.com',
+        displayName: 'Casey Example',
+        clientId: session.onboardingComplete ? 7 : null,
+        onboardingComplete: session.onboardingComplete,
+      }));
+      localStorage.setItem('tadpoles.auth.token', 'stored-token');
+      localStorage.setItem('tadpoles.user.profile', JSON.stringify({
+        userId: 14,
+        clientId: session.onboardingComplete ? 7 : null,
+        email: 'casey@example.com',
+        displayName: 'Casey Example',
+        clientName: '',
+        phone: '',
+        dateOfBirth: '',
+        addressLine1: '',
+        addressLine2: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        country: '',
+        employmentStatus: '',
+        netWorth: null,
+        riskTolerance: '',
+        investmentObjective: '',
+        preferredContactMethod: '',
+        paperlessStatements: true,
+        marketingOptIn: false,
+        onboardingComplete: session.onboardingComplete,
+      }));
     }
 
     const fixture = TestBed.createComponent(App);
@@ -48,7 +81,7 @@ describe('App routing and shell', () => {
   });
 
   it('renders the authenticated shell for signed-in visitors', async () => {
-    const { fixture, router } = await renderAt('/', true);
+    const { fixture, router } = await renderAt('/', { onboardingComplete: true });
     const compiled = fixture.nativeElement as HTMLElement;
     const shellText = compiled.querySelector('app-top-nav')?.textContent ?? '';
 
@@ -61,8 +94,14 @@ describe('App routing and shell', () => {
   });
 
   it('redirects authenticated visitors away from login', async () => {
-    const { router } = await renderAt('/login', true);
+    const { router } = await renderAt('/login', { onboardingComplete: true });
 
     expect(router.url).toBe('/');
+  });
+
+  it('redirects authenticated users with incomplete onboarding to the onboarding route', async () => {
+    const { router } = await renderAt('/', { onboardingComplete: false });
+
+    expect(router.url).toBe('/onboarding');
   });
 });

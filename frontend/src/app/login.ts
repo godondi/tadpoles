@@ -1,4 +1,5 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from './core/auth/auth.service';
@@ -16,7 +17,7 @@ interface LoginForm {
       <div class="login-box">
         <div class="login-header">
           <h1 class="login-title">Tadpoles</h1>
-          <p class="login-subtitle">Sign in to view your account dashboard.</p>
+          <p class="login-subtitle">Sign in to continue to your dashboard or complete onboarding.</p>
         </div>
 
         <form class="login-form" (ngSubmit)="handleLogin()">
@@ -65,15 +66,15 @@ interface LoginForm {
             </div>
           }
 
-          <button type="submit" class="login-btn">
-            Sign In
+          <button type="submit" class="login-btn" [disabled]="isSubmitting()">
+            {{ isSubmitting() ? 'Signing In…' : 'Sign In' }}
           </button>
         </form>
 
         <div class="login-footer">
           <p>
             Don't have an account?
-            <a href="#" class="signup-link">Sign up here</a>
+            <a routerLink="/signup" class="signup-link">Sign up here</a>
           </p>
         </div>
       </div>
@@ -226,6 +227,13 @@ interface LoginForm {
       box-shadow: 0 4px 12px rgba(118, 169, 35, 0.3);
     }
 
+    .login-btn:disabled {
+      opacity: 0.75;
+      cursor: progress;
+      transform: none;
+      box-shadow: none;
+    }
+
     .login-btn:active {
       transform: translateY(0);
     }
@@ -270,7 +278,7 @@ interface LoginForm {
       }
     }
   `],
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   host: {
     'role': 'application',
     'aria-label': 'Login page',
@@ -288,6 +296,7 @@ export class LoginComponent {
   });
 
   readonly errorMessage = signal('');
+  readonly isSubmitting = signal(false);
 
   updateLoginForm(field: string, event: any): void {
     const value = field === 'rememberMe' ? event.target.checked : event.target.value;
@@ -297,7 +306,7 @@ export class LoginComponent {
     }));
   }
 
-  handleLogin(): void {
+  async handleLogin(): Promise<void> {
     const form = this.loginForm();
     const trimmedEmail = form.email.trim();
 
@@ -313,20 +322,44 @@ export class LoginComponent {
       return;
     }
 
-    if (form.password.length < 6) {
-      this.errorMessage.set('Password must be at least 6 characters');
+    if (form.password.length < 8) {
+      this.errorMessage.set('Password must be at least 8 characters');
       setTimeout(() => this.errorMessage.set(''), 4000);
       return;
     }
 
-    this.authService.login(trimmedEmail);
+    this.errorMessage.set('');
+    this.isSubmitting.set(true);
 
-    const redirectTarget = this.route.snapshot.queryParamMap.get('redirectTo') || '/';
-    void this.router.navigateByUrl(redirectTarget);
+    try {
+      await this.authService.login(trimmedEmail, form.password);
+
+      const redirectTarget = this.route.snapshot.queryParamMap.get('redirectTo');
+      const nextRoute = this.authService.hasCompletedOnboarding()
+        ? redirectTarget || '/'
+        : '/onboarding';
+
+      await this.router.navigateByUrl(nextRoute);
+    } catch (error) {
+      this.errorMessage.set(this.toErrorMessage(error));
+    } finally {
+      this.isSubmitting.set(false);
+    }
   }
 
   private isValidEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
+  }
+
+  private toErrorMessage(error: unknown): string {
+    if (typeof error === 'object' && error !== null && 'error' in error) {
+      const apiError = (error as { error?: { message?: string } }).error;
+      if (apiError?.message) {
+        return apiError.message;
+      }
+    }
+
+    return 'Unable to sign in. Please try again.';
   }
 }

@@ -1,18 +1,51 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { TopNavComponent } from './top-nav.component';
-import { AuthService } from '../../core/auth/auth.service';
 
 describe('TopNavComponent', () => {
   beforeEach(async () => {
     localStorage.clear();
+    localStorage.setItem('tadpoles.auth.session', JSON.stringify({
+      token: 'stored-token',
+      tokenType: 'Bearer',
+      expiresIn: 3600,
+      userId: 24,
+      email: 'nav.tester@example.com',
+      displayName: 'Nav Tester',
+      clientId: 7,
+      onboardingComplete: true,
+    }));
+    localStorage.setItem('tadpoles.auth.token', 'stored-token');
+    localStorage.setItem('tadpoles.user.profile', JSON.stringify({
+      userId: 24,
+      clientId: 7,
+      email: 'nav.tester@example.com',
+      displayName: 'Nav Tester',
+      clientName: 'Nav Tester Household',
+      phone: '',
+      dateOfBirth: '',
+      addressLine1: '',
+      addressLine2: '',
+      city: '',
+      state: '',
+      postalCode: '',
+      country: '',
+      employmentStatus: '',
+      netWorth: null,
+      riskTolerance: '',
+      investmentObjective: '',
+      preferredContactMethod: '',
+      paperlessStatements: true,
+      marketingOptIn: false,
+      onboardingComplete: true,
+    }));
 
     await TestBed.configureTestingModule({
       imports: [TopNavComponent],
-      providers: [provideRouter([])],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
-
-    TestBed.inject(AuthService).login('nav.tester@example.com');
   });
 
   afterEach(() => {

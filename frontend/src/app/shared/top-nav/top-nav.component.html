@@ -36,6 +36,7 @@
           <div id="account-menu" class="profile-menu" role="menu" aria-label="Account menu">
             <div class="profile-summary">
               <div class="profile-summary__label">Signed in as</div>
+              <div class="profile-summary__name">{{ userProfile().displayName || userProfile().clientName || 'New Client' }}</div>
               <div class="profile-summary__email mono-value">{{ userProfile().email }}</div>
             </div>
 

@@ -1,6 +1,5 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { UserService } from './user.service';
 
 @Component({
@@ -10,127 +9,114 @@ import { UserService } from './user.service';
       <main class="profile-main" role="main">
         <div class="profile-header">
           <div class="header-content">
-            <div class="avatar-large">{{ profile().avatar }}</div>
+            <div class="avatar-large">{{ initials() }}</div>
             <div class="header-text">
-              <h1>{{ profile().name }}</h1>
+              <h1>{{ profile().displayName || profile().clientName || 'Client Profile' }}</h1>
               <p class="email-text">{{ profile().email }}</p>
+              <p class="subtle-text">Client ID: {{ profile().clientId ?? 'Pending' }}</p>
             </div>
           </div>
         </div>
 
+        @if (isLoading()) {
+          <div class="status-card">Loading profile…</div>
+        }
+
+        @if (errorMessage()) {
+          <div class="error-message" role="alert">{{ errorMessage() }}</div>
+        }
+
         <div class="profile-content">
-          <!-- Personal Information Section -->
           <div class="profile-card">
-            <h2>Personal Information</h2>
+            <h2>Identity</h2>
             <div class="info-grid">
               <div class="info-item">
-                <label>Full Name</label>
-                <p>{{ profile().name }}</p>
+                <label>Display name</label>
+                <p>{{ profile().displayName || 'Not provided' }}</p>
+              </div>
+              <div class="info-item">
+                <label>Client name</label>
+                <p>{{ profile().clientName || 'Not provided' }}</p>
               </div>
               <div class="info-item">
                 <label>Email</label>
-                <p class="mono-value">{{ profile().email }}</p>
+                <p class="mono-value">{{ profile().email || 'Not provided' }}</p>
               </div>
               <div class="info-item">
                 <label>Phone</label>
-                <p class="mono-value">{{ profile().phone }}</p>
+                <p class="mono-value">{{ profile().phone || 'Not provided' }}</p>
               </div>
               <div class="info-item">
-                <label>Date of Birth</label>
-                <p>{{ profile().dateOfBirth }}</p>
+                <label>Date of birth</label>
+                <p>{{ profile().dateOfBirth || 'Not provided' }}</p>
               </div>
               <div class="info-item">
-                <label>Address</label>
-                <p>{{ profile().address }}<br/>{{ profile().city }}, {{ profile().state }} {{ profile().zipCode }}</p>
-              </div>
-              <div class="info-item">
-                <label>Account Number</label>
-                <p class="mono-value">{{ profile().accountNumber }}</p>
+                <label>Onboarding status</label>
+                <p><span class="status-badge">{{ profile().onboardingComplete ? 'Complete' : 'In progress' }}</span></p>
               </div>
             </div>
           </div>
 
-          <!-- Account Information Section -->
           <div class="profile-card">
-            <h2>Account Information</h2>
+            <h2>Address & Contact Preferences</h2>
+            <div class="info-grid">
+              <div class="info-item wide">
+                <label>Address</label>
+                <p>
+                  {{ profile().addressLine1 || 'Not provided' }}
+                  @if (profile().addressLine2) {<br />{{ profile().addressLine2 }}}
+                </p>
+              </div>
+              <div class="info-item">
+                <label>City</label>
+                <p>{{ profile().city || 'Not provided' }}</p>
+              </div>
+              <div class="info-item">
+                <label>State</label>
+                <p>{{ profile().state || 'Not provided' }}</p>
+              </div>
+              <div class="info-item">
+                <label>Postal code</label>
+                <p>{{ profile().postalCode || 'Not provided' }}</p>
+              </div>
+              <div class="info-item">
+                <label>Country</label>
+                <p>{{ profile().country || 'Not provided' }}</p>
+              </div>
+              <div class="info-item">
+                <label>Preferred contact method</label>
+                <p>{{ profile().preferredContactMethod || 'Not provided' }}</p>
+              </div>
+              <div class="info-item">
+                <label>Paperless statements</label>
+                <p>{{ profile().paperlessStatements ? 'Enabled' : 'Disabled' }}</p>
+              </div>
+              <div class="info-item">
+                <label>Marketing updates</label>
+                <p>{{ profile().marketingOptIn ? 'Subscribed' : 'Not subscribed' }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="profile-card">
+            <h2>Investment Profile</h2>
             <div class="info-grid">
               <div class="info-item">
-                <label>Account Type</label>
-                <p>{{ profile().accountType }}</p>
+                <label>Employment status</label>
+                <p>{{ profile().employmentStatus || 'Not provided' }}</p>
               </div>
               <div class="info-item">
-                <label>Account Status</label>
-                <p><span class="status-badge">{{ profile().accountStatus }}</span></p>
+                <label>Net worth</label>
+                <p>{{ profile().netWorth !== null ? (profile().netWorth | number:'1.0-2') : 'Not provided' }}</p>
               </div>
               <div class="info-item">
-                <label>Member Since</label>
-                <p>{{ profile().memberSince }}</p>
+                <label>Risk tolerance</label>
+                <p>{{ profile().riskTolerance || 'Not provided' }}</p>
               </div>
-              <div class="info-item">
-                <label>Verification Status</label>
-                <p><span class="verification-badge">{{ profile().verificationStatus }}</span></p>
+              <div class="info-item wide">
+                <label>Investment objective</label>
+                <p>{{ profile().investmentObjective || 'Not provided' }}</p>
               </div>
-              <div class="info-item">
-                <label>Last Login</label>
-                <p>{{ profile().lastLoginDate }}</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Change Password Section -->
-          <div class="profile-card">
-            <h2>Security</h2>
-            <div class="password-form">
-              <div class="form-group">
-                <label for="current-password">Current Password</label>
-                <input
-                  id="current-password"
-                  type="password"
-                  class="form-input"
-                  [value]="passwordForm().currentPassword"
-                  (input)="updatePasswordForm('currentPassword', $event)"
-                  placeholder="Enter current password"
-                  aria-label="Current password"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="new-password">New Password</label>
-                <input
-                  id="new-password"
-                  type="password"
-                  class="form-input"
-                  [value]="passwordForm().newPassword"
-                  (input)="updatePasswordForm('newPassword', $event)"
-                  placeholder="Enter new password"
-                  aria-label="New password"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="confirm-password">Confirm Password</label>
-                <input
-                  id="confirm-password"
-                  type="password"
-                  class="form-input"
-                  [value]="passwordForm().confirmPassword"
-                  (input)="updatePasswordForm('confirmPassword', $event)"
-                  placeholder="Confirm new password"
-                  aria-label="Confirm password"
-                />
-              </div>
-
-              @if (passwordError()) {
-                <div class="error-message" role="alert">{{ passwordError() }}</div>
-              }
-
-              @if (passwordSuccess()) {
-                <div class="success-message" role="status">{{ passwordSuccess() }}</div>
-              }
-
-              <button class="btn-primary" (click)="changePassword()" aria-label="Update password">
-                Update Password
-              </button>
             </div>
           </div>
         </div>
@@ -194,10 +180,15 @@ import { UserService } from './user.service';
        font-weight: 700;
     }
 
-    .email-text {
+    .email-text,
+    .subtle-text {
       color: #666;
       margin: 0.5rem 0 0 0;
       font-size: 1rem;
+    }
+
+    .subtle-text {
+      font-size: 0.9rem;
     }
 
     .profile-content {
@@ -227,6 +218,10 @@ import { UserService } from './user.service';
       gap: 1.5rem;
     }
 
+    .wide {
+      grid-column: span 2;
+    }
+
     .info-item {
       display: flex;
       flex-direction: column;
@@ -249,7 +244,7 @@ import { UserService } from './user.service';
       line-height: 1.5;
     }
 
-    .status-badge, .verification-badge {
+    .status-badge {
       display: inline-block;
       padding: 0.35rem 0.75rem;
       border-radius: 4px;
@@ -257,43 +252,6 @@ import { UserService } from './user.service';
       font-weight: 600;
       background-color: #76A923;
       color: white;
-    }
-
-    /* Password Form Styles */
-    .password-form {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .form-group label {
-      color: #006044;
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-      font-size: 0.95rem;
-    }
-
-    .form-input {
-      padding: 0.75rem 1rem;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 1rem;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .form-input:hover {
-      border-color: #76A923;
-    }
-
-    .form-input:focus {
-      outline: none;
-      border-color: #76A923;
-      box-shadow: 0 0 0 3px rgba(118, 169, 35, 0.1);
     }
 
     .error-message {
@@ -305,36 +263,12 @@ import { UserService } from './user.service';
       font-size: 0.95rem;
     }
 
-    .success-message {
+    .status-card {
       padding: 1rem;
-      background-color: #d4edda;
-      color: #155724;
-      border: 1px solid #c3e6cb;
-      border-radius: 4px;
-      font-size: 0.95rem;
-    }
-
-    .btn-primary {
-      align-self: flex-start;
-      background: linear-gradient(135deg, #76A923 0%, #006044 100%);
-      color: white;
-      border: none;
-      padding: 0.75rem 1.5rem;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 1rem;
-      font-weight: 600;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(118, 169, 35, 0.3);
-    }
-
-    .btn-primary:focus-visible {
-      outline: 3px solid #AF8A49;
-      outline-offset: 2px;
+      background-color: #eef7ef;
+      color: #006044;
+      border-radius: 0.75rem;
+      margin-bottom: 1rem;
     }
 
     @media (max-width: 768px) {
@@ -362,63 +296,53 @@ import { UserService } from './user.service';
       }
     }
   `],
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule],
 })
-export class ProfileComponent {
-  private userService = inject(UserService);
+export class ProfileComponent implements OnInit {
+  private readonly userService = inject(UserService);
 
-  profile = this.userService.getProfile();
+  readonly profile = this.userService.getProfile();
+  readonly errorMessage = signal('');
+  readonly isLoading = signal(false);
 
-  passwordForm = signal({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
+  readonly initials = signal('CP');
 
-  passwordError = signal('');
-  passwordSuccess = signal('');
+  async ngOnInit(): Promise<void> {
+    this.setInitials();
+    if (this.profile().onboardingComplete && this.profile().email) {
+      return;
+    }
 
-  updatePasswordForm(field: 'currentPassword' | 'newPassword' | 'confirmPassword', event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
-    const current = this.passwordForm();
-    this.passwordForm.set({ ...current, [field]: value });
-    this.passwordError.set('');
-    this.passwordSuccess.set('');
+    this.isLoading.set(true);
+    try {
+      await this.userService.loadCurrentProfile();
+      this.setInitials();
+    } catch (error) {
+      this.errorMessage.set(this.toErrorMessage(error));
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
-  changePassword(): void {
-    const form = this.passwordForm();
+  private setInitials(): void {
+    const source = this.profile().displayName || this.profile().clientName || this.profile().email || 'Client Profile';
+    this.initials.set(
+      source
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() ?? '')
+        .join('') || 'CP',
+    );
+  }
 
-    if (!form.currentPassword || !form.newPassword || !form.confirmPassword) {
-      this.passwordError.set('All fields are required.');
-      return;
+  private toErrorMessage(error: unknown): string {
+    if (typeof error === 'object' && error !== null && 'error' in error) {
+      const apiError = (error as { error?: { message?: string } }).error;
+      if (apiError?.message) {
+        return apiError.message;
+      }
     }
 
-    if (form.newPassword.length < 8) {
-      this.passwordError.set('New password must be at least 8 characters long.');
-      return;
-    }
-
-    if (form.newPassword !== form.confirmPassword) {
-      this.passwordError.set('New passwords do not match.');
-      return;
-    }
-
-    if (form.currentPassword === form.newPassword) {
-      this.passwordError.set('New password must be different from current password.');
-      return;
-    }
-
-    this.passwordError.set('');
-    this.passwordSuccess.set('Password updated successfully.');
-    this.passwordForm.set({
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
-    });
-
-    setTimeout(() => {
-      this.passwordSuccess.set('');
-    }, 3000);
+    return 'Unable to load your profile.';
   }
 }
