@@ -128,7 +128,7 @@ import { UserService } from './user.service';
       display: block;
       width: 100%;
       min-height: 100vh;
-      background: linear-gradient(135deg, #f8f9fa 0%, #f0f1f3 100%);
+      background: #f8f9fa;
     }
 
     .profile-container {
@@ -148,7 +148,7 @@ import { UserService } from './user.service';
     .profile-header {
       background: white;
       padding: 2rem;
-      border-radius: 8px;
+      border-radius: 0;
       margin-bottom: 2rem;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
@@ -168,8 +168,8 @@ import { UserService } from './user.service';
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #76A923 0%, #006044 100%);
-      border-radius: 50%;
+      background: #006044;
+      border-radius: 0;
       color: white;
     }
 
@@ -200,7 +200,7 @@ import { UserService } from './user.service';
     .profile-card {
       background: white;
       padding: 1.5rem;
-      border-radius: 8px;
+      border-radius: 0;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
@@ -247,7 +247,7 @@ import { UserService } from './user.service';
     .status-badge {
       display: inline-block;
       padding: 0.35rem 0.75rem;
-      border-radius: 4px;
+      border-radius: 0;
       font-size: 0.875rem;
       font-weight: 600;
       background-color: #76A923;
@@ -259,7 +259,7 @@ import { UserService } from './user.service';
       background-color: #f8d7da;
       color: #721c24;
       border: 1px solid #f5c6cb;
-      border-radius: 4px;
+      border-radius: 0;
       font-size: 0.95rem;
     }
 
@@ -267,7 +267,7 @@ import { UserService } from './user.service';
       padding: 1rem;
       background-color: #eef7ef;
       color: #006044;
-      border-radius: 0.75rem;
+      border-radius: 0;
       margin-bottom: 1rem;
     }
 

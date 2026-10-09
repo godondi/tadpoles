@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from './core/auth/auth.service';
@@ -41,7 +41,12 @@ import { CompleteClientOnboardingRequest, UserService } from './user.service';
           </label>
           <label>
             <span>Employment status</span>
-            <input type="text" [value]="form().employmentStatus" (input)="updateField('employmentStatus', $event)" required />
+            <select name="employmentStatus" [value]="form().employmentStatus" (change)="updateField('employmentStatus', $event)" required>
+              <option value="" disabled>Select employment status</option>
+              @for (option of employmentStatusOptions; track option) {
+                <option [value]="option">{{ option }}</option>
+              }
+            </select>
           </label>
           <label class="span-2">
             <span>Address line 1</span>
@@ -69,19 +74,40 @@ import { CompleteClientOnboardingRequest, UserService } from './user.service';
           </label>
           <label>
             <span>Net worth</span>
-            <input type="number" min="0" [value]="form().netWorth ?? ''" (input)="updateNetWorth($event)" required />
+            <select name="netWorth" [value]="selectedNetWorthRange()" (change)="updateNetWorth($event)" required>
+              <option value="" disabled>Select net worth</option>
+              @for (range of netWorthRanges; track range.minimum) {
+                <option [value]="range.minimum">{{ range.label }}</option>
+              }
+            </select>
           </label>
           <label>
             <span>Risk tolerance</span>
-            <input type="text" [value]="form().riskTolerance" (input)="updateField('riskTolerance', $event)" required />
+            <select name="riskTolerance" [value]="form().riskTolerance" (change)="updateField('riskTolerance', $event)" aria-describedby="risk-tolerance-help" required>
+              <option value="" disabled>Select risk tolerance</option>
+              @for (option of riskToleranceOptions; track option) {
+                <option [value]="option">{{ option }}</option>
+              }
+            </select>
+            <small id="risk-tolerance-help">Choose the investment losses and price fluctuations you are willing and able to accept: lower (Conservative), medium (Moderate), or higher (Aggressive).</small>
           </label>
           <label class="span-2">
             <span>Investment objective</span>
-            <input type="text" [value]="form().investmentObjective" (input)="updateField('investmentObjective', $event)" required />
+            <select name="investmentObjective" [value]="form().investmentObjective" (change)="updateField('investmentObjective', $event)" required>
+              <option value="" disabled>Select investment objective</option>
+              @for (option of investmentObjectiveOptions; track option) {
+                <option [value]="option">{{ option }}</option>
+              }
+            </select>
           </label>
           <label>
             <span>Preferred contact method</span>
-            <input type="text" [value]="form().preferredContactMethod" (input)="updateField('preferredContactMethod', $event)" required />
+            <select name="preferredContactMethod" [value]="form().preferredContactMethod" (change)="updateField('preferredContactMethod', $event)" required>
+              <option value="" disabled>Select contact method</option>
+              @for (option of preferredContactMethodOptions; track option) {
+                <option [value]="option">{{ option }}</option>
+              }
+            </select>
           </label>
           <label class="checkbox-row">
             <input type="checkbox" [checked]="form().paperlessStatements" (change)="updateCheckbox('paperlessStatements', $event)" />
@@ -105,7 +131,7 @@ import { CompleteClientOnboardingRequest, UserService } from './user.service';
     :host {
       display: block;
       min-height: 100vh;
-      background: linear-gradient(180deg, #f6f9f7 0%, #edf3ef 100%);
+      background: #f6f9f7;
       padding: 2rem 1rem;
     }
 
@@ -116,7 +142,7 @@ import { CompleteClientOnboardingRequest, UserService } from './user.service';
 
     .panel {
       background: white;
-      border-radius: 1.25rem;
+      border-radius: 0;
       padding: 2rem;
       box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
     }
@@ -152,11 +178,22 @@ import { CompleteClientOnboardingRequest, UserService } from './user.service';
       color: #1f2937;
     }
 
-    input {
+    input,
+    select {
       border: 1px solid #d5dde5;
-      border-radius: 0.75rem;
+      border-radius: 0;
       padding: 0.8rem 0.95rem;
       font: inherit;
+      background: white;
+      color: #1f2937;
+      min-width: 0;
+      width: 100%;
+    }
+
+    small {
+      color: #51606f;
+      font-weight: 400;
+      line-height: 1.4;
     }
 
     .span-2 {
@@ -184,9 +221,9 @@ import { CompleteClientOnboardingRequest, UserService } from './user.service';
 
     button {
       border: none;
-      border-radius: 0.8rem;
+      border-radius: 0;
       padding: 0.9rem 1.2rem;
-      background: linear-gradient(135deg, #76A923 0%, #006044 100%);
+      background: #006044;
       color: white;
       font: inherit;
       font-weight: 700;
@@ -208,7 +245,7 @@ import { CompleteClientOnboardingRequest, UserService } from './user.service';
     .message {
       margin-bottom: 1rem;
       padding: 0.85rem 1rem;
-      border-radius: 0.75rem;
+      border-radius: 0;
     }
 
     .status {
@@ -249,6 +286,27 @@ export class OnboardingComponent implements OnInit {
   private readonly userService = inject(UserService);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+
+  readonly employmentStatusOptions = ['Unemployed', 'Intern', 'Student', 'Employed (Part-Time)', 'Employed (Full-Time)', 'Retired'];
+  readonly investmentObjectiveOptions = ['Preservation', 'Income', 'Growth', 'Speculation'];
+  readonly preferredContactMethodOptions = ['Email', 'Phone'];
+  readonly riskToleranceOptions = ['Conservative', 'Moderate', 'Aggressive'];
+  // Keep the numeric API contract: newly selected ranges submit their lower bound.
+  readonly netWorthRanges = [
+    { minimum: 0, label: '$0 - $24,999' },
+    { minimum: 25000, label: '$25,000 - $49,999' },
+    { minimum: 50000, label: '$50,000 - $99,999' },
+    { minimum: 100000, label: '$100,000 - $249,999' },
+    { minimum: 250000, label: '$250,000 - $499,999' },
+    { minimum: 500000, label: '$500,000 - $999,999' },
+    { minimum: 1000000, label: '$1,000,000+' },
+  ];
+  readonly selectedNetWorthRange = computed(() => {
+    const amount = this.form().netWorth;
+    if (amount === null || !Number.isFinite(amount) || amount < 0) return '';
+    const range = this.netWorthRanges.reduce((selected, next) => amount >= next.minimum ? next : selected);
+    return String(range.minimum);
+  });
 
   readonly form = signal<CompleteClientOnboardingRequest>({
     clientName: '',
@@ -308,7 +366,7 @@ export class OnboardingComponent implements OnInit {
   }
 
   updateField(field: keyof CompleteClientOnboardingRequest, event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
+    const value = (event.target as HTMLInputElement | HTMLSelectElement).value;
     this.form.update((current) => ({ ...current, [field]: value }));
   }
 
@@ -318,7 +376,7 @@ export class OnboardingComponent implements OnInit {
   }
 
   updateNetWorth(event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
+    const value = (event.target as HTMLInputElement | HTMLSelectElement).value;
     this.form.update((current) => ({
       ...current,
       netWorth: value === '' ? null : Number(value),
@@ -337,8 +395,20 @@ export class OnboardingComponent implements OnInit {
       return;
     }
 
-    if (payload.netWorth === null || payload.netWorth < 0) {
+    if (payload.netWorth === null || !Number.isFinite(payload.netWorth) || payload.netWorth < 0) {
       this.errorMessage.set('Net worth must be zero or greater.');
+      return;
+    }
+
+    if (!this.employmentStatusOptions.includes(payload.employmentStatus)
+      || !this.investmentObjectiveOptions.includes(payload.investmentObjective)
+      || !this.preferredContactMethodOptions.includes(payload.preferredContactMethod)) {
+      this.errorMessage.set('Please select an employment status, investment objective, and preferred contact method.');
+      return;
+    }
+
+    if (!this.riskToleranceOptions.includes(payload.riskTolerance)) {
+      this.errorMessage.set('Please select a risk tolerance.');
       return;
     }
 
@@ -385,5 +455,3 @@ export class OnboardingComponent implements OnInit {
     return 'Unable to load or save onboarding details.';
   }
 }
-
-

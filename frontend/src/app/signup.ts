@@ -64,7 +64,7 @@ interface SignupForm {
     :host {
       display: block;
       min-height: 100vh;
-      background: linear-gradient(135deg, #006044 0%, #76A923 100%);
+      background: #006044;
       padding: 2rem 1rem;
     }
 
@@ -77,7 +77,7 @@ interface SignupForm {
     .auth-card {
       width: min(100%, 34rem);
       background: rgba(255, 255, 255, 0.98);
-      border-radius: 1.25rem;
+      border-radius: 0;
       padding: 2rem;
       box-shadow: 0 24px 48px rgba(0, 0, 0, 0.18);
     }
@@ -108,7 +108,7 @@ interface SignupForm {
 
     input {
       border: 1px solid #d5dde5;
-      border-radius: 0.75rem;
+      border-radius: 0;
       padding: 0.85rem 1rem;
       font: inherit;
     }
@@ -120,9 +120,9 @@ interface SignupForm {
 
     button {
       border: none;
-      border-radius: 0.75rem;
+      border-radius: 0;
       padding: 0.9rem 1rem;
-      background: linear-gradient(135deg, #76A923 0%, #006044 100%);
+      background: #006044;
       color: white;
       font: inherit;
       font-weight: 700;
@@ -136,7 +136,7 @@ interface SignupForm {
 
     .message {
       padding: 0.85rem 1rem;
-      border-radius: 0.75rem;
+      border-radius: 0;
       font-size: 0.95rem;
     }
 

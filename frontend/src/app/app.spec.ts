@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
 import { vi } from 'vitest';
 import { App } from './app';
@@ -103,5 +104,22 @@ describe('App routing and shell', () => {
     const { router } = await renderAt('/', { onboardingComplete: false });
 
     expect(router.url).toBe('/onboarding');
+  });
+
+  it('keeps the shared header on the instrument route for signed-in users', async () => {
+    const { fixture, router } = await renderAt('/trade/AAPL', { onboardingComplete: true });
+    expect(router.url).toBe('/trade/AAPL');
+    expect(fixture.nativeElement.querySelector('app-top-nav')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('app-trade')).toBeTruthy();
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne(r => r.url.endsWith('/candles/AAPL')).flush({ data: { candles: [] }, meta: {} });
+    http.expectOne(r => r.url.endsWith('/quotes/AAPL')).flush({}, { status: 404, statusText: 'Not Found' });
+    http.verify();
+  });
+
+  it('preserves the instrument URL when redirecting a guest to login', async () => {
+    const { router } = await renderAt('/trade/AAPL');
+    expect(router.url).toContain('/login');
+    expect(router.parseUrl(router.url).queryParams['redirectTo']).toBe('/trade/AAPL');
   });
 });

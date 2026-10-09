@@ -85,7 +85,7 @@ interface LoginForm {
       display: block;
       width: 100%;
       height: 100vh;
-      background: linear-gradient(135deg, #006044 0%, #76A923 100%);
+      background: #006044;
       font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
       margin: 0;
       padding: 0;
@@ -103,7 +103,7 @@ interface LoginForm {
 
     .login-box {
       background: rgba(255, 255, 255, 0.98);
-      border-radius: 20px;
+      border-radius: 0;
       box-shadow: 0 24px 50px rgba(0, 0, 0, 0.18);
       width: 100%;
       max-width: 420px;
@@ -152,7 +152,7 @@ interface LoginForm {
     .form-group input[type="password"] {
       padding: 0.75rem;
       border: 2px solid #e0e0e0;
-      border-radius: 6px;
+      border-radius: 0;
       font-size: 0.95rem;
       transition: all 0.3s;
     }
@@ -203,7 +203,7 @@ interface LoginForm {
       padding: 0.75rem;
       background-color: #ffebee;
       color: #c62828;
-      border-radius: 6px;
+      border-radius: 0;
       font-size: 0.9rem;
       border-left: 4px solid #c62828;
     }
@@ -213,7 +213,7 @@ interface LoginForm {
       background-color: #76A923;
       color: white;
       border: none;
-      border-radius: 6px;
+      border-radius: 0;
       font-weight: 600;
       font-size: 0.95rem;
       cursor: pointer;
