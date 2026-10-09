@@ -1270,9 +1270,22 @@ paths:
   /analytics/summary:
     get:
       tags: [Analytics]
-      summary: Return high-level analytics data for external consumers
+      summary: Return high-level internal trading insights
       operationId: getAnalyticsSummary
       x-required-roles: [ADMIN, AUDITOR, ANALYST]
+      parameters:
+        - name: fromDate
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: toDate
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
       responses:
         '200':
           description: Analytics summary
@@ -1280,10 +1293,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AnalyticsSummaryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /analytics/advisors/{advisorId}:
     parameters:
@@ -2524,14 +2543,79 @@ components:
         generatedAt:
           type: string
           format: date-time
+        fromDate:
+          type: string
+          format: date
+          nullable: true
+        toDate:
+          type: string
+          format: date
+          nullable: true
         metrics:
-          type: object
-          additionalProperties: true
-        series:
+          $ref: '#/components/schemas/AnalyticsMetrics'
+        mostActiveInstruments:
           type: array
           items:
-            type: object
-            additionalProperties: true
+            $ref: '#/components/schemas/AnalyticsInstrumentActivity'
+        clientActivityTrends:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsClientActivityTrend'
+
+    AnalyticsMetrics:
+      type: object
+      properties:
+        totalTrades:
+          type: integer
+          format: int64
+        executedTrades:
+          type: integer
+          format: int64
+        executedQuantity:
+          type: number
+          format: double
+        executedNotional:
+          type: number
+          format: double
+        activeClients:
+          type: integer
+          format: int64
+        activeInstruments:
+          type: integer
+          format: int64
+
+    AnalyticsInstrumentActivity:
+      type: object
+      properties:
+        instrumentId:
+          type: integer
+          format: int64
+        ticker:
+          type: string
+        instrumentName:
+          type: string
+        tradeCount:
+          type: integer
+          format: int64
+        executedNotional:
+          type: number
+          format: double
+
+    AnalyticsClientActivityTrend:
+      type: object
+      properties:
+        periodStart:
+          type: string
+          format: date
+        tradeCount:
+          type: integer
+          format: int64
+        executedTradeCount:
+          type: integer
+          format: int64
+        activeClientCount:
+          type: integer
+          format: int64
 
     DashboardResponse:
       type: object
