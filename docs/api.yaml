@@ -773,6 +773,9 @@ paths:
     post:
       tags: [Clients]
       summary: Fill a client trade order
+      description: >-
+        Prices execution against the current market quote for supported launch
+        classes: equities, foreign exchange, and crypto assets.
       operationId: fillClientTrade
       requestBody:
         required: false
@@ -788,7 +791,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/OrderFillResponse'
         '400':
-          description: Invalid fill request or the current market quote does not satisfy the order limit
+          description: Invalid fill request, unsupported launch asset class, or the current market quote does not satisfy the order limit
           content:
             application/json:
               schema:

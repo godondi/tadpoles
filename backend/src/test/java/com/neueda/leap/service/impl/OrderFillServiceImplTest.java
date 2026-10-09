@@ -10,9 +10,6 @@ import static org.mockito.Mockito.when;
 import com.neueda.leap.domain.Client;
 import com.neueda.leap.domain.ClientHolding;
 import com.neueda.leap.domain.ClientTrade;
-import com.neueda.leap.domain.FauxnanceQuote;
-import com.neueda.leap.domain.FauxnanceQuoteMeta;
-import com.neueda.leap.domain.FauxnanceQuoteResponse;
 import com.neueda.leap.domain.Instrument;
 import com.neueda.leap.dto.FillOrderRequestDto;
 import com.neueda.leap.dto.OrderFillResponseDto;
@@ -21,11 +18,10 @@ import com.neueda.leap.mapper.ClientHoldingMapper;
 import com.neueda.leap.mapper.ClientMapper;
 import com.neueda.leap.mapper.ClientTradeMapper;
 import com.neueda.leap.mapper.InstrumentMapper;
-import com.neueda.leap.service.FauxnanceQuoteService;
+import com.neueda.leap.service.ExecutionQuoteService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -44,7 +40,7 @@ class OrderFillServiceImplTest {
     @Mock
     private InstrumentMapper instrumentMapper;
     @Mock
-    private FauxnanceQuoteService fauxnanceQuoteService;
+    private ExecutionQuoteService executionQuoteService;
 
     private OrderFillServiceImpl orderFillService;
 
@@ -55,7 +51,7 @@ class OrderFillServiceImplTest {
                 clientTradeMapper,
                 clientHoldingMapper,
                 instrumentMapper,
-                fauxnanceQuoteService
+                executionQuoteService
         );
     }
 
@@ -71,7 +67,8 @@ class OrderFillServiceImplTest {
         when(clientTradeMapper.getTradeForUpdate(21)).thenReturn(trade);
         when(clientMapper.getClientForUpdate(7)).thenReturn(client);
         when(instrumentMapper.getInstrument(11)).thenReturn(instrument);
-        when(fauxnanceQuoteService.getQuote("AAPL")).thenReturn(buildQuoteResponse("80.00", "80.10", false));
+        when(executionQuoteService.getExecutionQuote(instrument))
+                .thenReturn(new ExecutionQuote("AAPL", "EQUITY", new BigDecimal("80.00"), new BigDecimal("80.10"), false));
         when(clientHoldingMapper.getLatestHoldingForUpdate(7, 11)).thenReturn(holding);
         when(clientHoldingMapper.updateClientHolding(any())).thenReturn(1);
         when(clientMapper.updateClientBalance(eq(7), eq(new BigDecimal("799.75")))).thenReturn(1);
@@ -99,7 +96,8 @@ class OrderFillServiceImplTest {
         when(clientTradeMapper.getTradeForUpdate(21)).thenReturn(trade);
         when(clientMapper.getClientForUpdate(7)).thenReturn(client);
         when(instrumentMapper.getInstrument(11)).thenReturn(instrument);
-        when(fauxnanceQuoteService.getQuote("AAPL")).thenReturn(buildQuoteResponse("80.30", "80.50", false));
+        when(executionQuoteService.getExecutionQuote(instrument))
+                .thenReturn(new ExecutionQuote("AAPL", "EQUITY", new BigDecimal("80.30"), new BigDecimal("80.50"), false));
         when(clientHoldingMapper.getLatestHoldingForUpdate(7, 11)).thenReturn(holding);
         when(clientHoldingMapper.updateClientHolding(any())).thenReturn(1);
         when(clientMapper.updateClientBalance(eq(7), eq(new BigDecimal("1200.75")))).thenReturn(1);
@@ -127,7 +125,8 @@ class OrderFillServiceImplTest {
         when(clientTradeMapper.getTradeForUpdate(21)).thenReturn(trade);
         when(clientMapper.getClientForUpdate(7)).thenReturn(client);
         when(instrumentMapper.getInstrument(11)).thenReturn(buildInstrument(true));
-        when(fauxnanceQuoteService.getQuote("AAPL")).thenReturn(buildQuoteResponse("80.10", "80.30", false));
+        when(executionQuoteService.getExecutionQuote(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new ExecutionQuote("AAPL", "EQUITY", new BigDecimal("80.10"), new BigDecimal("80.30"), false));
 
         assertThrows(IllegalArgumentException.class,
                 () -> orderFillService.fillTrade(7, 21, new FillOrderRequestDto(null, null, null, null)));
@@ -141,7 +140,8 @@ class OrderFillServiceImplTest {
         when(clientTradeMapper.getTradeForUpdate(21)).thenReturn(trade);
         when(clientMapper.getClientForUpdate(7)).thenReturn(client);
         when(instrumentMapper.getInstrument(11)).thenReturn(buildInstrument(true));
-        when(fauxnanceQuoteService.getQuote("AAPL")).thenReturn(buildQuoteResponse("80.30", "80.50", false));
+        when(executionQuoteService.getExecutionQuote(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new ExecutionQuote("AAPL", "EQUITY", new BigDecimal("80.30"), new BigDecimal("80.50"), false));
         when(clientHoldingMapper.getLatestHoldingForUpdate(7, 11)).thenReturn(holding);
 
         assertThrows(IllegalArgumentException.class,
@@ -154,7 +154,8 @@ class OrderFillServiceImplTest {
         when(clientTradeMapper.getTradeForUpdate(21)).thenReturn(trade);
         when(clientMapper.getClientForUpdate(7)).thenReturn(buildClient("1000.00"));
         when(instrumentMapper.getInstrument(11)).thenReturn(buildInstrument(true));
-        when(fauxnanceQuoteService.getQuote("AAPL")).thenReturn(buildQuoteResponse("80.30", "80.40", false));
+        when(executionQuoteService.getExecutionQuote(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new ExecutionQuote("AAPL", "EQUITY", new BigDecimal("80.30"), new BigDecimal("80.40"), false));
 
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
@@ -170,7 +171,8 @@ class OrderFillServiceImplTest {
         when(clientTradeMapper.getTradeForUpdate(21)).thenReturn(trade);
         when(clientMapper.getClientForUpdate(7)).thenReturn(buildClient("1000.00"));
         when(instrumentMapper.getInstrument(11)).thenReturn(buildInstrument(true));
-        when(fauxnanceQuoteService.getQuote("AAPL")).thenReturn(buildQuoteResponse("80.10", "80.30", false));
+        when(executionQuoteService.getExecutionQuote(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new ExecutionQuote("AAPL", "EQUITY", new BigDecimal("80.10"), new BigDecimal("80.30"), false));
 
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
@@ -186,7 +188,8 @@ class OrderFillServiceImplTest {
         when(clientTradeMapper.getTradeForUpdate(21)).thenReturn(trade);
         when(clientMapper.getClientForUpdate(7)).thenReturn(buildClient("1000.00"));
         when(instrumentMapper.getInstrument(11)).thenReturn(buildInstrument(true));
-        when(fauxnanceQuoteService.getQuote("AAPL")).thenReturn(buildQuoteResponse("80.00", null, false));
+        when(executionQuoteService.getExecutionQuote(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new ExecutionQuote("AAPL", "EQUITY", new BigDecimal("80.00"), null, false));
 
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
@@ -244,20 +247,4 @@ class OrderFillServiceImplTest {
         return instrument;
     }
 
-    private FauxnanceQuoteResponse buildQuoteResponse(String bid, String ask, boolean stale) {
-        FauxnanceQuote quote = new FauxnanceQuote();
-        quote.setSymbol("AAPL");
-        quote.setBid(bid == null ? null : new BigDecimal(bid));
-        quote.setAsk(ask == null ? null : new BigDecimal(ask));
-
-        FauxnanceQuoteMeta meta = new FauxnanceQuoteMeta();
-        meta.setSymbol("AAPL");
-        meta.setAsOf(OffsetDateTime.parse("2026-10-08T15:59:00Z"));
-        meta.setStale(stale);
-
-        FauxnanceQuoteResponse response = new FauxnanceQuoteResponse();
-        response.setData(quote);
-        response.setMeta(meta);
-        return response;
-    }
 }

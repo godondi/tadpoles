@@ -12,10 +12,9 @@ import com.neueda.leap.dto.OrderFillResponseDto;
 import com.neueda.leap.mapper.ClientHoldingMapper;
 import com.neueda.leap.mapper.ClientMapper;
 import com.neueda.leap.mapper.ClientTradeMapper;
-import com.neueda.leap.service.FauxnanceQuoteService;
+import com.neueda.leap.service.ExecutionQuoteService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -48,11 +47,12 @@ class OrderFillServiceIntegrationTest {
     @Autowired
     private ClientTradeMapper clientTradeMapper;
     @MockBean
-    private FauxnanceQuoteService fauxnanceQuoteService;
+    private ExecutionQuoteService executionQuoteService;
 
     @Test
     void fillTradeCommitsAllUpdatesTogether() {
-        when(fauxnanceQuoteService.getQuote("AAPL")).thenReturn(buildQuoteResponse("80.00", "80.10"));
+        when(executionQuoteService.getExecutionQuote(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new ExecutionQuote("AAPL", "EQUITY", new BigDecimal("80.00"), new BigDecimal("80.10"), false));
 
         OrderFillResponseDto response = orderFillService.fillTrade(
                 7,
@@ -69,7 +69,8 @@ class OrderFillServiceIntegrationTest {
 
     @Test
     void fillTradeRollsBackWhenTradeRecordUpdateFails() {
-        when(fauxnanceQuoteService.getQuote("AAPL")).thenReturn(buildQuoteResponse("80.00", "80.10"));
+        when(executionQuoteService.getExecutionQuote(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new ExecutionQuote("AAPL", "EQUITY", new BigDecimal("80.00"), new BigDecimal("80.10"), false));
 
         assertThrows(Exception.class, () -> orderFillService.fillTrade(
                 7,
@@ -81,22 +82,5 @@ class OrderFillServiceIntegrationTest {
         assertEquals("APPROVED", clientTradeMapper.getClientTrade(7, 21).getStatus());
         assertEquals(0, new BigDecimal("7.000000")
                 .compareTo(clientHoldingMapper.getLatestHoldingForUpdate(7, 11).getQuantity()));
-    }
-
-    private FauxnanceQuoteResponse buildQuoteResponse(String bid, String ask) {
-        FauxnanceQuote quote = new FauxnanceQuote();
-        quote.setSymbol("AAPL");
-        quote.setBid(new BigDecimal(bid));
-        quote.setAsk(new BigDecimal(ask));
-
-        FauxnanceQuoteMeta meta = new FauxnanceQuoteMeta();
-        meta.setSymbol("AAPL");
-        meta.setAsOf(OffsetDateTime.parse("2026-10-08T15:59:00Z"));
-        meta.setStale(false);
-
-        FauxnanceQuoteResponse response = new FauxnanceQuoteResponse();
-        response.setData(quote);
-        response.setMeta(meta);
-        return response;
     }
 }
