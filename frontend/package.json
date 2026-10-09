@@ -7,6 +7,7 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
+    "test:qof-styles": "node scripts/check-qof-styles.mjs",
     "serve:ssr:pole": "node dist/pole/server/server.mjs"
   },
   "private": true,
