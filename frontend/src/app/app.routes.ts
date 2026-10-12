@@ -9,10 +9,24 @@ export const routes: Routes = [
     loadComponent: () => import('./login').then((m) => m.LoginComponent),
   },
   {
+    path: 'signup',
+    canActivate: [guestOnlyGuard],
+    loadComponent: () => import('./signup').then((m) => m.SignupComponent),
+  },
+  {
+    path: 'onboarding',
+    canActivate: [authGuard],
+    loadComponent: () => import('./onboarding').then((m) => m.OnboardingComponent),
+  },
+  {
     path: '',
     component: AuthenticatedShellComponent,
     canActivate: [authGuard],
     children: [
+      {
+        path: 'trade/:symbol',
+        loadComponent: () => import('./features/trade/trade.component').then((m) => m.TradeComponent),
+      },
       {
         path: '',
         loadComponent: () => import('./dashboard').then((m) => m.DashboardComponent),

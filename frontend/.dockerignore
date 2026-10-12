@@ -1,0 +1,18 @@
+# Install dependencies inside the image; never copy host packages or symlinks.
+node_modules
+**/node_modules
+
+# Build output and local caches are regenerated inside the image.
+dist
+.angular
+out-tsc
+coverage
+tmp
+
+# Local configuration and editor files are not needed for the build.
+.env
+.env.*
+.git
+.idea
+.vscode
+*.log

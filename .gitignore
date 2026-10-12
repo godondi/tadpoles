@@ -5,3 +5,7 @@ frontend/pole/node_modules/
 target/
 auth-stub/node_modules
 .env
+/.metadata/
+*.classpath
+*.project
+*.settings/

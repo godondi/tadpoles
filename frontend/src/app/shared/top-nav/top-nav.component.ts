@@ -22,7 +22,7 @@ export class TopNavComponent {
   readonly isMenuOpen = signal(false);
   readonly userProfile = this.userService.getProfile();
   readonly userInitials = computed(() => {
-    const name = this.userProfile().name.trim();
+    const name = (this.userProfile().displayName || this.userProfile().clientName || this.userProfile().email).trim();
 
     return name
       .split(/\s+/)
@@ -35,8 +35,19 @@ export class TopNavComponent {
     this.searchQuery.set(value);
   }
 
-  preventSearch(event?: Event): void {
+  search(event?: Event): void {
     event?.preventDefault();
+    const ticker = this.searchQuery().trim().toUpperCase();
+    if (!ticker) return;
+    this.searchQuery.set(ticker);
+    this.closeProfileMenu();
+    void this.router.navigate(['/trade', ticker]);
+  }
+
+  openDashboard(): void {
+    if (this.router.url.split(/[?#]/)[0] === '/') return;
+    this.closeProfileMenu();
+    void this.router.navigate(['/']);
   }
 
   toggleProfileMenu(): void {
@@ -45,6 +56,10 @@ export class TopNavComponent {
 
   openProfile(): void {
     this.closeProfileMenu();
+    if (!this.authService.hasCompletedOnboarding()) {
+      void this.router.navigate(['/onboarding']);
+      return;
+    }
     void this.router.navigate(['/profile']);
   }
 
@@ -79,4 +94,3 @@ export class TopNavComponent {
     this.closeProfileMenu();
   }
 }
-
