@@ -75,6 +75,20 @@ public interface ClientHoldingMapper {
               AND instrument_id = #{instrumentId}
             ORDER BY as_of_date DESC, holding_id DESC
             LIMIT 1
+            """)
+    ClientHolding getLatestHolding(@Param("clientId") Integer clientId, @Param("instrumentId") Integer instrumentId);
+
+    @Select("""
+            SELECT holding_id AS holdingId,
+                   client_id AS clientId,
+                   instrument_id AS instrumentId,
+                   quantity AS quantity,
+                   as_of_date AS asOfDate
+            FROM client_holdings
+            WHERE client_id = #{clientId}
+              AND instrument_id = #{instrumentId}
+            ORDER BY as_of_date DESC, holding_id DESC
+            LIMIT 1
             FOR UPDATE
             """)
     ClientHolding getLatestHoldingForUpdate(@Param("clientId") Integer clientId, @Param("instrumentId") Integer instrumentId);
@@ -94,5 +108,4 @@ public interface ClientHoldingMapper {
         }
     }
 }
-
 

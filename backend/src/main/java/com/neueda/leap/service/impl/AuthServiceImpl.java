@@ -19,14 +19,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import javax.crypto.SecretKey;
-import java.util.Date;
-import java.util.List;
-
 @Service
 public class AuthServiceImpl implements AuthService {
-
-    private static final long TOKEN_EXPIRATION_MS = 3600000; // 1 hour
     private final UserMapper userMapper;
     private final UserService userService;
     private final ClientProfileMapper clientProfileMapper;
@@ -50,7 +44,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public LoginResponseDto login(LoginRequestDto request) {
+    public AuthTokensResponseDto login(LoginRequestDto request) {
         if (request == null || request.username() == null || request.password() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username and password are required");
         }
@@ -61,18 +55,13 @@ public class AuthServiceImpl implements AuthService {
         if (user == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password");
         }
-
-        // Check if user is enabled
         if (!Boolean.TRUE.equals(user.getEnabled())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User account is disabled");
         }
-
-        // Validate password against BCrypt hash
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password");
         }
 
-        // Get user roles from database
         List<String> roles = userMapper.findRolesByUserId(user.getUserId());
         SessionMetadata sessionMetadata = resolveSessionMetadata(user, roles);
 

@@ -23,14 +23,19 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class RefreshTokenServiceImpl implements RefreshTokenService {
     private static final long DEFAULT_REFRESH_TOKEN_TTL_SECONDS = 604800L;
-    private static final long DEFAULT_ACCESS_TOKEN_TTL_SECONDS = 900L;
 
     private final RefreshTokenMapper refreshTokenMapper;
     private final AppUserService appUserService;
+    private final AccessTokenService accessTokenService;
 
-    public RefreshTokenServiceImpl(RefreshTokenMapper refreshTokenMapper, AppUserService appUserService) {
+    public RefreshTokenServiceImpl(
+            RefreshTokenMapper refreshTokenMapper,
+            AppUserService appUserService,
+            AccessTokenService accessTokenService
+    ) {
         this.refreshTokenMapper = refreshTokenMapper;
         this.appUserService = appUserService;
+        this.accessTokenService = accessTokenService;
     }
 
     @Override
@@ -63,7 +68,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     @Override
     public AuthTokensResponseDto refreshAccessToken(RefreshTokenRequestDto request) {
         RefreshToken stored = resolveUsableRefreshToken(request);
-        appUserService.getUser(stored.getUserId());
+        com.neueda.leap.domain.AppUser user = appUserService.getUser(stored.getUserId());
 
         LocalDateTime revokedAt = LocalDateTime.now();
         int rows = refreshTokenMapper.revokeRefreshToken(stored.getRefreshTokenId(), revokedAt);
@@ -77,10 +82,14 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         );
 
         return new AuthTokensResponseDto(
-                generateOpaqueToken("access"),
+                accessTokenService.generateAccessToken(
+                        user,
+                        user.getRoles() == null ? List.of() : List.copyOf(user.getRoles()),
+                        rotatedToken.refreshTokenId()
+                ),
                 rotatedToken.refreshToken(),
                 rotatedToken.tokenType(),
-                DEFAULT_ACCESS_TOKEN_TTL_SECONDS
+                accessTokenService.getAccessTokenTtlSeconds()
         );
     }
 
@@ -95,6 +104,13 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         if (rows == 0) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token is no longer active.");
         }
+    }
+
+    @Override
+    public void revokeUserRefreshTokens(Integer userId) {
+        validateUserId(userId);
+        appUserService.getUser(userId);
+        refreshTokenMapper.revokeUserRefreshTokens(userId, LocalDateTime.now());
     }
 
     String hashTokenForTesting(String rawToken) {
@@ -185,4 +201,3 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         }
     }
 }
-

@@ -1,8 +1,9 @@
 package com.neueda.leap.controller;
 
-import static org.mockito.Mockito.when;
 import static com.neueda.leap.support.TestSecurityUtils.jwtWithRoles;
 import static com.neueda.leap.support.TestSecurityUtils.jwtWithSubjectAndRoles;
+import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -12,7 +13,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.neueda.leap.config.SecurityConfig;
 import com.neueda.leap.domain.AppUser;
 import com.neueda.leap.domain.Client;
+import com.neueda.leap.domain.RefreshToken;
 import com.neueda.leap.exception.GlobalExceptionHandler;
+import com.neueda.leap.mapper.RefreshTokenMapper;
 import com.neueda.leap.service.AppUserService;
 import com.neueda.leap.service.ClientService;
 import java.math.BigDecimal;
@@ -24,6 +27,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -38,6 +42,8 @@ class ClientControllerTest {
     private ClientService clientService;
     @MockBean
     private AppUserService appUserService;
+    @MockBean
+    private RefreshTokenMapper refreshTokenMapper;
 
     @Test
     void listClientsReturnsJsonResponse() throws Exception {
@@ -97,6 +103,27 @@ class ClientControllerTest {
                         .with(jwtWithSubjectAndRoles("client01", "CLIENT")))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("Clients may only access their own records."));
+    }
+
+    @Test
+    void getClientReturnsUnauthorizedWhenSessionIsRevoked() throws Exception {
+        RefreshToken refreshToken = new RefreshToken();
+        refreshToken.setRefreshTokenId(21);
+        refreshToken.setUserId(14);
+        refreshToken.setExpiresAt(LocalDateTime.of(2026, 10, 8, 10, 0));
+        refreshToken.setRevokedAt(LocalDateTime.of(2026, 10, 7, 10, 5));
+        when(refreshTokenMapper.getRefreshToken(21)).thenReturn(refreshToken);
+
+        mockMvc.perform(get("/api/clients/7")
+                        .with(jwt()
+                                .authorities(new SimpleGrantedAuthority("ROLE_CLIENT"))
+                                .jwt(token -> token
+                                        .subject("client01")
+                                        .claim("roles", List.of("CLIENT"))
+                                        .claim("userId", 14)
+                                        .claim("refreshTokenId", 21))))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Session is no longer active."));
     }
 
     @Test

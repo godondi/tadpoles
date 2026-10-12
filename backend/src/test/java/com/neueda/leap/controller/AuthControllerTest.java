@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.neueda.leap.config.SecurityConfig;
+import com.neueda.leap.dto.AuthTokensResponseDto;
 import com.neueda.leap.dto.ClientRegistrationResponseDto;
 import com.neueda.leap.dto.CreateUserResponseDto;
 import com.neueda.leap.dto.SignupResponseDto;

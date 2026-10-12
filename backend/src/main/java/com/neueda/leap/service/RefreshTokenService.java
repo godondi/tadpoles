@@ -13,5 +13,5 @@ public interface RefreshTokenService {
     IssuedRefreshTokenResponseDto issueRefreshToken(Integer userId, CreateRefreshTokenRequestDto request);
     AuthTokensResponseDto refreshAccessToken(RefreshTokenRequestDto request);
     void revokeRefreshToken(RefreshTokenRequestDto request);
+    void revokeUserRefreshTokens(Integer userId);
 }
-

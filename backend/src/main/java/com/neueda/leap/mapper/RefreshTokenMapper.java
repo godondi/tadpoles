@@ -71,5 +71,12 @@ public interface RefreshTokenMapper {
               AND revoked_at IS NULL
             """)
     int revokeRefreshToken(@Param("refreshTokenId") Integer refreshTokenId, @Param("revokedAt") LocalDateTime revokedAt);
-}
 
+    @Update("""
+            UPDATE refresh_tokens
+            SET revoked_at = #{revokedAt}
+            WHERE user_id = #{userId}
+              AND revoked_at IS NULL
+            """)
+    int revokeUserRefreshTokens(@Param("userId") Integer userId, @Param("revokedAt") LocalDateTime revokedAt);
+}
