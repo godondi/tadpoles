@@ -34,14 +34,12 @@ class RefreshTokenServiceImplTest {
     private RefreshTokenMapper refreshTokenMapper;
     @Mock
     private AppUserService appUserService;
-    private AccessTokenService accessTokenService;
 
     private RefreshTokenServiceImpl refreshTokenService;
 
     @BeforeEach
     void setUp() {
-        accessTokenService = new AccessTokenService("test-jwt-secret-test-jwt-secret-123456");
-        refreshTokenService = new RefreshTokenServiceImpl(refreshTokenMapper, appUserService, accessTokenService);
+        refreshTokenService = new RefreshTokenServiceImpl(refreshTokenMapper, appUserService);
     }
 
     @Test
@@ -92,10 +90,8 @@ class RefreshTokenServiceImplTest {
         String rawRefreshToken = "raw-refresh-token";
         RefreshToken stored = buildStoredRefreshToken();
         stored.setTokenHash(refreshTokenService.hashTokenForTesting(rawRefreshToken));
-        AppUser user = buildUser();
-        user.setRoles(List.of("ADMIN"));
         when(refreshTokenMapper.getRefreshTokenByTokenHash(stored.getTokenHash())).thenReturn(stored);
-        when(appUserService.getUser(1)).thenReturn(user);
+        when(appUserService.getUser(1)).thenReturn(buildUser());
         when(refreshTokenMapper.revokeRefreshToken(eq(21), any())).thenReturn(1);
         when(refreshTokenMapper.insertRefreshToken(any())).thenAnswer(invocation -> {
             RefreshToken token = invocation.getArgument(0, RefreshToken.class);
@@ -110,7 +106,6 @@ class RefreshTokenServiceImplTest {
         assertNotNull(result.refreshToken());
         assertNotEquals(rawRefreshToken, result.refreshToken());
         assertEquals("Bearer", result.tokenType());
-        assertEquals(3600L, result.expiresInSeconds());
     }
 
     @Test
@@ -124,15 +119,6 @@ class RefreshTokenServiceImplTest {
         refreshTokenService.revokeRefreshToken(new RefreshTokenRequestDto(rawRefreshToken));
 
         verify(refreshTokenMapper).revokeRefreshToken(eq(21), any());
-    }
-
-    @Test
-    void revokeUserRefreshTokensRevokesAllActiveTokens() {
-        when(appUserService.getUser(1)).thenReturn(buildUser());
-
-        refreshTokenService.revokeUserRefreshTokens(1);
-
-        verify(refreshTokenMapper).revokeUserRefreshTokens(eq(1), any());
     }
 
     @Test
@@ -189,3 +175,5 @@ class RefreshTokenServiceImplTest {
         return refreshToken;
     }
 }
+
+

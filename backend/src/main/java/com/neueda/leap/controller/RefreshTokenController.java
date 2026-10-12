@@ -63,11 +63,4 @@ public class RefreshTokenController {
     ) {
         return refreshTokenService.issueRefreshToken(userId, request);
     }
-
-    @PostMapping("/users/{userId}/refresh-tokens/revoke-all")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasRole('ADMIN')")
-    public void revokeUserRefreshTokens(@PathVariable Integer userId) {
-        refreshTokenService.revokeUserRefreshTokens(userId);
-    }
 }

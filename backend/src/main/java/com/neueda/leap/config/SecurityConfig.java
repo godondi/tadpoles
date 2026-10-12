@@ -2,7 +2,6 @@ package com.neueda.leap.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.neueda.leap.exception.ApiErrorResponse;
-import com.neueda.leap.mapper.RefreshTokenMapper;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
@@ -12,7 +11,6 @@ import java.util.stream.Collectors;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,7 +25,6 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
-import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
@@ -43,10 +40,7 @@ public class SecurityConfig {
     private static final int MIN_HMAC_SECRET_BYTES = 32;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(
-            HttpSecurity http,
-            OncePerRequestFilter accessTokenSessionFilter
-    ) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
@@ -64,7 +58,6 @@ public class SecurityConfig {
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
                 )
-                .addFilterAfter(accessTokenSessionFilter, BearerTokenAuthenticationFilter.class)
                 .build();
     }
 
@@ -108,11 +101,6 @@ public class SecurityConfig {
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
         converter.setJwtGrantedAuthoritiesConverter(this::extractAuthorities);
         return converter;
-    }
-
-    @Bean
-    public OncePerRequestFilter accessTokenSessionFilter(ObjectProvider<RefreshTokenMapper> refreshTokenMapperProvider) {
-        return new AccessTokenSessionFilter(refreshTokenMapperProvider);
     }
 
     private Collection<GrantedAuthority> extractAuthorities(Jwt jwt) {

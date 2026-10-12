@@ -94,7 +94,7 @@ paths:
   /auth/login:
     post:
       tags: [Authentication]
-      summary: Authenticate a user and start a revocable session
+      summary: Authenticate a user and return JWT tokens
       operationId: login
       x-required-roles: []
       security: []
@@ -110,7 +110,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthTokens'
+                $ref: '#/components/schemas/LoginResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -123,7 +123,7 @@ paths:
   /auth/refresh:
     post:
       tags: [Authentication]
-      summary: Exchange a refresh token for a rotated session token pair
+      summary: "Planned: exchange a refresh token for a new access token"
       operationId: refreshToken
       x-required-roles: []
       security: []
@@ -150,7 +150,7 @@ paths:
   /auth/logout:
     post:
       tags: [Authentication]
-      summary: Revoke the current session refresh token
+      summary: "Planned: revoke the current refresh token"
       operationId: logout
       x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
       requestBody:
@@ -168,26 +168,6 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-
-  /users/{userId}/refresh-tokens/revoke-all:
-    parameters:
-      - $ref: '#/components/parameters/UserId'
-    post:
-      tags: [Authentication]
-      summary: Revoke all active refresh tokens for a user
-      operationId: revokeUserRefreshTokens
-      x-required-roles: [ADMIN]
-      responses:
-        '204':
-          description: All active refresh tokens revoked
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
 
   /users/me:
     get:
@@ -460,8 +440,6 @@ paths:
                 $ref: '#/components/schemas/ClientSummary'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
     patch:
@@ -485,8 +463,6 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -506,8 +482,6 @@ paths:
                 $ref: '#/components/schemas/ClientBalanceResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -548,12 +522,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SubscriptionListResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
     post:
       tags: [Clients]
       summary: Subscribe a client to a model portfolio
@@ -589,8 +557,6 @@ paths:
                 $ref: '#/components/schemas/HoldingListResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
     post:
@@ -614,8 +580,6 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -641,8 +605,6 @@ paths:
                 $ref: '#/components/schemas/HoldingSummary'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
     patch:
@@ -666,8 +628,6 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -687,8 +647,6 @@ paths:
                 $ref: '#/components/schemas/TradeListResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
     post:
@@ -709,15 +667,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/TradeSummary'
         '400':
-          description: Invalid trade request, including inactive instruments or failed trading-rule checks such as insufficient cash or holdings
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -761,8 +713,6 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -773,9 +723,6 @@ paths:
     post:
       tags: [Clients]
       summary: Fill a client trade order
-      description: >-
-        Prices execution against the current market quote for supported launch
-        classes: equities, foreign exchange, and crypto assets.
       operationId: fillClientTrade
       requestBody:
         required: false
@@ -791,21 +738,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/OrderFillResponse'
         '400':
-          description: Invalid fill request, unsupported launch asset class, or the current market quote does not satisfy the order limit
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-        '503':
-          description: Current market quote is unavailable or unusable
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
 
   /advisors/{advisorId}/clients/{clientId}/trade-suggestions:
     parameters:
@@ -845,12 +782,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TradeSuggestionListResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
 
   /trade-suggestions/{suggestionId}:
     parameters:
@@ -872,12 +803,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TradeSuggestionSummary'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
     patch:
       tags: [Trade Suggestions]
       summary: Update the status of a trade suggestion
@@ -896,14 +821,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TradeSuggestionSummary'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
 
   /model-portfolios:
     get:
@@ -1270,22 +1187,9 @@ paths:
   /analytics/summary:
     get:
       tags: [Analytics]
-      summary: Return high-level internal trading insights
+      summary: Return high-level analytics data for external consumers
       operationId: getAnalyticsSummary
       x-required-roles: [ADMIN, AUDITOR, ANALYST]
-      parameters:
-        - name: fromDate
-          in: query
-          required: false
-          schema:
-            type: string
-            format: date
-        - name: toDate
-          in: query
-          required: false
-          schema:
-            type: string
-            format: date
       responses:
         '200':
           description: Analytics summary
@@ -1293,16 +1197,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AnalyticsSummaryResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
 
   /analytics/advisors/{advisorId}:
     parameters:
@@ -1495,12 +1393,6 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-    TooManyRequests:
-      description: Too many requests
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
     NotFound:
       description: Resource not found
       content:
@@ -1509,12 +1401,6 @@ components:
             $ref: '#/components/schemas/ErrorResponse'
     Conflict:
       description: Duplicate resource or conflicting state
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    InternalServerError:
-      description: Unexpected server error
       content:
         application/json:
           schema:
@@ -1530,6 +1416,20 @@ components:
         password:
           type: string
           format: password
+
+    LoginResponse:
+      type: object
+      required: [token, tokenType, expiresIn]
+      properties:
+        token:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+        expiresIn:
+          type: integer
+          format: int64
+          example: 3600
 
     RefreshTokenRequest:
       type: object
@@ -2303,7 +2203,6 @@ components:
         price:
           type: number
           format: double
-          description: Optional limit-price override; the actual execution price is taken from the current market quote.
           nullable: true
         executedAt:
           type: string
@@ -2543,79 +2442,14 @@ components:
         generatedAt:
           type: string
           format: date-time
-        fromDate:
-          type: string
-          format: date
-          nullable: true
-        toDate:
-          type: string
-          format: date
-          nullable: true
         metrics:
-          $ref: '#/components/schemas/AnalyticsMetrics'
-        mostActiveInstruments:
+          type: object
+          additionalProperties: true
+        series:
           type: array
           items:
-            $ref: '#/components/schemas/AnalyticsInstrumentActivity'
-        clientActivityTrends:
-          type: array
-          items:
-            $ref: '#/components/schemas/AnalyticsClientActivityTrend'
-
-    AnalyticsMetrics:
-      type: object
-      properties:
-        totalTrades:
-          type: integer
-          format: int64
-        executedTrades:
-          type: integer
-          format: int64
-        executedQuantity:
-          type: number
-          format: double
-        executedNotional:
-          type: number
-          format: double
-        activeClients:
-          type: integer
-          format: int64
-        activeInstruments:
-          type: integer
-          format: int64
-
-    AnalyticsInstrumentActivity:
-      type: object
-      properties:
-        instrumentId:
-          type: integer
-          format: int64
-        ticker:
-          type: string
-        instrumentName:
-          type: string
-        tradeCount:
-          type: integer
-          format: int64
-        executedNotional:
-          type: number
-          format: double
-
-    AnalyticsClientActivityTrend:
-      type: object
-      properties:
-        periodStart:
-          type: string
-          format: date
-        tradeCount:
-          type: integer
-          format: int64
-        executedTradeCount:
-          type: integer
-          format: int64
-        activeClientCount:
-          type: integer
-          format: int64
+            type: object
+            additionalProperties: true
 
     DashboardResponse:
       type: object
