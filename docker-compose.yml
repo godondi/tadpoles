@@ -16,7 +16,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       AUTH_STUB_URL: ${AUTH_STUB_URL}
       JWT_SECRET: ${JWT_SECRET}
-      PORT: ${PORT}
+      PORT: ${SERVER_PORT}
     ports:
       - "${BACKEND_HOST_PORT}:${BACKEND_CONTAINER_PORT}"
     depends_on:
