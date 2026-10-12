@@ -102,7 +102,7 @@ import { TradesService } from './trades.service';
       display: block;
       width: 100%;
       min-height: 100vh;
-      background: linear-gradient(135deg, #f8f9fa 0%, #f0f1f3 100%);
+      background: #f8f9fa;
     }
 
     .trades-container {
@@ -144,7 +144,7 @@ import { TradesService } from './trades.service';
     .stat-card {
       background: white;
       padding: 1.5rem;
-      border-radius: 8px;
+      border-radius: 0;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       border-left: 4px solid #76A923;
     }
@@ -167,7 +167,7 @@ import { TradesService } from './trades.service';
 
     .trades-card {
       background: white;
-      border-radius: 8px;
+      border-radius: 0;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       overflow: hidden;
     }
@@ -194,7 +194,7 @@ import { TradesService } from './trades.service';
     .filter-select {
       padding: 0.5rem 1rem;
       border: 1px solid #ddd;
-      border-radius: 4px;
+      border-radius: 0;
       background-color: white;
       color: #006044;
       font-weight: 500;
@@ -257,14 +257,14 @@ import { TradesService } from './trades.service';
       background-color: #e8f5e9;
       color: #006044;
       padding: 0.25rem 0.75rem;
-      border-radius: 4px;
+      border-radius: 0;
       font-weight: 600;
       font-size: 0.875rem;
     }
 
     .action-badge {
       padding: 0.25rem 0.75rem;
-      border-radius: 4px;
+      border-radius: 0;
       font-weight: 600;
       font-size: 0.875rem;
     }
@@ -281,7 +281,7 @@ import { TradesService } from './trades.service';
 
     .status-badge {
       padding: 0.25rem 0.75rem;
-      border-radius: 4px;
+      border-radius: 0;
       font-weight: 600;
       font-size: 0.875rem;
     }

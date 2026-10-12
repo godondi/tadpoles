@@ -14,6 +14,7 @@ import com.neueda.leap.mapper.ClientMapper;
 import com.neueda.leap.mapper.ClientProfileMapper;
 import com.neueda.leap.mapper.UserMapper;
 import com.neueda.leap.service.UserService;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.regex.Pattern;
@@ -94,6 +95,7 @@ public class UserServiceImpl implements UserService {
         Client client = new Client();
         client.setClientName(request.clientName().trim());
         client.setUserId(newUser.getUserId());
+        client.setCashBalance(BigDecimal.ZERO);
         clientMapper.insertClient(client);
 
         createOrUpdatePlaceholderClientProfile(newUser.getUserId(), client.getClientId());

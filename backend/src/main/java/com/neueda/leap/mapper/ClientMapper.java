@@ -101,7 +101,7 @@ public interface ClientMapper {
                 #{advisorId},
                 #{modelPortfolioId},
                 #{createdByUserId},
-                #{cashBalance}
+                COALESCE(#{cashBalance}, 0.00)
             )
             """)
     @Options(useGeneratedKeys = true, keyProperty = "clientId", keyColumn = "client_id")

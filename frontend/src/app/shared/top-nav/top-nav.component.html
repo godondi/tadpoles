@@ -1,15 +1,15 @@
 <nav class="top-nav">
   <div class="nav-container">
-    <div class="brand" aria-label="Tadpoles brand">Tadpoles</div>
+    <button class="brand" type="button" aria-label="Tadpoles dashboard" (click)="openDashboard()">Tadpoles</button>
 
     <div class="nav-actions">
-      <form class="search-form" (submit)="preventSearch($event)" aria-label="Search stub">
-        <label class="sr-only" for="global-search">Search</label>
+      <form class="search-form" (submit)="search($event)" aria-label="Search for a ticker">
+        <label class="sr-only" for="global-search">Search ticker</label>
         <input
           id="global-search"
           type="search"
           class="search-input"
-          placeholder="Search"
+          placeholder="Search ticker"
           [value]="searchQuery()"
           (input)="updateSearchQuery(searchInput.value)"
           #searchInput
@@ -55,4 +55,3 @@
     </div>
   </div>
 </nav>
-

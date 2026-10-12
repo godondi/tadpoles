@@ -24,6 +24,10 @@ export const routes: Routes = [
     canActivate: [authGuard],
     children: [
       {
+        path: 'trade/:symbol',
+        loadComponent: () => import('./features/trade/trade.component').then((m) => m.TradeComponent),
+      },
+      {
         path: '',
         loadComponent: () => import('./dashboard').then((m) => m.DashboardComponent),
       },

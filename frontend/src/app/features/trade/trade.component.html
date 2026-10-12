@@ -1,0 +1,146 @@
+<main class="trade-page">
+  @if (notFound()) {
+    <section class="not-found" role="alert">
+      <svg width="64" height="64" viewBox="0 0 64 64" aria-label="Warning" role="img">
+        <path
+          d="M32 6 60 56H4Z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-linejoin="round"
+        />
+        <path d="M32 23v16" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
+        <circle cx="32" cy="47" r="2.5" fill="currentColor" />
+      </svg>
+      <h1>Instrument unavailable</h1>
+      <p>{{ notFound() }}</p>
+    </section>
+  } @else {
+    <header class="page-heading">
+      <p class="eyebrow">MARKET OVERVIEW</p>
+      <h1>{{ symbol() }}</h1>
+      <p>Daily price history and the latest quote</p>
+    </header>
+    <div class="trade-layout">
+      <section
+        class="chart-panel"
+        aria-labelledby="chart-title"
+        [attr.aria-busy]="loadingCandles()"
+      >
+        <div class="panel-heading">
+          <h2 id="chart-title">Daily chart</h2>
+          <span class="range">30 candles · 1D</span>
+        </div>
+        @if (loadingCandles()) {
+          <app-loading label="Loading daily candles…" />
+        } @else if (candleError()) {
+          <div class="panel-error" role="alert">
+            <p>{{ candleError() }}</p>
+            <button data-retry-candles (click)="loadCandles()">Retry chart</button>
+          </div>
+        } @else if (candles().length) {
+          <app-candle-chart
+            [candles]="candles()"
+            [symbol]="symbol()"
+            [currency]="candleResponse()!.data.currency"
+          />
+          @if (candles().length < 30) {
+            <p class="note">Only {{ candles().length }} daily candles available for this period.</p>
+          }
+          @if (candleResponse()!.meta.partial) {
+            <p class="note">Partial price history returned.</p>
+          }
+          @if (candleResponse()!.meta.stale) {
+            <p class="note">Stale price history.</p>
+          }
+          <p class="note">{{ candleResponse()!.meta.disclaimer }}</p>
+        } @else {
+          <p class="empty">No daily candles available for {{ symbol() }}.</p>
+        }
+      </section>
+      <aside class="quote-panel" aria-labelledby="quote-title" [attr.aria-busy]="loadingQuote()">
+        <div class="panel-heading">
+          <h2 id="quote-title">Latest quote</h2>
+          <button data-refresh (click)="refreshQuote()" [disabled]="loadingQuote()">
+            {{ loadingQuote() ? 'Refreshing…' : 'Refresh' }}
+          </button>
+        </div>
+        @if (loadingQuote()) {
+          <app-loading label="Loading quote…" />
+        }
+        @if (quoteError()) {
+          <p class="panel-error" role="alert">{{ quoteError() }}</p>
+        }
+        @if (quote(); as response) {
+          <p class="price">
+            @if (response.data.currency) {
+              {{ response.data.price | currency: response.data.currency : 'symbol' : '1.2-2' }}
+            } @else {
+              {{ response.data.price | number: '1.2-2' }}
+            }
+          </p>
+          <p class="change" [class.negative]="(response.data.change ?? 0) < 0">
+            @if (response.data.change !== null) {
+              {{ response.data.change > 0 ? '+' : '' }}{{ response.data.change | number: '1.2-2' }}
+            } @else {
+              —
+            }
+            @if (response.data.changePercent !== null) {
+              ({{ response.data.changePercent > 0 ? '+' : ''
+              }}{{ response.data.changePercent | number: '1.2-2' }}%)
+            }
+            <span>today</span>
+          </p>
+          @if (response.meta.stale) {
+            <p class="stale">Stale quote · refresh to check for updates</p>
+          }
+          <dl>
+            <div>
+              <dt>Bid</dt>
+              <dd>{{ response.data.bid | number: '1.2-2' }}</dd>
+            </div>
+            <div>
+              <dt>Ask</dt>
+              <dd>{{ response.data.ask | number: '1.2-2' }}</dd>
+            </div>
+            <div>
+              <dt>Spread</dt>
+              <dd>{{ response.data.spreadBps | number: '1.2-2' }} bps</dd>
+            </div>
+            <div>
+              <dt>Previous close</dt>
+              <dd>
+                {{
+                  response.data.previousClose === null
+                    ? '—'
+                    : (response.data.previousClose | number: '1.2-2')
+                }}
+              </dd>
+            </div>
+            <div>
+              <dt>Currency</dt>
+              <dd>{{ response.data.currency || 'Not specified' }}</dd>
+            </div>
+            <div>
+              <dt>Market</dt>
+              <dd class="market">{{ response.data.marketState }}</dd>
+            </div>
+            <div>
+              <dt>As of</dt>
+              <dd>{{ response.data.asOf | date: 'MMM d, y, HH:mm' : 'UTC' }} UTC</dd>
+            </div>
+            <div>
+              <dt>Source</dt>
+              <dd>{{ response.meta.source }}</dd>
+            </div>
+            <div>
+              <dt>Spread source</dt>
+              <dd>{{ response.meta.spreadSource }}</dd>
+            </div>
+          </dl>
+          <p class="note">{{ response.meta.disclaimer }}</p>
+        }
+      </aside>
+    </div>
+  }
+</main>

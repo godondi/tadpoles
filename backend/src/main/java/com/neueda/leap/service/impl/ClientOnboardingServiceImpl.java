@@ -46,6 +46,7 @@ public class ClientOnboardingServiceImpl implements ClientOnboardingService {
             client = new Client();
             client.setUserId(currentUser.getUserId());
             client.setClientName(normalizeRequired(request.clientName(), "Client name is required"));
+            client.setCashBalance(BigDecimal.ZERO);
             clientMapper.insertClient(client);
         } else {
             client.setClientName(normalizeRequired(request.clientName(), "Client name is required"));
