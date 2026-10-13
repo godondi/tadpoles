@@ -14,13 +14,13 @@ class SchemaConstraintValidationTest extends AbstractPostgresIntegrationTest {
     @Test
     void advisorsConstraintsAreEnforced() throws SQLException {
         assertThrows(SQLException.class, () -> executeUpdate(
-                "INSERT INTO advisors (adviosr_name) VALUES (?)",
+                "INSERT INTO advisors (advisor_name) VALUES (?)",
                 (Object) null
         ));
 
-        executeUpdate("INSERT INTO advisors (advisor_id, adviosr_name) VALUES (?, ?)", 1, "Alice Advisor");
+        executeUpdate("INSERT INTO advisors (advisor_id, advisor_name) VALUES (?, ?)", 1, "Alice Advisor");
         assertThrows(SQLException.class, () -> executeUpdate(
-                "INSERT INTO advisors (advisor_id, adviosr_name) VALUES (?, ?)",
+                "INSERT INTO advisors (advisor_id, advisor_name) VALUES (?, ?)",
                 1, "Duplicate Advisor Id"
         ));
     }
@@ -41,7 +41,7 @@ class SchemaConstraintValidationTest extends AbstractPostgresIntegrationTest {
 
     @Test
     void clientsConstraintsAreEnforced() throws SQLException {
-        executeUpdate("INSERT INTO advisors (advisor_id, adviosr_name) VALUES (?, ?)", 1, "Alice Advisor");
+        executeUpdate("INSERT INTO advisors (advisor_id, advisor_name) VALUES (?, ?)", 1, "Alice Advisor");
         executeUpdate("INSERT INTO model_portfolios (model_portfolio_id, model_name) VALUES (?, ?)", 1, "Growth");
 
         assertThrows(SQLException.class, () -> executeUpdate(
@@ -134,7 +134,7 @@ class SchemaConstraintValidationTest extends AbstractPostgresIntegrationTest {
 
     @Test
     void clientSubscriptionsConstraintsAreEnforced() throws SQLException {
-        executeUpdate("INSERT INTO advisors (advisor_id, adviosr_name) VALUES (?, ?)", 1, "Alice Advisor");
+        executeUpdate("INSERT INTO advisors (advisor_id, advisor_name) VALUES (?, ?)", 1, "Alice Advisor");
         executeUpdate("INSERT INTO model_portfolios (model_portfolio_id, model_name) VALUES (?, ?)", 1, "Growth");
         executeUpdate(
                 "INSERT INTO clients (client_id, client_name, advisor_id, model_portfolio_id) VALUES (?, ?, ?, ?)",
@@ -147,8 +147,8 @@ class SchemaConstraintValidationTest extends AbstractPostgresIntegrationTest {
         );
 
         assertThrows(SQLException.class, () -> executeUpdate(
-                "INSERT INTO client_subscriptions (client_id, model_portfolio_id, subscribed_date) VALUES (?, ?, ?)",
-                1, 1, LocalDate.of(2026, 1, 2)
+                "INSERT INTO client_subscriptions (client_id, model_portfolio_id, subscribed_date, status) VALUES (?, ?, ?, ?)",
+                1, 1, LocalDate.of(2026, 1, 2), "INVALID"
         ));
 
         assertThrows(SQLException.class, () -> executeUpdate(
@@ -169,7 +169,7 @@ class SchemaConstraintValidationTest extends AbstractPostgresIntegrationTest {
 
     @Test
     void clientHoldingsConstraintsAreEnforced() throws SQLException {
-        executeUpdate("INSERT INTO advisors (advisor_id, adviosr_name) VALUES (?, ?)", 1, "Alice Advisor");
+        executeUpdate("INSERT INTO advisors (advisor_id, advisor_name) VALUES (?, ?)", 1, "Alice Advisor");
         executeUpdate("INSERT INTO model_portfolios (model_portfolio_id, model_name) VALUES (?, ?)", 1, "Growth");
         executeUpdate(
                 "INSERT INTO clients (client_id, client_name, advisor_id, model_portfolio_id) VALUES (?, ?, ?, ?)",
@@ -187,7 +187,7 @@ class SchemaConstraintValidationTest extends AbstractPostgresIntegrationTest {
 
         assertThrows(SQLException.class, () -> executeUpdate(
                 "INSERT INTO client_holdings (client_id, instrument_id, quantity, as_of_date) VALUES (?, ?, ?, ?)",
-                1, 1, 20, LocalDate.of(2026, 2, 2)
+                1, 1, 20, LocalDate.of(2026, 2, 1)
         ));
 
         assertThrows(SQLException.class, () -> executeUpdate(
@@ -213,7 +213,7 @@ class SchemaConstraintValidationTest extends AbstractPostgresIntegrationTest {
 
     @Test
     void clientTradesConstraintsAreEnforced() throws SQLException {
-        executeUpdate("INSERT INTO advisors (advisor_id, adviosr_name) VALUES (?, ?)", 1, "Alice Advisor");
+        executeUpdate("INSERT INTO advisors (advisor_id, advisor_name) VALUES (?, ?)", 1, "Alice Advisor");
         executeUpdate("INSERT INTO model_portfolios (model_portfolio_id, model_name) VALUES (?, ?)", 1, "Growth");
         executeUpdate(
                 "INSERT INTO clients (client_id, client_name, advisor_id, model_portfolio_id) VALUES (?, ?, ?, ?)",
