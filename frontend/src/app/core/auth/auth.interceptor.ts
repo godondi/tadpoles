@@ -8,10 +8,6 @@ import {
 import { Observable } from 'rxjs';
 import { AuthService } from './auth.service';
 
-/**
- * HTTP Interceptor that automatically adds the JWT token to all outgoing requests.
- * Skips auth endpoints that don't require a token.
- */
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
   private readonly authService = inject(AuthService);
@@ -20,24 +16,23 @@ export class AuthInterceptor implements HttpInterceptor {
     request: HttpRequest<unknown>,
     next: HttpHandler,
   ): Observable<HttpEvent<unknown>> {
-    // Skip adding token for auth endpoints
-    const authEndpoints = ['/auth/login', '/auth/signup', '/auth/register/client'];
-    const isAuthEndpoint = authEndpoints.some(endpoint => request.url.includes(endpoint));
+    const authEndpoints = ['/auth/login', '/auth/signup', '/auth/register/client', '/api/auth/refresh'];
+    const isAuthEndpoint = authEndpoints.some((endpoint) => request.url.includes(endpoint));
+    const isBackendRequest = request.url.includes(':8082/') || request.url.includes('/api/') || request.url.includes('/auth/');
 
-    if (isAuthEndpoint) {
+    if (isAuthEndpoint || !isBackendRequest) {
       return next.handle(request);
     }
 
-    // Add token for all other requests
     const token = this.authService.getAccessToken();
-    if (token) {
-      request = request.clone({
-        setHeaders: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+    if (!token) {
+      return next.handle(request);
     }
 
-    return next.handle(request);
+    return next.handle(request.clone({
+      setHeaders: {
+        Authorization: `Bearer ${token}`,
+      },
+    }));
   }
 }

@@ -1,6 +1,5 @@
 package com.neueda.leap.controller;
 
-import static com.neueda.leap.support.TestSecurityUtils.jwtWithRoles;
 import static com.neueda.leap.support.TestSecurityUtils.jwtWithSubjectAndRoles;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -60,9 +59,10 @@ class ClientTradeControllerTest {
     void createTradeReturnsCreatedResponse() throws Exception {
         when(clientTradeService.createTrade(org.mockito.ArgumentMatchers.eq(7), org.mockito.ArgumentMatchers.any()))
                 .thenReturn(buildTrade());
+        when(appUserService.getUserByUsername("client01")).thenReturn(buildCurrentUser(7));
 
         mockMvc.perform(post("/api/clients/7/trades")
-                        .with(jwtWithRoles("ADMIN"))
+                        .with(jwtWithSubjectAndRoles("client01", "CLIENT"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -83,9 +83,10 @@ class ClientTradeControllerTest {
     @Test
     void getTradeReturnsJsonResponse() throws Exception {
         when(clientTradeService.getTrade(7, 21)).thenReturn(buildTrade());
+        when(appUserService.getUserByUsername("client01")).thenReturn(buildCurrentUser(7));
 
         mockMvc.perform(get("/api/clients/7/trades/21")
-                        .with(jwtWithRoles("ADMIN")))
+                        .with(jwtWithSubjectAndRoles("client01", "CLIENT")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.tradeId").value(21))
                 .andExpect(jsonPath("$.instrumentId").value(11));
@@ -97,9 +98,10 @@ class ClientTradeControllerTest {
         trade.setStatus("EXECUTED");
         when(clientTradeService.updateTrade(org.mockito.ArgumentMatchers.eq(7), org.mockito.ArgumentMatchers.eq(21), org.mockito.ArgumentMatchers.any()))
                 .thenReturn(trade);
+        when(appUserService.getUserByUsername("client01")).thenReturn(buildCurrentUser(7));
 
         mockMvc.perform(patch("/api/clients/7/trades/21")
-                        .with(jwtWithRoles("ADMIN"))
+                        .with(jwtWithSubjectAndRoles("client01", "CLIENT"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -123,9 +125,10 @@ class ClientTradeControllerTest {
         );
         when(orderFillService.fillTrade(org.mockito.ArgumentMatchers.eq(7), org.mockito.ArgumentMatchers.eq(21), org.mockito.ArgumentMatchers.any()))
                 .thenReturn(response);
+        when(appUserService.getUserByUsername("client01")).thenReturn(buildCurrentUser(7));
 
         mockMvc.perform(post("/api/clients/7/trades/21/fill")
-                        .with(jwtWithRoles("ADMIN"))
+                        .with(jwtWithSubjectAndRoles("client01", "CLIENT"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {

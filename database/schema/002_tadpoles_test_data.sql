@@ -38,7 +38,9 @@ INSERT INTO roles (role_id, role_name) VALUES
 (7, 'SUPPORT'),
 (8, 'OPERATIONS'),
 (9, 'REPORTING'),
-(10, 'GUEST');
+(10, 'GUEST'),
+(11, 'TRADING_OPS'),
+(12, 'FINANCE');
 
 INSERT INTO user_roles (user_id, role_id) VALUES
 (1, 1),

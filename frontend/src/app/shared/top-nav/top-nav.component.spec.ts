@@ -1,8 +1,12 @@
+import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router, provideRouter } from '@angular/router';
 import { TopNavComponent } from './top-nav.component';
+
+@Component({ template: '' })
+class DummyComponent {}
 
 describe('TopNavComponent', () => {
   beforeEach(async () => {
@@ -16,6 +20,7 @@ describe('TopNavComponent', () => {
       displayName: 'Nav Tester',
       clientId: 7,
       onboardingComplete: true,
+      roles: ['CLIENT'],
     }));
     localStorage.setItem('tadpoles.auth.token', 'stored-token');
     localStorage.setItem('tadpoles.user.profile', JSON.stringify({
@@ -44,7 +49,18 @@ describe('TopNavComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [TopNavComponent],
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter([
+          { path: 'app/overview', component: DummyComponent },
+          { path: 'trade/:symbol', component: DummyComponent },
+          { path: 'profile', component: DummyComponent },
+          { path: 'onboarding', component: DummyComponent },
+          { path: 'login', component: DummyComponent },
+          { path: 'unauthorized', component: DummyComponent },
+        ]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+      ],
     }).compileComponents();
   });
 
@@ -57,12 +73,10 @@ describe('TopNavComponent', () => {
     fixture.detectChanges();
 
     const host = fixture.nativeElement as HTMLElement;
-
     expect(host.textContent).toContain('Tadpoles');
     expect(host.querySelector('.search-input')?.getAttribute('placeholder')).toContain('Search');
     expect(host.querySelector('.search-button')?.textContent).toContain('Search');
     expect(host.querySelector('.profile-btn')?.textContent).toContain('Account');
-    expect(host.textContent).not.toContain('Trades');
   });
 
   it.each([' aapl ', 'brk.b', 'BRK-B'])('submits ticker %s through the search form', (query) => {
@@ -70,11 +84,11 @@ describe('TopNavComponent', () => {
     fixture.detectChanges();
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     const host = fixture.nativeElement as HTMLElement;
-    const input = host.querySelector('input')!;
+    const input = host.querySelector('input') as HTMLInputElement;
     input.value = query;
     input.dispatchEvent(new Event('input'));
     const event = new Event('submit', { cancelable: true });
-    host.querySelector('form')!.dispatchEvent(event);
+    (host.querySelector('form') as HTMLFormElement).dispatchEvent(event);
     expect(event.defaultPrevented).toBe(true);
     expect(navigate).toHaveBeenCalledWith(['/trade', query.trim().toUpperCase()]);
   });
@@ -85,29 +99,17 @@ describe('TopNavComponent', () => {
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     for (const query of ['', '   ']) {
       fixture.componentInstance.updateSearchQuery(query);
-      fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit'));
+      (fixture.nativeElement.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
     }
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it('returns to the dashboard when the brand is clicked away from it', () => {
+  it('navigates to the default workspace when the brand is clicked', () => {
     const fixture = TestBed.createComponent(TopNavComponent);
     fixture.detectChanges();
-    const router = TestBed.inject(Router);
-    vi.spyOn(router, 'url', 'get').mockReturnValue('/trade/AAPL');
-    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
-    fixture.nativeElement.querySelector('.brand').click();
-    expect(navigate).toHaveBeenCalledWith(['/']);
-  });
-
-  it.each(['/', '/?view=holdings', '/#holdings'])('does nothing when the brand is clicked on dashboard %s', (url) => {
-    const fixture = TestBed.createComponent(TopNavComponent);
-    fixture.detectChanges();
-    const router = TestBed.inject(Router);
-    vi.spyOn(router, 'url', 'get').mockReturnValue(url);
-    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
-    fixture.nativeElement.querySelector('.brand').click();
-    expect(navigate).not.toHaveBeenCalled();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    (fixture.nativeElement.querySelector('.brand') as HTMLButtonElement).click();
+    expect(navigate).toHaveBeenCalledWith('/app/overview');
   });
 
   it('opens and closes the account menu', () => {
@@ -119,13 +121,10 @@ describe('TopNavComponent', () => {
 
     menuToggle.click();
     fixture.detectChanges();
-
     expect(host.querySelector('.profile-menu')).toBeTruthy();
 
     document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     fixture.detectChanges();
-
     expect(host.querySelector('.profile-menu')).toBeNull();
   });
 });
-

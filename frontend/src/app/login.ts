@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { AuthService } from './core/auth/auth.service';
 
 interface LoginForm {
-  email: string;
+  usernameOrEmail: string;
   password: string;
   rememberMe: boolean;
 }
@@ -22,13 +22,13 @@ interface LoginForm {
 
         <form class="login-form" (ngSubmit)="handleLogin()">
           <div class="form-group">
-            <label for="email">Email Address</label>
+            <label for="usernameOrEmail">Username or Email</label>
             <input
-              id="email"
-              type="email"
-              placeholder="Enter your email"
-              [value]="loginForm().email"
-              (input)="updateLoginForm('email', $event)"
+              id="usernameOrEmail"
+              type="text"
+              placeholder="Enter username or email"
+              [value]="loginForm().usernameOrEmail"
+              (input)="updateLoginForm('usernameOrEmail', $event)"
               required
               aria-required="true"
             />
@@ -290,7 +290,7 @@ export class LoginComponent {
   private readonly authService = inject(AuthService);
 
   readonly loginForm = signal<LoginForm>({
-    email: '',
+    usernameOrEmail: '',
     password: '',
     rememberMe: false,
   });
@@ -298,8 +298,9 @@ export class LoginComponent {
   readonly errorMessage = signal('');
   readonly isSubmitting = signal(false);
 
-  updateLoginForm(field: string, event: any): void {
-    const value = field === 'rememberMe' ? event.target.checked : event.target.value;
+  updateLoginForm(field: 'usernameOrEmail' | 'password' | 'rememberMe', event: Event): void {
+    const target = event.target as HTMLInputElement;
+    const value = field === 'rememberMe' ? target.checked : target.value;
     this.loginForm.update(form => ({
       ...form,
       [field]: value,
@@ -308,22 +309,10 @@ export class LoginComponent {
 
   async handleLogin(): Promise<void> {
     const form = this.loginForm();
-    const trimmedEmail = form.email.trim();
+    const identifier = form.usernameOrEmail.trim();
 
-    if (!trimmedEmail || !form.password) {
-      this.errorMessage.set('Please enter both email and password');
-      setTimeout(() => this.errorMessage.set(''), 4000);
-      return;
-    }
-
-    if (!this.isValidEmail(trimmedEmail)) {
-      this.errorMessage.set('Please enter a valid email address');
-      setTimeout(() => this.errorMessage.set(''), 4000);
-      return;
-    }
-
-    if (form.password.length < 8) {
-      this.errorMessage.set('Password must be at least 8 characters');
+    if (!identifier || !form.password) {
+      this.errorMessage.set('Please enter both username/email and password');
       setTimeout(() => this.errorMessage.set(''), 4000);
       return;
     }
@@ -332,7 +321,7 @@ export class LoginComponent {
     this.isSubmitting.set(true);
 
     try {
-      await this.authService.login(trimmedEmail, form.password);
+      await this.authService.login(identifier, form.password);
 
       const redirectTarget = this.route.snapshot.queryParamMap.get('redirectTo');
       const nextRoute = this.authService.hasCompletedOnboarding()
@@ -345,11 +334,6 @@ export class LoginComponent {
     } finally {
       this.isSubmitting.set(false);
     }
-  }
-
-  private isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
   }
 
   private toErrorMessage(error: unknown): string {

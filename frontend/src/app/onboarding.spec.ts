@@ -16,13 +16,17 @@ const choices = {
 
 describe('Onboarding dropdowns', () => {
   beforeEach(() => {
+    TestBed.resetTestingModule();
     localStorage.clear();
     TestBed.configureTestingModule({
       imports: [OnboardingComponent],
       providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     });
   });
-  afterEach(() => localStorage.clear());
+  afterEach(() => {
+    localStorage.clear();
+    TestBed.resetTestingModule();
+  });
 
   async function setup(netWorth: number | null = null, riskTolerance = '') {
     const users = TestBed.inject(UserService);

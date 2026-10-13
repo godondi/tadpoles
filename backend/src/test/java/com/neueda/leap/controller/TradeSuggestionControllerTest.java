@@ -66,8 +66,10 @@ class TradeSuggestionControllerTest {
     void listClientTradeSuggestionsReturnsJsonResponseForAuthorizedUser() throws Exception {
         when(tradeSuggestionService.listClientTradeSuggestions(7)).thenReturn(List.of(buildSuggestion()));
 
+        when(appUserService.getUserByUsername("client01")).thenReturn(buildCurrentUser(7));
+
         mockMvc.perform(get("/api/clients/7/trade-suggestions")
-                        .with(jwtWithRoles("ANALYST")))
+                        .with(jwtWithSubjectAndRoles("client01", "CLIENT")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.suggestions[0].suggestionId").value(15))
                 .andExpect(jsonPath("$.suggestions[0].tradeType").value("BUY"));

@@ -1,6 +1,5 @@
 package com.neueda.leap.controller;
 
-import static com.neueda.leap.support.TestSecurityUtils.jwtWithRoles;
 import static com.neueda.leap.support.TestSecurityUtils.jwtWithSubjectAndRoles;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -56,9 +55,10 @@ class ClientHoldingControllerTest {
     void createHoldingReturnsCreatedResponse() throws Exception {
         when(clientHoldingService.createHolding(org.mockito.ArgumentMatchers.eq(7), org.mockito.ArgumentMatchers.any()))
                 .thenReturn(buildHolding());
+        when(appUserService.getUserByUsername("client01")).thenReturn(buildCurrentUser(7));
 
         mockMvc.perform(post("/api/clients/7/holdings")
-                        .with(jwtWithRoles("ADMIN"))
+                        .with(jwtWithSubjectAndRoles("client01", "CLIENT"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -75,9 +75,10 @@ class ClientHoldingControllerTest {
     @Test
     void getHoldingReturnsJsonResponse() throws Exception {
         when(clientHoldingService.getHolding(7, 13)).thenReturn(buildHolding());
+        when(appUserService.getUserByUsername("client01")).thenReturn(buildCurrentUser(7));
 
         mockMvc.perform(get("/api/clients/7/holdings/13")
-                        .with(jwtWithRoles("ADMIN")))
+                        .with(jwtWithSubjectAndRoles("client01", "CLIENT")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.holdingId").value(13))
                 .andExpect(jsonPath("$.clientId").value(7));
@@ -89,9 +90,10 @@ class ClientHoldingControllerTest {
         holding.setQuantity(new BigDecimal("12.000000"));
         when(clientHoldingService.updateHolding(org.mockito.ArgumentMatchers.eq(7), org.mockito.ArgumentMatchers.eq(13), org.mockito.ArgumentMatchers.any()))
                 .thenReturn(holding);
+        when(appUserService.getUserByUsername("client01")).thenReturn(buildCurrentUser(7));
 
         mockMvc.perform(patch("/api/clients/7/holdings/13")
-                        .with(jwtWithRoles("ADMIN"))
+                        .with(jwtWithSubjectAndRoles("client01", "CLIENT"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {

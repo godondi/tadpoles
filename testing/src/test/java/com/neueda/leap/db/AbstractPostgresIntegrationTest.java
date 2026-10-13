@@ -43,9 +43,18 @@ public abstract class AbstractPostgresIntegrationTest {
 
     private static Path resolveSchemaPath() {
         List<Path> candidates = new ArrayList<>();
-        candidates.add(Path.of("..", "database", "schema", "tadpoles_schema.sql"));
-        candidates.add(Path.of("database", "schema", "tadpoles_schema.sql"));
-        candidates.add(Path.of("..", "..", "database", "schema", "tadpoles_schema.sql"));
+        String[] schemaNames = {"001_tadpoles_schema.sql", "tadpoles_schema.sql"};
+        Path[] roots = {
+                Path.of("..", "database", "schema"),
+                Path.of("database", "schema"),
+                Path.of("..", "..", "database", "schema")
+        };
+
+        for (Path root : roots) {
+            for (String schemaName : schemaNames) {
+                candidates.add(root.resolve(schemaName));
+            }
+        }
 
         for (Path candidate : candidates) {
             Path normalized = candidate.toAbsolutePath().normalize();
@@ -54,7 +63,7 @@ public abstract class AbstractPostgresIntegrationTest {
             }
         }
 
-        throw new IllegalStateException("Unable to locate database/schema/tadpoles_schema.sql from test runtime.");
+        throw new IllegalStateException("Unable to locate the database schema from test runtime.");
     }
 
     private void executeSqlScript(Path sqlPath) throws IOException, SQLException {

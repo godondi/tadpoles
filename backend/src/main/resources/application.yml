@@ -11,14 +11,14 @@ mybatis:
     map-underscore-to-camel-case: true
 
 server:
-  port: ${SERVER_PORT}
+  port: ${SERVER_PORT:8080}
 
 jwt:
   secret: ${JWT_SECRET}
 
 fauxnance:
-  base-url: ${FAUX_SERVER_URL}
-  api-key: ${FAUX_API_KEY}
-  default-interval: ${FAUX_DEFAULT_INTERVAL}
-  connect-timeout-seconds: ${FAUX_CONNECT_TIMEOUT_SECONDS}
-  read-timeout-seconds: ${FAUX_READ_TIMEOUT_SECONDS}
+  base-url: ${FAUX_SERVER_URL:https://y4t9nq2bqf.execute-api.eu-west-2.amazonaws.com/v1}
+  api-key: ${FAUX_API_KEY:}
+  default-interval: ${FAUX_DEFAULT_INTERVAL:1d}
+  connect-timeout-seconds: ${FAUX_CONNECT_TIMEOUT_SECONDS:10}
+  read-timeout-seconds: ${FAUX_READ_TIMEOUT_SECONDS:20}

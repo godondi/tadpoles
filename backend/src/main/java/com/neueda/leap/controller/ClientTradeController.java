@@ -41,7 +41,7 @@ public class ClientTradeController {
     }
 
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CLIENT')")
     public ClientTradeListResponseDto listTrades(@PathVariable Integer clientId, @AuthenticationPrincipal Jwt jwt) {
         SecurityRoleSupport.requireClientOwnership(jwt, appUserService, clientId);
         return ClientTradeListResponseDto.fromEntities(clientTradeService.listClientTrades(clientId));
@@ -49,7 +49,7 @@ public class ClientTradeController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CLIENT')")
     public ClientTradeResponseDto createTrade(
             @PathVariable Integer clientId,
             @RequestBody CreateClientTradeRequestDto request,
@@ -61,7 +61,7 @@ public class ClientTradeController {
     }
 
     @GetMapping("/{tradeId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CLIENT')")
     public ClientTradeResponseDto getTrade(
             @PathVariable Integer clientId,
             @PathVariable Integer tradeId,
@@ -73,7 +73,7 @@ public class ClientTradeController {
     }
 
     @PatchMapping("/{tradeId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CLIENT')")
     public ClientTradeResponseDto updateTrade(
             @PathVariable Integer clientId,
             @PathVariable Integer tradeId,
@@ -86,7 +86,7 @@ public class ClientTradeController {
     }
 
     @PostMapping("/{tradeId}/fill")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CLIENT')")
     public OrderFillResponseDto fillTrade(
             @PathVariable Integer clientId,
             @PathVariable Integer tradeId,

@@ -32,7 +32,7 @@ public class ClientHoldingController {
     }
 
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CLIENT')")
     public ClientHoldingListResponseDto listHoldings(@PathVariable Integer clientId, @AuthenticationPrincipal Jwt jwt) {
         SecurityRoleSupport.requireClientOwnership(jwt, appUserService, clientId);
         return ClientHoldingListResponseDto.fromEntities(clientHoldingService.listClientHoldings(clientId));
@@ -40,7 +40,7 @@ public class ClientHoldingController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CLIENT')")
     public ClientHoldingResponseDto createHolding(
             @PathVariable Integer clientId,
             @RequestBody CreateClientHoldingRequestDto request,
@@ -52,7 +52,7 @@ public class ClientHoldingController {
     }
 
     @GetMapping("/{holdingId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CLIENT')")
     public ClientHoldingResponseDto getHolding(
             @PathVariable Integer clientId,
             @PathVariable Integer holdingId,
@@ -64,7 +64,7 @@ public class ClientHoldingController {
     }
 
     @PatchMapping("/{holdingId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CLIENT')")
     public ClientHoldingResponseDto updateHolding(
             @PathVariable Integer clientId,
             @PathVariable Integer holdingId,

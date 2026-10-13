@@ -44,7 +44,7 @@ public class TradeSuggestionController {
     }
 
     @GetMapping("/clients/{clientId}/trade-suggestions")
-    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR', 'ANALYST', 'ADVISOR', 'CLIENT')")
+    @PreAuthorize("hasRole('CLIENT')")
     public TradeSuggestionListResponseDto listClientTradeSuggestions(
             @PathVariable Integer clientId,
             @AuthenticationPrincipal Jwt jwt
@@ -54,7 +54,7 @@ public class TradeSuggestionController {
     }
 
     @GetMapping("/trade-suggestions/{suggestionId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR', 'ANALYST', 'ADVISOR', 'CLIENT')")
+    @PreAuthorize("hasRole('CLIENT')")
     public TradeSuggestionResponseDto getTradeSuggestion(
             @PathVariable Integer suggestionId,
             @AuthenticationPrincipal Jwt jwt

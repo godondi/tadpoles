@@ -27,14 +27,14 @@ public class InstrumentController {
     }
 
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ADMIN')")
     public InstrumentListResponseDto listInstruments() {
         return InstrumentListResponseDto.fromEntities(instrumentService.listInstruments());
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ADMIN')")
     public InstrumentResponseDto createInstrument(@RequestBody CreateInstrumentRequestDto request) {
         Instrument instrument = instrumentService.createInstrument(request);
         return InstrumentResponseDto.fromEntity(instrument);

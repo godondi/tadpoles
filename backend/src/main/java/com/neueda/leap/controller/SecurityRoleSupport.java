@@ -30,7 +30,7 @@ final class SecurityRoleSupport {
     static void requireClientOwnership(Jwt jwt, AppUserService appUserService, Integer clientId) {
         requireAuthenticated(jwt);
         if (!hasAnyRole(jwt, "CLIENT")) {
-            return;
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Client role required");
         }
 
         AppUser currentUser = resolveCurrentUser(jwt, appUserService);

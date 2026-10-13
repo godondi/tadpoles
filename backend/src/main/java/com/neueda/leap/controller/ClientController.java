@@ -40,14 +40,14 @@ public class ClientController {
 
     @PostMapping("/clients")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ADMIN')")
     public ClientResponseDto createClient(@RequestBody CreateClientRequestDto request) {
         Client client = clientService.createClient(request);
         return ClientResponseDto.fromEntity(client);
     }
 
     @GetMapping("/clients/{clientId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CLIENT')")
     public ClientResponseDto getClient(@PathVariable Integer clientId, @AuthenticationPrincipal Jwt jwt) {
         SecurityRoleSupport.requireClientOwnership(jwt, appUserService, clientId);
         Client client = clientService.getClient(clientId);
@@ -55,7 +55,7 @@ public class ClientController {
     }
 
     @PatchMapping("/clients/{clientId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CLIENT')")
     public ClientResponseDto updateClient(
             @PathVariable Integer clientId,
             @RequestBody UpdateClientRequestDto request,
@@ -67,7 +67,7 @@ public class ClientController {
     }
 
     @GetMapping("/clients/{clientId}/balance")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('CLIENT')")
     public ClientBalanceResponseDto getClientBalance(@PathVariable Integer clientId, @AuthenticationPrincipal Jwt jwt) {
         SecurityRoleSupport.requireClientOwnership(jwt, appUserService, clientId);
         return new ClientBalanceResponseDto(clientId, clientService.getClientBalance(clientId));

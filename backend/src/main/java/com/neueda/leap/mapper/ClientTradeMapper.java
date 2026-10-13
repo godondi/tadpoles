@@ -47,10 +47,46 @@ public interface ClientTradeMapper {
                    executed_at AS executedAt,
                    reason AS reason
             FROM client_trades
+            ORDER BY trade_date DESC, trade_id DESC
+            """)
+    List<ClientTrade> listAllTrades();
+
+    @Select("""
+            SELECT trade_id AS tradeId,
+                   client_id AS clientId,
+                   instrument_id AS instrumentId,
+                   submitted_by_user_id AS submittedByUserId,
+                   approved_by_user_id AS approvedByUserId,
+                   trade_type AS tradeType,
+                   quantity AS quantity,
+                   price AS price,
+                   trade_date AS tradeDate,
+                   status AS status,
+                   executed_at AS executedAt,
+                   reason AS reason
+            FROM client_trades
             WHERE client_id = #{clientId}
               AND trade_id = #{tradeId}
             """)
     ClientTrade getClientTrade(@Param("clientId") Integer clientId, @Param("tradeId") Integer tradeId);
+
+    @Select("""
+            SELECT trade_id AS tradeId,
+                   client_id AS clientId,
+                   instrument_id AS instrumentId,
+                   submitted_by_user_id AS submittedByUserId,
+                   approved_by_user_id AS approvedByUserId,
+                   trade_type AS tradeType,
+                   quantity AS quantity,
+                   price AS price,
+                   trade_date AS tradeDate,
+                   status AS status,
+                   executed_at AS executedAt,
+                   reason AS reason
+            FROM client_trades
+            WHERE trade_id = #{tradeId}
+            """)
+    ClientTrade getTradeById(@Param("tradeId") Integer tradeId);
 
     @Insert("""
             INSERT INTO client_trades (
@@ -144,4 +180,3 @@ public interface ClientTradeMapper {
         }
     }
 }
-

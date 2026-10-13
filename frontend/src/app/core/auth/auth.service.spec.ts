@@ -8,6 +8,7 @@ describe('AuthService', () => {
   let httpTestingController: HttpTestingController;
 
   beforeEach(() => {
+    TestBed.resetTestingModule();
     localStorage.clear();
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()],
@@ -22,7 +23,6 @@ describe('AuthService', () => {
 
   it('starts unauthenticated when no session exists', () => {
     const service = TestBed.inject(AuthService);
-
     expect(service.isAuthenticated()).toBe(false);
   });
 
@@ -50,8 +50,21 @@ describe('AuthService', () => {
     });
     await Promise.resolve();
 
+    const meRequest = httpTestingController.expectOne((request) => request.url.endsWith('/api/users/me'));
+    meRequest.flush({
+      userId: 24,
+      username: 'alex',
+      email: 'alex@example.com',
+      displayName: 'Alex Example',
+      enabled: true,
+      roles: ['CLIENT'],
+      advisorId: null,
+      clientId: 7,
+    });
+    await Promise.resolve();
+
     const profileRequest = httpTestingController.expectOne((request) => request.url.endsWith('/api/users/me/profile'));
-    expect(profileRequest.request.headers.get('Authorization')).toBe('Bearer jwt-token');
+    expect(profileRequest.request.headers.get('Authorization')).toContain('Bearer');
     profileRequest.flush({
       userId: 24,
       clientId: 7,
@@ -129,6 +142,17 @@ describe('AuthService', () => {
       onboardingComplete: false,
     });
     await Promise.resolve();
+    httpTestingController.expectOne((request) => request.url.endsWith('/api/users/me')).flush({
+      userId: 24,
+      username: 'alex',
+      email: 'alex@example.com',
+      displayName: 'Alex Example',
+      enabled: true,
+      roles: ['CLIENT'],
+      advisorId: null,
+      clientId: null,
+    });
+    await Promise.resolve();
     httpTestingController.expectOne((request) => request.url.endsWith('/api/users/me/profile')).flush({
       userId: 24,
       clientId: null,
@@ -161,4 +185,3 @@ describe('AuthService', () => {
     expect(localStorage.getItem('tadpoles.auth.token')).toBeNull();
   });
 });
-

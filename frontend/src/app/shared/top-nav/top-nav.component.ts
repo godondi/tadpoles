@@ -1,15 +1,23 @@
-import { Component, ElementRef, HostListener, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, ElementRef, computed, inject, signal } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { UserService } from '../../user.service';
 
+interface WorkspaceLink {
+  label: string;
+  route: string;
+}
+
 @Component({
   selector: 'app-top-nav',
+  imports: [RouterLink],
   templateUrl: './top-nav.component.html',
   styleUrl: './top-nav.component.css',
   host: {
     role: 'navigation',
     'aria-label': 'Primary navigation',
+    '(document:click)': 'onDocumentClick($event)',
+    '(document:keydown.escape)': 'onEscapeKey()',
   },
 })
 export class TopNavComponent {
@@ -21,6 +29,30 @@ export class TopNavComponent {
   readonly searchQuery = signal('');
   readonly isMenuOpen = signal(false);
   readonly userProfile = this.userService.getProfile();
+  readonly workspaceLinks = computed<WorkspaceLink[]>(() => {
+    const links: WorkspaceLink[] = [];
+    const roles = this.authService.roles();
+    if (roles.includes('CLIENT')) {
+      links.push({ label: 'Overview', route: '/app/overview' });
+      links.push({ label: 'Markets', route: '/app/markets' });
+      links.push({ label: 'Portfolio', route: '/app/portfolio' });
+      links.push({ label: 'Orders', route: '/app/orders' });
+    }
+    if (roles.includes('TRADING_OPS')) {
+      links.push({ label: 'Operations', route: '/operations/orders' });
+    }
+    if (roles.includes('COMPLIANCE')) {
+      links.push({ label: 'Compliance', route: '/compliance/investigations' });
+    }
+    if (roles.includes('ANALYST')) {
+      links.push({ label: 'Analytics', route: '/analytics/overview' });
+    }
+    if (roles.includes('FINANCE')) {
+      links.push({ label: 'Finance', route: '/finance/overview' });
+    }
+    return links;
+  });
+  readonly showSearch = computed(() => this.authService.roles().includes('CLIENT'));
   readonly userInitials = computed(() => {
     const name = (this.userProfile().displayName || this.userProfile().clientName || this.userProfile().email).trim();
 
@@ -38,16 +70,17 @@ export class TopNavComponent {
   search(event?: Event): void {
     event?.preventDefault();
     const ticker = this.searchQuery().trim().toUpperCase();
-    if (!ticker) return;
+    if (!ticker) {
+      return;
+    }
     this.searchQuery.set(ticker);
     this.closeProfileMenu();
     void this.router.navigate(['/trade', ticker]);
   }
 
-  openDashboard(): void {
-    if (this.router.url.split(/[?#]/)[0] === '/') return;
+  openDefaultWorkspace(): void {
     this.closeProfileMenu();
-    void this.router.navigate(['/']);
+    void this.router.navigateByUrl(this.authService.resolveLandingRoute());
   }
 
   toggleProfileMenu(): void {
@@ -56,16 +89,11 @@ export class TopNavComponent {
 
   openProfile(): void {
     this.closeProfileMenu();
-    if (!this.authService.hasCompletedOnboarding()) {
+    if (!this.authService.hasCompletedOnboarding() && this.authService.roles().includes('CLIENT')) {
       void this.router.navigate(['/onboarding']);
       return;
     }
     void this.router.navigate(['/profile']);
-  }
-
-  openTrades(): void {
-    this.closeProfileMenu();
-    void this.router.navigate(['/trades']);
   }
 
   logout(): void {
@@ -74,12 +102,16 @@ export class TopNavComponent {
     void this.router.navigate(['/login']);
   }
 
+  navigateTo(route: string): void {
+    this.closeProfileMenu();
+    void this.router.navigateByUrl(route);
+  }
+
   private closeProfileMenu(): void {
     this.isMenuOpen.set(false);
   }
 
-  @HostListener('document:click', ['$event'])
-  handleDocumentClick(event: MouseEvent): void {
+  onDocumentClick(event: MouseEvent): void {
     if (!this.isMenuOpen()) {
       return;
     }
@@ -89,8 +121,7 @@ export class TopNavComponent {
     }
   }
 
-  @HostListener('document:keydown.escape')
-  handleEscapeKey(): void {
+  onEscapeKey(): void {
     this.closeProfileMenu();
   }
 }

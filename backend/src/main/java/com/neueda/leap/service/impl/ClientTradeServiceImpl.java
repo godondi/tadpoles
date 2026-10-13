@@ -39,6 +39,11 @@ public class ClientTradeServiceImpl implements ClientTradeService {
     }
 
     @Override
+    public List<ClientTrade> listAllTrades() {
+        return clientTradeMapper.listAllTrades();
+    }
+
+    @Override
     public ClientTrade getTrade(Integer clientId, Integer tradeId) {
         validateClientId(clientId);
         validateTradeId(tradeId);
@@ -46,6 +51,16 @@ public class ClientTradeServiceImpl implements ClientTradeService {
         ClientTrade trade = clientTradeMapper.getClientTrade(clientId, tradeId);
         if (trade == null) {
             throw new ClientTradeNotFoundException(clientId, tradeId);
+        }
+        return trade;
+    }
+
+    @Override
+    public ClientTrade getTradeById(Integer tradeId) {
+        validateTradeId(tradeId);
+        ClientTrade trade = clientTradeMapper.getTradeById(tradeId);
+        if (trade == null) {
+            throw new ClientTradeNotFoundException(null, tradeId);
         }
         return trade;
     }
@@ -179,5 +194,4 @@ public class ClientTradeServiceImpl implements ClientTradeService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 }
-
 
