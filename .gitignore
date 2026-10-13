@@ -9,3 +9,5 @@ auth-stub/node_modules
 *.classpath
 *.project
 *.settings/
+frontend/.angular
+frontend/pole
