@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { Subject } from 'rxjs';
 import { vi } from 'vitest';
 import { appConfig } from '../../app.config';
 import { AuthService } from '../auth/auth.service';
@@ -13,7 +14,13 @@ describe('MarketDataService with application HTTP configuration', () => {
       providers: [
         ...appConfig.providers,
         provideHttpClientTesting(),
-        { provide: AuthService, useValue: { getAccessToken: () => 'test-session-token' } },
+        {
+          provide: AuthService,
+          useValue: {
+            getAccessToken: () => 'test-session-token',
+            sessionChanged: new Subject<void>(),
+          },
+        },
       ],
     });
     http = TestBed.inject(HttpTestingController);

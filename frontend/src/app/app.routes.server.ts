@@ -1,9 +1,3 @@
 import { RenderMode, ServerRoute } from '@angular/ssr';
-
-export const serverRoutes: ServerRoute[] = [
-  { path: 'trade/:symbol', renderMode: RenderMode.Client },
-  {
-    path: '**',
-    renderMode: RenderMode.Prerender
-  }
-];
+// No identity or personal data is rendered into shared HTML or build artifacts.
+export const serverRoutes: ServerRoute[] = [{ path: '**', renderMode: RenderMode.Client }];

@@ -4,6 +4,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { HttpTestingController } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
 import { vi } from 'vitest';
+import { AuthService } from './core/auth/auth.service';
 import { App } from './app';
 import { routes } from './app.routes';
 
@@ -29,42 +30,76 @@ describe('App routing and shell', () => {
     const router = TestBed.inject(Router);
 
     if (session) {
-      localStorage.setItem('tadpoles.auth.session', JSON.stringify({
-        token: 'stored-token',
-        tokenType: 'Bearer',
-        expiresIn: 3600,
-        userId: 14,
-        email: 'casey@example.com',
-        displayName: 'Casey Example',
-        clientId: session.onboardingComplete ? 7 : null,
-        onboardingComplete: session.onboardingComplete,
-      }));
+      localStorage.setItem(
+        'tadpoles.auth.session',
+        JSON.stringify({
+          token: 'stored-token',
+          tokenType: 'Bearer',
+          expiresIn: 3600,
+          expiresAt: Date.now() + 3600000,
+          userId: 14,
+          email: 'casey@example.com',
+          displayName: 'Casey Example',
+          clientId: session.onboardingComplete ? 7 : null,
+          onboardingComplete: session.onboardingComplete,
+        }),
+      );
       localStorage.setItem('tadpoles.auth.token', 'stored-token');
-      localStorage.setItem('tadpoles.user.profile', JSON.stringify({
-        userId: 14,
-        clientId: session.onboardingComplete ? 7 : null,
-        email: 'casey@example.com',
-        displayName: 'Casey Example',
-        clientName: '',
-        phone: '',
-        dateOfBirth: '',
-        addressLine1: '',
-        addressLine2: '',
-        city: '',
-        state: '',
-        postalCode: '',
-        country: '',
-        employmentStatus: '',
-        netWorth: null,
-        riskTolerance: '',
-        investmentObjective: '',
-        preferredContactMethod: '',
-        paperlessStatements: true,
-        marketingOptIn: false,
-        onboardingComplete: session.onboardingComplete,
-      }));
+      localStorage.setItem(
+        'tadpoles.user.profile',
+        JSON.stringify({
+          userId: 14,
+          clientId: session.onboardingComplete ? 7 : null,
+          email: 'casey@example.com',
+          displayName: 'Casey Example',
+          clientName: '',
+          phone: '',
+          dateOfBirth: '',
+          addressLine1: '',
+          addressLine2: '',
+          city: '',
+          state: '',
+          postalCode: '',
+          country: '',
+          employmentStatus: '',
+          netWorth: null,
+          riskTolerance: '',
+          investmentObjective: '',
+          preferredContactMethod: '',
+          paperlessStatements: true,
+          marketingOptIn: false,
+          onboardingComplete: session.onboardingComplete,
+        }),
+      );
     }
 
+    if (session) {
+      const auth = TestBed.inject(AuthService);
+      const http = TestBed.inject(HttpTestingController);
+      const init = auth.ensureInitialized();
+      http
+        .expectOne((r) => r.url.endsWith('/api/users/me'))
+        .flush({
+          userId: 14,
+          enabled: true,
+          roles: ['CLIENT'],
+          clientId: session.onboardingComplete ? 7 : null,
+          email: 'casey@example.com',
+          displayName: 'Casey',
+        });
+      await init;
+      const profile = auth.ensureClientProfile();
+      http
+        .expectOne((r) => r.url.endsWith('/api/users/me/profile'))
+        .flush({
+          userId: 14,
+          clientId: session.onboardingComplete ? 7 : null,
+          email: 'casey@example.com',
+          displayName: 'Casey',
+          onboardingComplete: session.onboardingComplete,
+        });
+      await profile;
+    }
     const fixture = TestBed.createComponent(App);
     await router.navigateByUrl(url);
     fixture.detectChanges();
@@ -86,7 +121,7 @@ describe('App routing and shell', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const shellText = compiled.querySelector('app-top-nav')?.textContent ?? '';
 
-    expect(router.url).toBe('/');
+    expect(router.url).toBe('/app/overview');
     expect(compiled.querySelector('app-top-nav')).toBeTruthy();
     expect(shellText).toContain('Tadpoles');
     expect(shellText).toContain('Search');
@@ -97,7 +132,7 @@ describe('App routing and shell', () => {
   it('redirects authenticated visitors away from login', async () => {
     const { router } = await renderAt('/login', { onboardingComplete: true });
 
-    expect(router.url).toBe('/');
+    expect(router.url).toBe('/app/overview');
   });
 
   it('redirects authenticated users with incomplete onboarding to the onboarding route', async () => {
@@ -107,13 +142,30 @@ describe('App routing and shell', () => {
   });
 
   it('keeps the shared header on the instrument route for signed-in users', async () => {
-    const { fixture, router } = await renderAt('/trade/AAPL', { onboardingComplete: true });
-    expect(router.url).toBe('/trade/AAPL');
+    const { fixture, router } = await renderAt('/app/instruments/11', { onboardingComplete: true });
+    expect(router.url).toBe('/app/instruments/11');
     expect(fixture.nativeElement.querySelector('app-top-nav')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('app-trade')).toBeTruthy();
     const http = TestBed.inject(HttpTestingController);
-    http.expectOne(r => r.url.endsWith('/candles/AAPL')).flush({ data: { candles: [] }, meta: {} });
-    http.expectOne(r => r.url.endsWith('/quotes/AAPL')).flush({}, { status: 404, statusText: 'Not Found' });
+    http
+      .expectOne((r) => r.url.endsWith('/api/instruments/11'))
+      .flush({
+        instrumentId: 11,
+        ticker: 'AAPL',
+        instrumentName: 'Apple',
+        currency: 'USD',
+        isActive: true,
+      });
+    http
+      .expectOne((r) => r.url.endsWith('/trading-availability'))
+      .flush({ enabled: false, reason: 'Not enabled' });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-trade')).toBeTruthy();
+    http
+      .expectOne((r) => r.url.endsWith('/candles/AAPL'))
+      .flush({ data: { candles: [] }, meta: {} });
+    http
+      .expectOne((r) => r.url.endsWith('/quotes/AAPL'))
+      .flush({}, { status: 404, statusText: 'Not Found' });
     http.verify();
   });
 

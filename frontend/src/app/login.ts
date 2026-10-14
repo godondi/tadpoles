@@ -17,16 +17,17 @@ interface LoginForm {
       <div class="login-box">
         <div class="login-header">
           <h1 class="login-title">Tadpoles</h1>
-          <p class="login-subtitle">Sign in to continue to your dashboard or complete onboarding.</p>
+          <p class="login-subtitle">Sign in to your account or staff workspace.</p>
         </div>
 
         <form class="login-form" (ngSubmit)="handleLogin()">
           <div class="form-group">
-            <label for="email">Email Address</label>
+            <label for="email">Email or username</label>
             <input
               id="email"
-              type="email"
-              placeholder="Enter your email"
+              autocomplete="username"
+              type="text"
+              placeholder="Enter your email or username"
               [value]="loginForm().email"
               (input)="updateLoginForm('email', $event)"
               required
@@ -38,6 +39,7 @@ interface LoginForm {
             <label for="password">Password</label>
             <input
               id="password"
+              autocomplete="current-password"
               type="password"
               placeholder="Enter your password"
               [value]="loginForm().password"
@@ -45,19 +47,6 @@ interface LoginForm {
               required
               aria-required="true"
             />
-          </div>
-
-          <div class="form-group checkbox">
-            <label for="remember">
-              <input
-                id="remember"
-                type="checkbox"
-                [checked]="loginForm().rememberMe"
-                (change)="updateLoginForm('rememberMe', $event)"
-              />
-              Remember me
-            </label>
-            <a href="#" class="forgot-password">Forgot password?</a>
           </div>
 
           @if (errorMessage()) {
@@ -80,207 +69,209 @@ interface LoginForm {
       </div>
     </div>
   `,
-  styles: [`
-    :host {
-      display: block;
-      width: 100%;
-      height: 100vh;
-      background: #006044;
-      font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-    }
+  styles: [
+    `
+      :host {
+        display: block;
+        width: 100%;
+        min-height: 100vh;
+        background: #006044;
+        font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+        margin: 0;
+        padding: 0;
+        overflow: auto;
+      }
 
-    .login-container {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      width: 100%;
-      height: 100%;
-      padding: 0;
-    }
+      .login-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+      }
 
-    .login-box {
-      background: rgba(255, 255, 255, 0.98);
-      border-radius: 0;
-      box-shadow: 0 24px 50px rgba(0, 0, 0, 0.18);
-      width: 100%;
-      max-width: 420px;
-      padding: 2.5rem;
-      margin: 0 1rem;
-    }
-
-    .login-header {
-      text-align: center;
-      margin-bottom: 2rem;
-    }
-
-    .login-title {
-      font-size: 2rem;
-      font-weight: 700;
-      color: #006044;
-      margin: 0 0 0.5rem 0;
-      letter-spacing: 0.01em;
-    }
-
-    .login-subtitle {
-      font-size: 0.95rem;
-      color: #51606f;
-      margin: 0;
-    }
-
-    .login-form {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-    }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .form-group label {
-      font-weight: 600;
-      color: #333;
-      margin-bottom: 0.5rem;
-      font-size: 0.95rem;
-    }
-
-    .form-group input[type="email"],
-    .form-group input[type="password"] {
-      padding: 0.75rem;
-      border: 2px solid #e0e0e0;
-      border-radius: 0;
-      font-size: 0.95rem;
-      transition: all 0.3s;
-    }
-
-    .form-group input[type="email"]:focus,
-    .form-group input[type="password"]:focus {
-      outline: none;
-      border-color: #76A923;
-      box-shadow: 0 0 0 3px rgba(118, 169, 35, 0.1);
-    }
-
-    .form-group.checkbox {
-      flex-direction: row;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .form-group.checkbox label {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin: 0;
-      font-weight: 500;
-      color: #333;
-      cursor: pointer;
-    }
-
-    .form-group.checkbox input[type="checkbox"] {
-      width: auto;
-      margin: 0;
-      cursor: pointer;
-      accent-color: #76A923;
-    }
-
-    .forgot-password {
-      color: #AF8A49;
-      text-decoration: none;
-      font-size: 0.9rem;
-      transition: color 0.3s;
-    }
-
-    .forgot-password:hover {
-      color: #9a7840;
-      text-decoration: underline;
-    }
-
-    .error-message {
-      padding: 0.75rem;
-      background-color: #ffebee;
-      color: #c62828;
-      border-radius: 0;
-      font-size: 0.9rem;
-      border-left: 4px solid #c62828;
-    }
-
-    .login-btn {
-      padding: 0.85rem;
-      background-color: #76A923;
-      color: white;
-      border: none;
-      border-radius: 0;
-      font-weight: 600;
-      font-size: 0.95rem;
-      cursor: pointer;
-      transition: all 0.3s;
-      margin-top: 0.5rem;
-    }
-
-    .login-btn:hover {
-      background-color: #6a9419;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(118, 169, 35, 0.3);
-    }
-
-    .login-btn:disabled {
-      opacity: 0.75;
-      cursor: progress;
-      transform: none;
-      box-shadow: none;
-    }
-
-    .login-btn:active {
-      transform: translateY(0);
-    }
-
-    .login-btn:focus {
-      outline: none;
-      box-shadow: 0 0 0 3px rgba(118, 169, 35, 0.3);
-    }
-
-    .login-footer {
-      text-align: center;
-      margin-top: 1.5rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid #e0e0e0;
-      color: #666;
-      font-size: 0.9rem;
-    }
-
-    .signup-link {
-      color: #76A923;
-      text-decoration: none;
-      font-weight: 600;
-      transition: color 0.3s;
-    }
-
-    .signup-link:hover {
-      color: #6a9419;
-      text-decoration: underline;
-    }
-
-    @media (max-width: 480px) {
       .login-box {
-        padding: 2rem 1.5rem;
+        background: rgba(255, 255, 255, 0.98);
+        border-radius: 0;
+        box-shadow: 0 24px 50px rgba(0, 0, 0, 0.18);
+        width: 100%;
+        max-width: 420px;
+        padding: 2.5rem;
+        margin: 0 1rem;
+      }
+
+      .login-header {
+        text-align: center;
+        margin-bottom: 2rem;
       }
 
       .login-title {
-        font-size: 1.5rem;
+        font-size: 2rem;
+        font-weight: 700;
+        color: #006044;
+        margin: 0 0 0.5rem 0;
+        letter-spacing: 0.01em;
+      }
+
+      .login-subtitle {
+        font-size: 0.95rem;
+        color: #51606f;
+        margin: 0;
       }
 
       .login-form {
-        gap: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
       }
-    }
-  `],
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .form-group label {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+      }
+
+      .form-group input[type='text'],
+      .form-group input[type='password'] {
+        padding: 0.75rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 0;
+        font-size: 0.95rem;
+        transition: all 0.3s;
+      }
+
+      .form-group input[type='text']:focus,
+      .form-group input[type='password']:focus {
+        outline: none;
+        border-color: #006044;
+        box-shadow: 0 0 0 3px rgba(118, 169, 35, 0.1);
+      }
+
+      .form-group.checkbox {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .form-group.checkbox label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0;
+        font-weight: 500;
+        color: #333;
+        cursor: pointer;
+      }
+
+      .form-group.checkbox input[type='checkbox'] {
+        width: auto;
+        margin: 0;
+        cursor: pointer;
+        accent-color: #006044;
+      }
+
+      .forgot-password {
+        color: #af8a49;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.3s;
+      }
+
+      .forgot-password:hover {
+        color: #9a7840;
+        text-decoration: underline;
+      }
+
+      .error-message {
+        padding: 0.75rem;
+        background-color: #ffebee;
+        color: #c62828;
+        border-radius: 0;
+        font-size: 0.9rem;
+        border-left: 4px solid #c62828;
+      }
+
+      .login-btn {
+        padding: 0.85rem;
+        background-color: #006044;
+        color: white;
+        border: none;
+        border-radius: 0;
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-top: 0.5rem;
+      }
+
+      .login-btn:hover {
+        background-color: #0d4b39;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(118, 169, 35, 0.3);
+      }
+
+      .login-btn:disabled {
+        opacity: 0.75;
+        cursor: progress;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .login-btn:active {
+        transform: translateY(0);
+      }
+
+      .login-btn:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(118, 169, 35, 0.3);
+      }
+
+      .login-footer {
+        text-align: center;
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #e0e0e0;
+        color: #666;
+        font-size: 0.9rem;
+      }
+
+      .signup-link {
+        color: #006044;
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.3s;
+      }
+
+      .signup-link:hover {
+        color: #6a9419;
+        text-decoration: underline;
+      }
+
+      @media (max-width: 480px) {
+        .login-box {
+          padding: 2rem 1.5rem;
+        }
+
+        .login-title {
+          font-size: 1.5rem;
+        }
+
+        .login-form {
+          gap: 1.25rem;
+        }
+      }
+    `,
+  ],
   imports: [FormsModule, RouterLink],
   host: {
-    'role': 'application',
+    role: 'application',
     'aria-label': 'Login page',
   },
 })
@@ -300,7 +291,7 @@ export class LoginComponent {
 
   updateLoginForm(field: string, event: any): void {
     const value = field === 'rememberMe' ? event.target.checked : event.target.value;
-    this.loginForm.update(form => ({
+    this.loginForm.update((form) => ({
       ...form,
       [field]: value,
     }));
@@ -311,20 +302,7 @@ export class LoginComponent {
     const trimmedEmail = form.email.trim();
 
     if (!trimmedEmail || !form.password) {
-      this.errorMessage.set('Please enter both email and password');
-      setTimeout(() => this.errorMessage.set(''), 4000);
-      return;
-    }
-
-    if (!this.isValidEmail(trimmedEmail)) {
-      this.errorMessage.set('Please enter a valid email address');
-      setTimeout(() => this.errorMessage.set(''), 4000);
-      return;
-    }
-
-    if (form.password.length < 8) {
-      this.errorMessage.set('Password must be at least 8 characters');
-      setTimeout(() => this.errorMessage.set(''), 4000);
+      this.errorMessage.set('Please enter your email or username and password');
       return;
     }
 
@@ -335,9 +313,7 @@ export class LoginComponent {
       await this.authService.login(trimmedEmail, form.password);
 
       const redirectTarget = this.route.snapshot.queryParamMap.get('redirectTo');
-      const nextRoute = this.authService.hasCompletedOnboarding()
-        ? redirectTarget || '/'
-        : '/onboarding';
+      const nextRoute = this.authService.returnUrl(redirectTarget);
 
       await this.router.navigateByUrl(nextRoute);
     } catch (error) {
