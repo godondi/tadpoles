@@ -251,6 +251,6 @@ public class UserServiceImpl implements UserService {
     }
 
     private boolean isValidRole(String role) {
-        return role.matches("ADMIN|AUDITOR|ANALYST|ADVISOR|CLIENT|COMPLIANCE|SUPPORT|OPERATIONS|REPORTING|GUEST");
+        return role.matches("ADMIN|AUDITOR|ANALYST|ADVISOR|CLIENT|COMPLIANCE|SUPPORT|OPERATIONS|REPORTING|GUEST|TRADING_OPS|FINANCE");
     }
 }

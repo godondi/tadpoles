@@ -92,8 +92,13 @@ public class SecurityConfig {
     }
 
     @Bean
-    public JwtDecoder jwtDecoder(SecretKey jwtSigningKey) {
-        return NimbusJwtDecoder.withSecretKey(jwtSigningKey).build();
+    public JwtDecoder jwtDecoder(SecretKey jwtSigningKey,
+            org.springframework.beans.factory.ObjectProvider<com.neueda.leap.service.AppUserService> users) {
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(jwtSigningKey).build();
+        decoder.setJwtValidator(new org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator<>(
+                org.springframework.security.oauth2.jwt.JwtValidators.createDefault(),
+                jwt -> new LiveIdentityValidator(users.getObject()).validate(jwt)));
+        return decoder;
     }
 
     @Bean
@@ -111,7 +116,8 @@ public class SecurityConfig {
         }
 
         return roles.stream()
-                .map(String::valueOf)
+                .filter(String.class::isInstance)
+                .map(String.class::cast)
                 .map(role -> "ROLE_" + role)
                 .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());

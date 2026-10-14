@@ -28,7 +28,7 @@ public class AdvisorController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR', 'ANALYST')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR')")
     public AdvisorListResponseDto listAdvisors() {
         return AdvisorListResponseDto.fromEntities(advisorService.listAdvisors());
     }
@@ -42,7 +42,7 @@ public class AdvisorController {
     }
 
     @GetMapping("/{advisorId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR', 'ANALYST', 'ADVISOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR', 'ADVISOR')")
     public AdvisorResponseDto getAdvisor(@PathVariable Integer advisorId) {
         Advisor advisor = advisorService.getAdvisor(advisorId);
         return AdvisorResponseDto.fromEntity(advisor);

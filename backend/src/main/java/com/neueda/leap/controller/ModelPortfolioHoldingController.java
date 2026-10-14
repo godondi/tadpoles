@@ -27,7 +27,7 @@ public class ModelPortfolioHoldingController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR', 'ANALYST', 'ADVISOR', 'CLIENT')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR', 'ADVISOR', 'CLIENT')")
     public ModelPortfolioHoldingListResponseDto listModelPortfolioHoldings(
             @PathVariable Integer modelPortfolioId
     ) {
@@ -48,7 +48,7 @@ public class ModelPortfolioHoldingController {
     }
 
     @GetMapping("/{instrumentId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR', 'ANALYST', 'ADVISOR', 'CLIENT')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR', 'ADVISOR', 'CLIENT')")
     public ModelPortfolioHoldingResponseDto getModelPortfolioHolding(
             @PathVariable Integer modelPortfolioId,
             @PathVariable Integer instrumentId
