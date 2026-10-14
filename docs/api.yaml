@@ -2,40 +2,34 @@ openapi: 3.1.0
 info:
   title: Tadpoles API Starter
   version: 1.0.0
-  description: >-
-    OpenAPI contract for the Tadpoles Spring Boot application.
-    The spec includes the currently implemented backend routes (login, register,
-    clients, holdings, trades, instruments) and also retains planned routes that
-    will be implemented later. JWT authentication is required for all protected
-    routes; role checks are applied only where the backend currently enforces them.
+  description: OpenAPI contract for the Tadpoles Spring Boot application. Actual backend paths with role-enforced workspace reads. Staff data capabilities return 503 until approved policies and sources are configured. New order submission is disabled by decision; no acceptance or execution is implied.
 servers:
-  - url: /api
-    description: Application API root
-
+- url: /
+  description: Application API root
 tags:
-  - name: Authentication
-  - name: Users
-  - name: Advisors
-  - name: Clients
-  - name: Portfolios
-  - name: Instruments
-  - name: Market Data
-  - name: Trades
-  - name: Trade Suggestions
-  - name: Audit
-  - name: Analytics
-  - name: Dashboard
-
+- name: Authentication
+- name: Users
+- name: Advisors
+- name: Clients
+- name: Portfolios
+- name: Instruments
+- name: Market Data
+- name: Trades
+- name: Trade Suggestions
+- name: Audit
+- name: Analytics
+- name: Dashboard
 security:
-  - bearerAuth: []
-
+- bearerAuth: []
 paths:
   /auth/register:
     post:
-      tags: [Authentication]
+      tags:
+      - Authentication
       summary: Register a new application user
       operationId: registerUser
-      x-required-roles: [ADMIN]
+      x-required-roles:
+      - ADMIN
       requestBody:
         required: true
         content:
@@ -61,10 +55,10 @@ paths:
           $ref: '#/components/responses/TooManyRequests'
         '500':
           $ref: '#/components/responses/InternalServerError'
-
   /auth/register/client:
     post:
-      tags: [Authentication]
+      tags:
+      - Authentication
       summary: Register a new client account
       operationId: registerClient
       x-required-roles: []
@@ -90,10 +84,10 @@ paths:
           $ref: '#/components/responses/TooManyRequests'
         '500':
           $ref: '#/components/responses/InternalServerError'
-
   /auth/login:
     post:
-      tags: [Authentication]
+      tags:
+      - Authentication
       summary: Authenticate a user and return JWT tokens
       operationId: login
       x-required-roles: []
@@ -119,11 +113,11 @@ paths:
           $ref: '#/components/responses/TooManyRequests'
         '500':
           $ref: '#/components/responses/InternalServerError'
-
-  /auth/refresh:
+  /api/auth/refresh:
     post:
-      tags: [Authentication]
-      summary: "Planned: exchange a refresh token for a new access token"
+      tags:
+      - Authentication
+      summary: exchange a refresh token for a new access token
       operationId: refreshToken
       x-required-roles: []
       security: []
@@ -146,13 +140,18 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-
-  /auth/logout:
+  /api/auth/logout:
     post:
-      tags: [Authentication]
-      summary: "Planned: revoke the current refresh token"
+      tags:
+      - Authentication
+      summary: revoke the current refresh token
       operationId: logout
-      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      x-required-roles:
+      - ADMIN
+      - AUDITOR
+      - ANALYST
+      - ADVISOR
+      - CLIENT
       requestBody:
         required: true
         content:
@@ -168,13 +167,13 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-
-  /users/me:
+  /api/users/me:
     get:
-      tags: [Users]
-      summary: Get the currently authenticated user profile
+      tags:
+      - Users
+      summary: Current authoritative identity and assigned roles; any authenticated enabled user
       operationId: getCurrentUser
-      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      x-required-roles: []
       responses:
         '200':
           description: Current user profile
@@ -184,13 +183,14 @@ paths:
                 $ref: '#/components/schemas/UserProfile'
         '401':
           $ref: '#/components/responses/Unauthorized'
-
-  /users:
+  /api/users:
     get:
-      tags: [Users]
+      tags:
+      - Users
       summary: List users for administration
       operationId: listUsers
-      x-required-roles: [ADMIN]
+      x-required-roles:
+      - ADMIN
       responses:
         '200':
           description: Paginated user list
@@ -200,15 +200,16 @@ paths:
                 $ref: '#/components/schemas/UserListResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
-
-  /users/{userId}:
+  /api/users/{userId}:
     parameters:
-      - $ref: '#/components/parameters/UserId'
+    - $ref: '#/components/parameters/UserId'
     get:
-      tags: [Users]
+      tags:
+      - Users
       summary: Get a user by ID
       operationId: getUserById
-      x-required-roles: [ADMIN]
+      x-required-roles:
+      - ADMIN
       responses:
         '200':
           description: User record
@@ -221,10 +222,12 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     patch:
-      tags: [Users]
+      tags:
+      - Users
       summary: Update a user profile or status
       operationId: updateUser
-      x-required-roles: [ADMIN]
+      x-required-roles:
+      - ADMIN
       requestBody:
         required: true
         content:
@@ -244,15 +247,16 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-
-  /users/{userId}/roles:
+  /api/users/{userId}/roles:
     parameters:
-      - $ref: '#/components/parameters/UserId'
+    - $ref: '#/components/parameters/UserId'
     put:
-      tags: [Users]
+      tags:
+      - Users
       summary: Replace the roles assigned to a user
       operationId: setUserRoles
-      x-required-roles: [ADMIN]
+      x-required-roles:
+      - ADMIN
       requestBody:
         required: true
         content:
@@ -274,13 +278,15 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-
-  /advisors:
+  /api/advisors:
     get:
-      tags: [Advisors]
+      tags:
+      - Advisors
       summary: List advisors
       operationId: listAdvisors
-      x-required-roles: [ADMIN, AUDITOR, ANALYST]
+      x-required-roles:
+      - ADMIN
+      - AUDITOR
       responses:
         '200':
           description: Advisor list
@@ -293,10 +299,12 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
     post:
-      tags: [Advisors]
+      tags:
+      - Advisors
       summary: Create an advisor record
       operationId: createAdvisor
-      x-required-roles: [ADMIN]
+      x-required-roles:
+      - ADMIN
       requestBody:
         required: true
         content:
@@ -316,15 +324,18 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-
-  /advisors/{advisorId}:
+  /api/advisors/{advisorId}:
     parameters:
-      - $ref: '#/components/parameters/AdvisorId'
+    - $ref: '#/components/parameters/AdvisorId'
     get:
-      tags: [Advisors]
+      tags:
+      - Advisors
       summary: Get advisor details
       operationId: getAdvisorById
-      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR]
+      x-required-roles:
+      - ADMIN
+      - AUDITOR
+      - ADVISOR
       responses:
         '200':
           description: Advisor record
@@ -337,10 +348,12 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     patch:
-      tags: [Advisors]
+      tags:
+      - Advisors
       summary: Update advisor metadata
       operationId: updateAdvisor
-      x-required-roles: [ADMIN]
+      x-required-roles:
+      - ADMIN
       requestBody:
         required: true
         content:
@@ -362,15 +375,17 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-
-  /advisors/{advisorId}/clients:
+  /api/advisors/{advisorId}/clients:
     parameters:
-      - $ref: '#/components/parameters/AdvisorId'
+    - $ref: '#/components/parameters/AdvisorId'
     get:
-      tags: [Advisors]
+      tags:
+      - Advisors
       summary: List clients assigned to an advisor
       operationId: listAdvisorClients
-      x-required-roles: [ADMIN, ADVISOR]
+      x-required-roles:
+      - ADMIN
+      - ADVISOR
       responses:
         '200':
           description: Clients for advisor
@@ -382,13 +397,14 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-
-  /clients:
+  /api/clients:
     get:
-      tags: [Clients]
+      tags:
+      - Clients
       summary: List clients
       operationId: listClients
-      x-required-roles: [ADMIN]
+      x-required-roles:
+      - ADMIN
       responses:
         '200':
           description: Client list
@@ -401,7 +417,8 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
     post:
-      tags: [Clients]
+      tags:
+      - Clients
       summary: Create a client record
       operationId: createClient
       requestBody:
@@ -423,12 +440,12 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-
-  /clients/{clientId}:
+  /api/clients/{clientId}:
     parameters:
-      - $ref: '#/components/parameters/ClientId'
+    - $ref: '#/components/parameters/ClientId'
     get:
-      tags: [Clients]
+      tags:
+      - Clients
       summary: Get client details
       operationId: getClientById
       responses:
@@ -443,7 +460,8 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     patch:
-      tags: [Clients]
+      tags:
+      - Clients
       summary: Update a client record
       operationId: updateClient
       requestBody:
@@ -465,12 +483,12 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-
-  /clients/{clientId}/balance:
+  /api/clients/{clientId}/balance:
     parameters:
-      - $ref: '#/components/parameters/ClientId'
+    - $ref: '#/components/parameters/ClientId'
     get:
-      tags: [Clients]
+      tags:
+      - Clients
       summary: Get the client cash balance
       operationId: getClientBalance
       responses:
@@ -484,37 +502,19 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-
-  /clients/{clientId}/advisor:
+  /api/clients/{clientId}/subscriptions:
     parameters:
-      - $ref: '#/components/parameters/ClientId'
-    put:
-      tags: [Clients]
-      summary: Assign or reassign a client to an advisor
-      operationId: assignClientAdvisor
-      x-required-roles: [ADMIN]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AssignAdvisorRequest'
-      responses:
-        '200':
-          description: Advisor assignment updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ClientSummary'
-
-  /clients/{clientId}/subscriptions:
-    parameters:
-      - $ref: '#/components/parameters/ClientId'
+    - $ref: '#/components/parameters/ClientId'
     get:
-      tags: [Clients]
+      tags:
+      - Clients
       summary: Get subscriptions for a client
       operationId: listClientSubscriptions
-      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      x-required-roles:
+      - ADMIN
+      - AUDITOR
+      - ADVISOR
+      - CLIENT
       responses:
         '200':
           description: Subscription list
@@ -523,10 +523,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/SubscriptionListResponse'
     post:
-      tags: [Clients]
+      tags:
+      - Clients
       summary: Subscribe a client to a model portfolio
       operationId: createClientSubscription
-      x-required-roles: [ADMIN, ADVISOR]
+      x-required-roles:
+      - ADMIN
+      - ADVISOR
       requestBody:
         required: true
         content:
@@ -540,12 +543,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SubscriptionSummary'
-
-  /clients/{clientId}/holdings:
+  /api/clients/{clientId}/holdings:
     parameters:
-      - $ref: '#/components/parameters/ClientId'
+    - $ref: '#/components/parameters/ClientId'
     get:
-      tags: [Clients]
+      tags:
+      - Clients
       summary: Get current holdings for a client
       operationId: getClientHoldings
       responses:
@@ -560,7 +563,8 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     post:
-      tags: [Clients]
+      tags:
+      - Clients
       summary: Create a holding for a client
       operationId: createClientHolding
       requestBody:
@@ -582,18 +586,18 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-
-  /clients/{clientId}/holdings/{holdingId}:
+  /api/clients/{clientId}/holdings/{holdingId}:
     parameters:
-      - $ref: '#/components/parameters/ClientId'
-      - name: holdingId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
+    - $ref: '#/components/parameters/ClientId'
+    - name: holdingId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
     get:
-      tags: [Clients]
+      tags:
+      - Clients
       summary: Get a holding by ID
       operationId: getClientHolding
       responses:
@@ -608,7 +612,8 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     patch:
-      tags: [Clients]
+      tags:
+      - Clients
       summary: Update a holding
       operationId: updateClientHolding
       requestBody:
@@ -630,12 +635,12 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-
-  /clients/{clientId}/trades:
+  /api/clients/{clientId}/trades:
     parameters:
-      - $ref: '#/components/parameters/ClientId'
+    - $ref: '#/components/parameters/ClientId'
     get:
-      tags: [Clients]
+      tags:
+      - Clients
       summary: List trades for a client
       operationId: listClientTrades
       responses:
@@ -650,7 +655,8 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     post:
-      tags: [Clients]
+      tags:
+      - Clients
       summary: Submit an actual trade for a client
       operationId: createClientTrade
       requestBody:
@@ -672,13 +678,13 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-
-  /clients/{clientId}/trades/{tradeId}:
+  /api/clients/{clientId}/trades/{tradeId}:
     parameters:
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/TradeId'
+    - $ref: '#/components/parameters/ClientId'
+    - $ref: '#/components/parameters/TradeId'
     get:
-      tags: [Clients]
+      tags:
+      - Clients
       summary: Get a trade by ID for a client
       operationId: getClientTrade
       responses:
@@ -693,7 +699,8 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     patch:
-      tags: [Clients]
+      tags:
+      - Clients
       summary: Update a client trade
       operationId: updateClientTrade
       requestBody:
@@ -715,13 +722,13 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-
-  /clients/{clientId}/trades/{tradeId}/fill:
+  /api/clients/{clientId}/trades/{tradeId}/fill:
     parameters:
-      - $ref: '#/components/parameters/ClientId'
-      - $ref: '#/components/parameters/TradeId'
+    - $ref: '#/components/parameters/ClientId'
+    - $ref: '#/components/parameters/TradeId'
     post:
-      tags: [Clients]
+      tags:
+      - Clients
       summary: Fill a client trade order
       operationId: fillClientTrade
       requestBody:
@@ -743,16 +750,17 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-
-  /advisors/{advisorId}/clients/{clientId}/trade-suggestions:
+  /api/advisors/{advisorId}/clients/{clientId}/trade-suggestions:
     parameters:
-      - $ref: '#/components/parameters/AdvisorId'
-      - $ref: '#/components/parameters/ClientId'
+    - $ref: '#/components/parameters/AdvisorId'
+    - $ref: '#/components/parameters/ClientId'
     post:
-      tags: [Trade Suggestions]
+      tags:
+      - Trade Suggestions
       summary: Suggest a trade for a client
       operationId: createTradeSuggestion
-      x-required-roles: [ADVISOR]
+      x-required-roles:
+      - ADVISOR
       requestBody:
         required: true
         content:
@@ -766,15 +774,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TradeSuggestionSummary'
-
-  /clients/{clientId}/trade-suggestions:
+  /api/clients/{clientId}/trade-suggestions:
     parameters:
-      - $ref: '#/components/parameters/ClientId'
+    - $ref: '#/components/parameters/ClientId'
     get:
-      tags: [Trade Suggestions]
+      tags:
+      - Trade Suggestions
       summary: List trade suggestions for a client
       operationId: listClientTradeSuggestions
-      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      x-required-roles:
+      - ADMIN
+      - AUDITOR
+      - ADVISOR
+      - CLIENT
       responses:
         '200':
           description: Trade suggestion list
@@ -782,20 +794,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TradeSuggestionListResponse'
-
-  /trade-suggestions/{suggestionId}:
+  /api/trade-suggestions/{suggestionId}:
     parameters:
-      - name: suggestionId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
+    - name: suggestionId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
     get:
-      tags: [Trade Suggestions]
+      tags:
+      - Trade Suggestions
       summary: Get a trade suggestion by ID
       operationId: getTradeSuggestionById
-      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      x-required-roles:
+      - ADMIN
+      - AUDITOR
+      - ADVISOR
+      - CLIENT
       responses:
         '200':
           description: Trade suggestion
@@ -804,10 +820,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/TradeSuggestionSummary'
     patch:
-      tags: [Trade Suggestions]
+      tags:
+      - Trade Suggestions
       summary: Update the status of a trade suggestion
       operationId: updateTradeSuggestionStatus
-      x-required-roles: [CLIENT]
+      x-required-roles:
+      - CLIENT
       requestBody:
         required: true
         content:
@@ -821,13 +839,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TradeSuggestionSummary'
-
-  /model-portfolios:
+  /api/model-portfolios:
     get:
-      tags: [Portfolios]
+      tags:
+      - Portfolios
       summary: List model portfolios
       operationId: listModelPortfolios
-      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR]
+      x-required-roles:
+      - ADMIN
+      - AUDITOR
+      - ADVISOR
       responses:
         '200':
           description: Model portfolio list
@@ -840,10 +861,12 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
     post:
-      tags: [Portfolios]
+      tags:
+      - Portfolios
       summary: Create a model portfolio
       operationId: createModelPortfolio
-      x-required-roles: [ADMIN]
+      x-required-roles:
+      - ADMIN
       requestBody:
         required: true
         content:
@@ -863,15 +886,19 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-
-  /model-portfolios/{portfolioId}:
+  /api/model-portfolios/{portfolioId}:
     parameters:
-      - $ref: '#/components/parameters/PortfolioId'
+    - $ref: '#/components/parameters/PortfolioId'
     get:
-      tags: [Portfolios]
+      tags:
+      - Portfolios
       summary: Get model portfolio details
       operationId: getModelPortfolio
-      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      x-required-roles:
+      - ADMIN
+      - AUDITOR
+      - ADVISOR
+      - CLIENT
       responses:
         '200':
           description: Portfolio summary
@@ -884,10 +911,12 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     patch:
-      tags: [Portfolios]
+      tags:
+      - Portfolios
       summary: Update portfolio metadata
       operationId: updateModelPortfolio
-      x-required-roles: [ADMIN]
+      x-required-roles:
+      - ADMIN
       requestBody:
         required: true
         content:
@@ -909,15 +938,19 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-
-  /model-portfolios/{portfolioId}/holdings:
+  /api/model-portfolios/{portfolioId}/holdings:
     parameters:
-      - $ref: '#/components/parameters/PortfolioId'
+    - $ref: '#/components/parameters/PortfolioId'
     get:
-      tags: [Portfolios]
+      tags:
+      - Portfolios
       summary: Get target holdings for a model portfolio
       operationId: getModelPortfolioHoldings
-      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+      x-required-roles:
+      - ADMIN
+      - AUDITOR
+      - ADVISOR
+      - CLIENT
       responses:
         '200':
           description: Target holding list
@@ -930,10 +963,12 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     put:
-      tags: [Portfolios]
+      tags:
+      - Portfolios
       summary: Replace target holdings for a model portfolio
       operationId: setModelPortfolioHoldings
-      x-required-roles: [ADMIN]
+      x-required-roles:
+      - ADMIN
       requestBody:
         required: true
         content:
@@ -955,10 +990,10 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-
-  /instruments:
+  /api/instruments:
     get:
-      tags: [Instruments]
+      tags:
+      - Instruments
       summary: List instruments
       operationId: listInstruments
       responses:
@@ -971,7 +1006,8 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
     post:
-      tags: [Instruments]
+      tags:
+      - Instruments
       summary: Create an instrument
       operationId: createInstrument
       requestBody:
@@ -993,12 +1029,12 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-
-  /instruments/{instrumentId}:
+  /api/instruments/{instrumentId}:
     parameters:
-      - $ref: '#/components/parameters/InstrumentId'
+    - $ref: '#/components/parameters/InstrumentId'
     get:
-      tags: [Instruments]
+      tags:
+      - Instruments
       summary: Get instrument details
       operationId: getInstrumentById
       responses:
@@ -1013,7 +1049,8 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     patch:
-      tags: [Instruments]
+      tags:
+      - Instruments
       summary: Update instrument metadata
       operationId: updateInstrument
       requestBody:
@@ -1037,21 +1074,19 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-
   /candles/{symbol}:
     parameters:
-      - $ref: '#/components/parameters/FauxnanceSymbol'
+    - $ref: '#/components/parameters/FauxnanceSymbol'
     get:
-      tags: [Market Data]
+      tags:
+      - Market Data
       summary: Retrieve daily OHLCV candles from Fauxnance
-      description: >-
-        Proxies the configured Fauxnance daily-candle endpoint. The backend currently
-        supports the `1d` interval only and returns the Fauxnance-style success payload.
+      description: Proxies the configured Fauxnance daily-candle endpoint. The backend currently supports the `1d` interval only and returns the Fauxnance-style success payload.
       operationId: getCandles
       parameters:
-        - $ref: '#/components/parameters/CandleFrom'
-        - $ref: '#/components/parameters/CandleTo'
-        - $ref: '#/components/parameters/CandleInterval'
+      - $ref: '#/components/parameters/CandleFrom'
+      - $ref: '#/components/parameters/CandleTo'
+      - $ref: '#/components/parameters/CandleInterval'
       responses:
         '200':
           description: Candle response in Fauxnance envelope format
@@ -1071,16 +1106,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-
   /quotes/{symbol}:
     parameters:
-      - $ref: '#/components/parameters/FauxnanceSymbol'
+    - $ref: '#/components/parameters/FauxnanceSymbol'
     get:
-      tags: [Market Data]
+      tags:
+      - Market Data
       summary: Retrieve the latest Fauxnance quote
-      description: >-
-        Proxies the configured Fauxnance latest-quote endpoint and returns the
-        quote envelope expected by the marketplace contract.
+      description: Proxies the configured Fauxnance latest-quote endpoint and returns the quote envelope expected by the marketplace contract.
       operationId: getQuote
       responses:
         '200':
@@ -1101,77 +1134,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-
-  /trades:
+  /api/audit-logs:
     get:
-      tags: [Trades]
-      summary: List trades across the system
-      operationId: listTrades
-      x-required-roles: [ADMIN, AUDITOR, ANALYST]
-      responses:
-        '200':
-          description: Trade list
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TradeListResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-
-  /trades/{tradeId}:
-    parameters:
-      - $ref: '#/components/parameters/TradeId'
-    get:
-      tags: [Trades]
-      summary: Get a trade by ID
-      operationId: getTradeById
-      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
-      responses:
-        '200':
-          description: Trade summary
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TradeSummary'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    patch:
-      tags: [Trades]
-      summary: Review or update trade status
-      operationId: updateTradeStatus
-      x-required-roles: [ADMIN]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateTradeRequest'
-      responses:
-        '200':
-          description: Trade updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TradeSummary'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /audit-logs:
-    get:
-      tags: [Audit]
+      tags:
+      - Audit
       summary: List audit log entries
       operationId: listAuditLogs
-      x-required-roles: [ADMIN, AUDITOR]
+      x-required-roles:
+      - ADMIN
+      - AUDITOR
       responses:
         '200':
           description: Audit log list
@@ -1183,116 +1154,495 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-
-  /analytics/summary:
+  /api/orders:
     get:
-      tags: [Analytics]
-      summary: Return high-level analytics data for external consumers
-      operationId: getAnalyticsSummary
-      x-required-roles: [ADMIN, AUDITOR, ANALYST]
+      summary: Own legacy order history; owner derived from current identity; stable trade-date then ID descending
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 100000
+          default: 0
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - PENDING
+          - APPROVED
+          - REJECTED
+          - EXECUTED
+      - name: side
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - BUY
+          - SELL
+      - name: instrumentId
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
       responses:
         '200':
-          description: Analytics summary
+          description: Own legacy order history; owner derived from current identity; stable trade-date then ID descending
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AnalyticsSummaryResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-
-  /analytics/advisors/{advisorId}:
-    parameters:
-      - $ref: '#/components/parameters/AdvisorId'
-    get:
-      tags: [Analytics]
-      summary: Return analytics for a specific advisor
-      operationId: getAdvisorAnalytics
-      x-required-roles: [ADMIN, ANALYST, ADVISOR]
-      responses:
-        '200':
-          description: Advisor analytics
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AnalyticsSummaryResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /analytics/clients/{clientId}:
-    parameters:
-      - $ref: '#/components/parameters/ClientId'
-    get:
-      tags: [Analytics]
-      summary: Return analytics for a specific client
-      operationId: getClientAnalytics
-      x-required-roles: [ADMIN, ANALYST, ADVISOR, CLIENT]
-      responses:
-        '200':
-          description: Client analytics
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AnalyticsSummaryResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /analytics/model-portfolios/{portfolioId}:
-    parameters:
-      - $ref: '#/components/parameters/PortfolioId'
-    get:
-      tags: [Analytics]
-      summary: Return analytics for a specific model portfolio
-      operationId: getPortfolioAnalytics
-      x-required-roles: [ADMIN, ANALYST, ADVISOR, CLIENT]
-      responses:
-        '200':
-          description: Portfolio analytics
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AnalyticsSummaryResponse'
+                $ref: '#/components/schemas/WorkspaceOrderPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-
-  /dashboard/me:
-    get:
-      tags: [Dashboard]
-      summary: Return role-aware dashboard data for the current user
-      operationId: getCurrentDashboard
-      x-required-roles: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT]
+    post:
+      summary: Disabled pending approved execution policy; no order accepted or recorded
+      x-required-roles:
+      - CLIENT
       responses:
-        '200':
-          description: Dashboard payload
+        '503':
+          description: Trading disabled
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DashboardResponse'
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-
+  /api/orders/{id}:
+    get:
+      summary: Own order record; missing quote, acceptance and posting provenance explicitly disclosed
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+      responses:
+        '200':
+          description: Own order record; missing quote, acceptance and posting provenance explicitly disclosed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceOrderDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/workspace/client/portfolio:
+    get:
+      summary: Recorded scalar cash and latest holding snapshots; currency and available values unavailable
+      x-required-roles:
+      - CLIENT
+      parameters: []
+      responses:
+        '200':
+          description: Recorded scalar cash and latest holding snapshots; currency and available values unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspacePortfolio'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/workspace/client/instruments:
+    get:
+      summary: Paginated catalog; active does not imply approved tradability
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 100000
+          default: 0
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+          maxLength: 100
+      - name: assetClass
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Paginated catalog; active does not imply approved tradability
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceInstrumentPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/workspace/client/trading-availability:
+    get:
+      summary: Always disabled pending user-supplied policy
+      x-required-roles:
+      - CLIENT
+      parameters: []
+      responses:
+        '200':
+          description: Always disabled pending user-supplied policy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceTradingAvailability'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/operations/orders:
+    get:
+      summary: Unavailable until approved scope and genuine data source are configured
+      x-required-roles:
+      - TRADING_OPS
+      x-implementation-status: availability-boundary-only
+      parameters: []
+      responses:
+        '503':
+          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/operations/orders/{id}:
+    get:
+      summary: Unavailable until approved scope and genuine data source are configured
+      x-required-roles:
+      - TRADING_OPS
+      x-implementation-status: availability-boundary-only
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '503':
+          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/compliance/investigations:
+    get:
+      summary: Unavailable until approved scope and genuine data source are configured
+      x-required-roles:
+      - COMPLIANCE
+      x-implementation-status: availability-boundary-only
+      parameters: []
+      responses:
+        '503':
+          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/compliance/orders/{id}/evidence:
+    get:
+      summary: Unavailable until approved scope and genuine data source are configured
+      x-required-roles:
+      - COMPLIANCE
+      x-implementation-status: availability-boundary-only
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '503':
+          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/compliance/evidence:
+    get:
+      summary: Unavailable until approved scope and genuine data source are configured
+      x-required-roles:
+      - COMPLIANCE
+      x-implementation-status: availability-boundary-only
+      parameters: []
+      responses:
+        '503':
+          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/analytics/summary:
+    get:
+      summary: Unavailable until approved scope and genuine data source are configured
+      x-required-roles:
+      - ANALYST
+      x-implementation-status: availability-boundary-only
+      parameters: []
+      responses:
+        '503':
+          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/analytics/trends:
+    get:
+      summary: Unavailable until approved scope and genuine data source are configured
+      x-required-roles:
+      - ANALYST
+      x-implementation-status: availability-boundary-only
+      parameters: []
+      responses:
+        '503':
+          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/analytics/instruments:
+    get:
+      summary: Unavailable until approved scope and genuine data source are configured
+      x-required-roles:
+      - ANALYST
+      x-implementation-status: availability-boundary-only
+      parameters: []
+      responses:
+        '503':
+          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/analytics/freshness:
+    get:
+      summary: Unavailable until approved scope and genuine data source are configured
+      x-required-roles:
+      - ANALYST
+      x-implementation-status: availability-boundary-only
+      parameters: []
+      responses:
+        '503':
+          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/finance/summary:
+    get:
+      summary: Unavailable until approved scope and genuine data source are configured
+      x-required-roles:
+      - FINANCE
+      x-implementation-status: availability-boundary-only
+      parameters: []
+      responses:
+        '503':
+          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/finance/reconciliations:
+    get:
+      summary: Unavailable until approved scope and genuine data source are configured
+      x-required-roles:
+      - FINANCE
+      x-implementation-status: availability-boundary-only
+      parameters: []
+      responses:
+        '503':
+          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/users/me/profile:
+    get:
+      summary: Current client profile and onboarding status
+      x-required-roles:
+      - CLIENT
+      parameters: []
+      responses:
+        '200':
+          description: Current client profile and onboarding status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /auth/signup:
+    post:
+      summary: Public client-only signup; role assignment cannot be selected
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              - password
+              - displayName
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                displayName:
+                  type: string
+      responses:
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '201':
+          description: Client identity and session; additional role field CLIENT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+  /api/users/me/onboarding:
+    put:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteClientOnboardingRequest'
+      summary: Complete current client's basic onboarding
+      x-required-roles:
+      - CLIENT
+      responses:
+        '200':
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientProfile'
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-
   parameters:
     UserId:
       name: userId
@@ -1347,7 +1697,7 @@ components:
       schema:
         type: string
         format: date
-      example: 2026-01-01
+      example: 2026-01-01T00:00:00Z
     CandleTo:
       name: to
       in: query
@@ -1356,7 +1706,7 @@ components:
       schema:
         type: string
         format: date
-      example: 2026-01-31
+      example: 2026-01-31T00:00:00Z
     CandleInterval:
       name: interval
       in: query
@@ -1365,7 +1715,8 @@ components:
       schema:
         type: string
         default: 1d
-        enum: [1d]
+        enum:
+        - 1d
     TradeId:
       name: tradeId
       in: path
@@ -1373,7 +1724,6 @@ components:
       schema:
         type: integer
         format: int64
-
   responses:
     BadRequest:
       description: Invalid or malformed request
@@ -1405,21 +1755,24 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-
   schemas:
     LoginRequest:
       type: object
-      required: [username, password]
+      required:
+      - username
+      - password
       properties:
         username:
           type: string
         password:
           type: string
           format: password
-
     LoginResponse:
       type: object
-      required: [token, tokenType, expiresIn]
+      required:
+      - token
+      - tokenType
+      - expiresIn
       properties:
         token:
           type: string
@@ -1430,17 +1783,35 @@ components:
           type: integer
           format: int64
           example: 3600
-
+        userId:
+          type:
+          - integer
+          - 'null'
+        clientId:
+          type:
+          - integer
+          - 'null'
+        email:
+          type: string
+        displayName:
+          type: string
+        onboardingComplete:
+          type: boolean
     RefreshTokenRequest:
       type: object
-      required: [refreshToken]
+      required:
+      - refreshToken
       properties:
         refreshToken:
           type: string
-
     RegisterUserRequest:
       type: object
-      required: [username, email, password, displayName, roleType]
+      required:
+      - username
+      - email
+      - password
+      - displayName
+      - roleType
       properties:
         username:
           type: string
@@ -1454,7 +1825,19 @@ components:
           type: string
         roleType:
           type: string
-          enum: [ADMIN, AUDITOR, ANALYST, ADVISOR, CLIENT, COMPLIANCE, SUPPORT, OPERATIONS, REPORTING, GUEST]
+          enum:
+          - ADMIN
+          - AUDITOR
+          - ANALYST
+          - ADVISOR
+          - CLIENT
+          - COMPLIANCE
+          - SUPPORT
+          - OPERATIONS
+          - REPORTING
+          - GUEST
+          - TRADING_OPS
+          - FINANCE
         advisorName:
           type: string
           nullable: true
@@ -1462,10 +1845,14 @@ components:
           type: boolean
           nullable: true
           default: true
-
     ClientRegistrationRequest:
       type: object
-      required: [username, email, password, displayName, clientName]
+      required:
+      - username
+      - email
+      - password
+      - displayName
+      - clientName
       properties:
         username:
           type: string
@@ -1479,10 +1866,13 @@ components:
           type: string
         clientName:
           type: string
-
     RegisterUserResponse:
       type: object
-      required: [userId, username, displayName, role]
+      required:
+      - userId
+      - username
+      - displayName
+      - role
       properties:
         userId:
           type: integer
@@ -1497,10 +1887,14 @@ components:
           type: integer
           format: int64
           nullable: true
-
     ClientRegistrationResponse:
       type: object
-      required: [userId, username, displayName, role, clientId]
+      required:
+      - userId
+      - username
+      - displayName
+      - role
+      - clientId
       properties:
         userId:
           type: integer
@@ -1511,14 +1905,15 @@ components:
           type: string
         role:
           type: string
-          enum: [CLIENT]
+          enum:
+          - CLIENT
         clientId:
           type: integer
           format: int64
-
     AuthTokens:
       type: object
-      required: [accessToken]
+      required:
+      - accessToken
       properties:
         accessToken:
           type: string
@@ -1530,7 +1925,6 @@ components:
         expiresInSeconds:
           type: integer
           format: int64
-
     ErrorResponse:
       type: object
       properties:
@@ -1549,7 +1943,6 @@ components:
           type: string
           format: date-time
           nullable: true
-
     UserProfile:
       type: object
       properties:
@@ -1577,7 +1970,6 @@ components:
           type: integer
           format: int64
           nullable: true
-
     UserListResponse:
       type: object
       properties:
@@ -1585,7 +1977,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/UserProfile'
-
     UpdateUserRequest:
       type: object
       properties:
@@ -1596,16 +1987,15 @@ components:
           format: email
         enabled:
           type: boolean
-
     UserRolesRequest:
       type: object
-      required: [roles]
+      required:
+      - roles
       properties:
         roles:
           type: array
           items:
             type: string
-
     AdvisorSummary:
       type: object
       properties:
@@ -1618,7 +2008,6 @@ components:
           type: integer
           format: int64
           nullable: true
-
     AdvisorListResponse:
       type: object
       properties:
@@ -1626,10 +2015,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AdvisorSummary'
-
     CreateAdvisorRequest:
       type: object
-      required: [advisorName]
+      required:
+      - advisorName
       properties:
         advisorName:
           type: string
@@ -1637,7 +2026,6 @@ components:
           type: integer
           format: int64
           nullable: true
-
     UpdateAdvisorRequest:
       type: object
       properties:
@@ -1647,7 +2035,6 @@ components:
           type: integer
           format: int64
           nullable: true
-
     ClientSummary:
       type: object
       properties:
@@ -1671,7 +2058,6 @@ components:
         cashBalance:
           type: number
           format: double
-
     ClientListResponse:
       type: object
       properties:
@@ -1679,10 +2065,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ClientSummary'
-
     CreateClientRequest:
       type: object
-      required: [clientName]
+      required:
+      - clientName
       properties:
         clientName:
           type: string
@@ -1701,7 +2087,6 @@ components:
         cashBalance:
           type: number
           format: double
-
     UpdateClientRequest:
       type: object
       properties:
@@ -1718,7 +2103,6 @@ components:
         cashBalance:
           type: number
           format: double
-
     ClientBalanceResponse:
       type: object
       properties:
@@ -1728,15 +2112,14 @@ components:
         cashBalance:
           type: number
           format: double
-
     AssignAdvisorRequest:
       type: object
-      required: [advisorId]
+      required:
+      - advisorId
       properties:
         advisorId:
           type: integer
           format: int64
-
     ModelPortfolioSummary:
       type: object
       properties:
@@ -1749,7 +2132,6 @@ components:
           type: string
         isActive:
           type: boolean
-
     ModelPortfolioListResponse:
       type: object
       properties:
@@ -1757,10 +2139,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ModelPortfolioSummary'
-
     CreateModelPortfolioRequest:
       type: object
-      required: [modelName]
+      required:
+      - modelName
       properties:
         modelName:
           type: string
@@ -1770,7 +2152,6 @@ components:
           type: integer
           format: int64
           nullable: true
-
     UpdateModelPortfolioRequest:
       type: object
       properties:
@@ -1780,10 +2161,11 @@ components:
           type: string
         isActive:
           type: boolean
-
     TargetHoldingItem:
       type: object
-      required: [instrumentId, targetWeightPct]
+      required:
+      - instrumentId
+      - targetWeightPct
       properties:
         instrumentId:
           type: integer
@@ -1791,16 +2173,15 @@ components:
         targetWeightPct:
           type: number
           format: float
-
     TargetHoldingListRequest:
       type: object
-      required: [holdings]
+      required:
+      - holdings
       properties:
         holdings:
           type: array
           items:
             $ref: '#/components/schemas/TargetHoldingItem'
-
     TargetHoldingListResponse:
       type: object
       properties:
@@ -1811,7 +2192,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TargetHoldingItem'
-
     InstrumentSummary:
       type: object
       properties:
@@ -1830,7 +2210,6 @@ components:
           type: string
         isActive:
           type: boolean
-
     InstrumentListResponse:
       type: object
       properties:
@@ -1838,10 +2217,12 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/InstrumentSummary'
-
     CreateInstrumentRequest:
       type: object
-      required: [instrumentName, ticker, currency]
+      required:
+      - instrumentName
+      - ticker
+      - currency
       properties:
         instrumentName:
           type: string
@@ -1855,7 +2236,6 @@ components:
           type: string
         isActive:
           type: boolean
-
     UpdateInstrumentRequest:
       type: object
       properties:
@@ -1871,10 +2251,16 @@ components:
           type: string
         isActive:
           type: boolean
-
     FauxnanceCandle:
       type: object
-      required: [date, open, high, low, close, adjclose, synthetic]
+      required:
+      - date
+      - open
+      - high
+      - low
+      - close
+      - adjclose
+      - synthetic
       properties:
         date:
           type: string
@@ -1900,17 +2286,21 @@ components:
           nullable: true
         synthetic:
           type: boolean
-
     FauxnanceCandlesData:
       type: object
-      required: [symbol, interval, currency, candles]
+      required:
+      - symbol
+      - interval
+      - currency
+      - candles
       properties:
         symbol:
           type: string
           example: AAPL
         interval:
           type: string
-          enum: [1d]
+          enum:
+          - 1d
         currency:
           type: string
           example: USD
@@ -1918,10 +2308,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FauxnanceCandle'
-
     FauxnanceMarketDataMeta:
       type: object
-      required: [asOf, disclaimer, symbol, source]
+      required:
+      - asOf
+      - disclaimer
+      - symbol
+      - source
       properties:
         asOf:
           type: string
@@ -1945,21 +2338,20 @@ components:
           type: string
           format: date
           nullable: true
-
     FauxnanceQuote:
       type: object
       required:
-        - symbol
-        - price
-        - bid
-        - ask
-        - spreadBps
-        - currency
-        - change
-        - changePercent
-        - previousClose
-        - asOf
-        - marketState
+      - symbol
+      - price
+      - bid
+      - ask
+      - spreadBps
+      - currency
+      - change
+      - changePercent
+      - previousClose
+      - asOf
+      - marketState
       properties:
         symbol:
           type: string
@@ -2002,12 +2394,22 @@ components:
           example: 2026-08-26T16:13:24Z
         marketState:
           type: string
-          enum: [open, closed, pre, post, unknown]
+          enum:
+          - open
+          - closed
+          - pre
+          - post
+          - unknown
           example: open
-
     FauxnanceQuoteMeta:
       type: object
-      required: [asOf, disclaimer, symbol, source, spreadSource, stale]
+      required:
+      - asOf
+      - disclaimer
+      - symbol
+      - source
+      - spreadSource
+      - stale
       properties:
         asOf:
           type: string
@@ -2023,32 +2425,40 @@ components:
           example: cache
         spreadSource:
           type: string
-          enum: [modelled]
+          enum:
+          - modelled
           example: modelled
         stale:
           type: boolean
-
     FauxnanceQuoteResponse:
       type: object
-      required: [data, meta]
+      required:
+      - data
+      - meta
       properties:
         data:
           $ref: '#/components/schemas/FauxnanceQuote'
         meta:
           $ref: '#/components/schemas/FauxnanceQuoteMeta'
-
     FauxnanceCandlesResponse:
       type: object
-      required: [data, meta]
+      required:
+      - data
+      - meta
       properties:
         data:
           $ref: '#/components/schemas/FauxnanceCandlesData'
         meta:
           $ref: '#/components/schemas/FauxnanceMarketDataMeta'
-
     TradeRequest:
       type: object
-      required: [clientId, instrumentId, tradeType, quantity, price, tradeDate]
+      required:
+      - clientId
+      - instrumentId
+      - tradeType
+      - quantity
+      - price
+      - tradeDate
       properties:
         clientId:
           type: integer
@@ -2058,7 +2468,9 @@ components:
           format: int64
         tradeType:
           type: string
-          enum: [BUY, SELL]
+          enum:
+          - BUY
+          - SELL
         quantity:
           type: number
           format: double
@@ -2070,7 +2482,6 @@ components:
           format: date
         reason:
           type: string
-
     TradeSummary:
       type: object
       properties:
@@ -2093,7 +2504,9 @@ components:
           nullable: true
         tradeType:
           type: string
-          enum: [BUY, SELL]
+          enum:
+          - BUY
+          - SELL
         quantity:
           type: number
           format: double
@@ -2112,10 +2525,12 @@ components:
         reason:
           type: string
           nullable: true
-
     CreateClientHoldingRequest:
       type: object
-      required: [instrumentId, quantity, asOfDate]
+      required:
+      - instrumentId
+      - quantity
+      - asOfDate
       properties:
         instrumentId:
           type: integer
@@ -2126,7 +2541,6 @@ components:
         asOfDate:
           type: string
           format: date
-
     UpdateClientHoldingRequest:
       type: object
       properties:
@@ -2136,10 +2550,14 @@ components:
         asOfDate:
           type: string
           format: date
-
     CreateClientTradeRequest:
       type: object
-      required: [instrumentId, tradeType, quantity, price, tradeDate]
+      required:
+      - instrumentId
+      - tradeType
+      - quantity
+      - price
+      - tradeDate
       properties:
         instrumentId:
           type: integer
@@ -2154,7 +2572,9 @@ components:
           nullable: true
         tradeType:
           type: string
-          enum: [BUY, SELL]
+          enum:
+          - BUY
+          - SELL
         quantity:
           type: number
           format: double
@@ -2170,7 +2590,6 @@ components:
         reason:
           type: string
           nullable: true
-
     UpdateClientTradeRequest:
       type: object
       properties:
@@ -2192,7 +2611,6 @@ components:
         reason:
           type: string
           nullable: true
-
     FillOrderRequest:
       type: object
       properties:
@@ -2211,10 +2629,16 @@ components:
         reason:
           type: string
           nullable: true
-
     OrderFillResponse:
       type: object
-      required: [clientId, cashBalance, holdingId, holdingQuantity, tradeId, tradeStatus, executedAt]
+      required:
+      - clientId
+      - cashBalance
+      - holdingId
+      - holdingQuantity
+      - tradeId
+      - tradeStatus
+      - executedAt
       properties:
         clientId:
           type: integer
@@ -2236,17 +2660,21 @@ components:
         executedAt:
           type: string
           format: date-time
-
     TradeSuggestionRequest:
       type: object
-      required: [instrumentId, tradeType, quantity]
+      required:
+      - instrumentId
+      - tradeType
+      - quantity
       properties:
         instrumentId:
           type: integer
           format: int64
         tradeType:
           type: string
-          enum: [BUY, SELL]
+          enum:
+          - BUY
+          - SELL
         quantity:
           type: number
           format: double
@@ -2256,7 +2684,6 @@ components:
           nullable: true
         notes:
           type: string
-
     TradeSuggestionSummary:
       type: object
       properties:
@@ -2274,7 +2701,9 @@ components:
           format: int64
         tradeType:
           type: string
-          enum: [BUY, SELL]
+          enum:
+          - BUY
+          - SELL
         quantity:
           type: number
           format: double
@@ -2284,11 +2713,15 @@ components:
           nullable: true
         status:
           type: string
-          enum: [SUGGESTED, VIEWED, ACCEPTED, REJECTED, EXPIRED]
+          enum:
+          - SUGGESTED
+          - VIEWED
+          - ACCEPTED
+          - REJECTED
+          - EXPIRED
         suggestedAt:
           type: string
           format: date-time
-
     TradeSuggestionListResponse:
       type: object
       properties:
@@ -2296,17 +2729,20 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TradeSuggestionSummary'
-
     TradeSuggestionDecisionRequest:
       type: object
-      required: [status]
+      required:
+      - status
       properties:
         status:
           type: string
-          enum: [VIEWED, ACCEPTED, REJECTED, EXPIRED]
+          enum:
+          - VIEWED
+          - ACCEPTED
+          - REJECTED
+          - EXPIRED
         notes:
           type: string
-
     TradeListResponse:
       type: object
       properties:
@@ -2314,13 +2750,16 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TradeSummary'
-
     UpdateTradeRequest:
       type: object
       properties:
         status:
           type: string
-          enum: [PENDING, APPROVED, REJECTED, EXECUTED]
+          enum:
+          - PENDING
+          - APPROVED
+          - REJECTED
+          - EXECUTED
         approvedByUserId:
           type: integer
           format: int64
@@ -2331,7 +2770,6 @@ components:
           nullable: true
         reason:
           type: string
-
     SubscriptionSummary:
       type: object
       properties:
@@ -2353,7 +2791,6 @@ components:
           nullable: true
         status:
           type: string
-
     SubscriptionListResponse:
       type: object
       properties:
@@ -2361,10 +2798,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SubscriptionSummary'
-
     CreateSubscriptionRequest:
       type: object
-      required: [modelPortfolioId, subscribedDate]
+      required:
+      - modelPortfolioId
+      - subscribedDate
       properties:
         modelPortfolioId:
           type: integer
@@ -2376,7 +2814,6 @@ components:
           type: integer
           format: int64
           nullable: true
-
     HoldingSummary:
       type: object
       properties:
@@ -2395,7 +2832,6 @@ components:
         asOfDate:
           type: string
           format: date
-
     HoldingListResponse:
       type: object
       properties:
@@ -2403,7 +2839,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/HoldingSummary'
-
     AuditLogSummary:
       type: object
       properties:
@@ -2424,7 +2859,6 @@ components:
         createdAt:
           type: string
           format: date-time
-
     AuditLogListResponse:
       type: object
       properties:
@@ -2432,7 +2866,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AuditLogSummary'
-
     AnalyticsSummaryResponse:
       type: object
       properties:
@@ -2450,7 +2883,6 @@ components:
           items:
             type: object
             additionalProperties: true
-
     DashboardResponse:
       type: object
       properties:
@@ -2464,3 +2896,190 @@ components:
           items:
             type: object
             additionalProperties: true
+    WorkspaceOrder:
+      type: object
+      properties:
+        orderId:
+          type: integer
+        instrumentId:
+          type: integer
+        ticker:
+          type: string
+        instrumentName:
+          type: string
+        currency:
+          type: string
+        side:
+          type: string
+        status:
+          type: string
+        quantity:
+          type: number
+        recordedPrice:
+          type: number
+        tradeDate:
+          type: string
+          format: date
+        executedAt:
+          type:
+          - string
+          - 'null'
+          description: Legacy local timestamp; timezone not recorded
+        reason:
+          type:
+          - string
+          - 'null'
+    WorkspaceOrderPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceOrder'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+    WorkspaceOrderDetail:
+      type: object
+      properties:
+        order:
+          $ref: '#/components/schemas/WorkspaceOrder'
+        evidenceCompleteness:
+          type: string
+          enum:
+          - INCOMPLETE_LEGACY
+        explanation:
+          type: string
+    WorkspacePosition:
+      type: object
+      properties:
+        holdingId:
+          type: integer
+        instrumentId:
+          type: integer
+        ticker:
+          type: string
+        name:
+          type: string
+        currency:
+          type: string
+        quantity:
+          type: number
+        asOfDate:
+          type: string
+          format: date
+    WorkspacePortfolio:
+      type: object
+      properties:
+        postedCash:
+          type: number
+        currency:
+          type: 'null'
+        availableCash:
+          type: 'null'
+        positions:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspacePosition'
+        retrievedAt:
+          type: string
+          format: date-time
+        limitation:
+          type: string
+      description: 'Latest recorded snapshot is not certified current ownership: legacy full-sale deletion may expose older snapshots.'
+    WorkspaceInstrumentPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/InstrumentSummary'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+    WorkspaceTradingAvailability:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          const: false
+        reason:
+          type: string
+    ClientProfile:
+      type: object
+      properties:
+        userId:
+          type: integer
+        clientId:
+          type:
+          - integer
+          - 'null'
+        email:
+          type: string
+        displayName:
+          type: string
+        onboardingComplete:
+          type: boolean
+        clientName: &id001
+          type: string
+        phone: &id002
+          type: string
+        dateOfBirth: &id003
+          type: string
+        addressLine1: &id004
+          type: string
+        addressLine2: &id005
+          type: string
+        city: &id006
+          type: string
+        state: &id007
+          type: string
+        postalCode: &id008
+          type: string
+        country: &id009
+          type: string
+        employmentStatus: &id010
+          type: string
+        riskTolerance: &id011
+          type: string
+        investmentObjective: &id012
+          type: string
+        preferredContactMethod: &id013
+          type: string
+        paperlessStatements: &id014
+          type: boolean
+        marketingOptIn: &id015
+          type: boolean
+        netWorth:
+          type:
+          - number
+          - 'null'
+      description: Existing client onboarding profile; retains address and preference fields.
+    CompleteClientOnboardingRequest:
+      properties:
+        clientName: *id001
+        phone: *id002
+        dateOfBirth: *id003
+        addressLine1: *id004
+        addressLine2: *id005
+        city: *id006
+        state: *id007
+        postalCode: *id008
+        country: *id009
+        employmentStatus: *id010
+        riskTolerance: *id011
+        investmentObjective: *id012
+        preferredContactMethod: *id013
+        paperlessStatements: *id014
+        marketingOptIn: *id015
+        netWorth:
+          type:
+          - number
+          - 'null'
+      type: object
