@@ -1,3 +1,5 @@
+import { signal } from '@angular/core';
+import { AuthService } from '../../core/auth/auth.service';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -7,44 +9,62 @@ import { TopNavComponent } from './top-nav.component';
 describe('TopNavComponent', () => {
   beforeEach(async () => {
     localStorage.clear();
-    localStorage.setItem('tadpoles.auth.session', JSON.stringify({
-      token: 'stored-token',
-      tokenType: 'Bearer',
-      expiresIn: 3600,
-      userId: 24,
-      email: 'nav.tester@example.com',
-      displayName: 'Nav Tester',
-      clientId: 7,
-      onboardingComplete: true,
-    }));
+    localStorage.setItem(
+      'tadpoles.auth.session',
+      JSON.stringify({
+        token: 'stored-token',
+        tokenType: 'Bearer',
+        expiresIn: 3600,
+        userId: 24,
+        email: 'nav.tester@example.com',
+        displayName: 'Nav Tester',
+        clientId: 7,
+        onboardingComplete: true,
+      }),
+    );
     localStorage.setItem('tadpoles.auth.token', 'stored-token');
-    localStorage.setItem('tadpoles.user.profile', JSON.stringify({
-      userId: 24,
-      clientId: 7,
-      email: 'nav.tester@example.com',
-      displayName: 'Nav Tester',
-      clientName: 'Nav Tester Household',
-      phone: '',
-      dateOfBirth: '',
-      addressLine1: '',
-      addressLine2: '',
-      city: '',
-      state: '',
-      postalCode: '',
-      country: '',
-      employmentStatus: '',
-      netWorth: null,
-      riskTolerance: '',
-      investmentObjective: '',
-      preferredContactMethod: '',
-      paperlessStatements: true,
-      marketingOptIn: false,
-      onboardingComplete: true,
-    }));
+    localStorage.setItem(
+      'tadpoles.user.profile',
+      JSON.stringify({
+        userId: 24,
+        clientId: 7,
+        email: 'nav.tester@example.com',
+        displayName: 'Nav Tester',
+        clientName: 'Nav Tester Household',
+        phone: '',
+        dateOfBirth: '',
+        addressLine1: '',
+        addressLine2: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        country: '',
+        employmentStatus: '',
+        netWorth: null,
+        riskTolerance: '',
+        investmentObjective: '',
+        preferredContactMethod: '',
+        paperlessStatements: true,
+        marketingOptIn: false,
+        onboardingComplete: true,
+      }),
+    );
 
     await TestBed.configureTestingModule({
       imports: [TopNavComponent],
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: AuthService,
+          useValue: {
+            roles: signal(['CLIENT']),
+            hasCompletedOnboarding: () => true,
+            logout: vi.fn(),
+          },
+        },
+      ],
     }).compileComponents();
   });
 
@@ -100,15 +120,18 @@ describe('TopNavComponent', () => {
     expect(navigate).toHaveBeenCalledWith(['/']);
   });
 
-  it.each(['/', '/?view=holdings', '/#holdings'])('does nothing when the brand is clicked on dashboard %s', (url) => {
-    const fixture = TestBed.createComponent(TopNavComponent);
-    fixture.detectChanges();
-    const router = TestBed.inject(Router);
-    vi.spyOn(router, 'url', 'get').mockReturnValue(url);
-    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
-    fixture.nativeElement.querySelector('.brand').click();
-    expect(navigate).not.toHaveBeenCalled();
-  });
+  it.each(['/', '/?view=holdings', '/#holdings'])(
+    'does nothing when the brand is clicked on dashboard %s',
+    (url) => {
+      const fixture = TestBed.createComponent(TopNavComponent);
+      fixture.detectChanges();
+      const router = TestBed.inject(Router);
+      vi.spyOn(router, 'url', 'get').mockReturnValue(url);
+      const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+      fixture.nativeElement.querySelector('.brand').click();
+      expect(navigate).not.toHaveBeenCalled();
+    },
+  );
 
   it('opens and closes the account menu', () => {
     const fixture = TestBed.createComponent(TopNavComponent);
@@ -128,4 +151,3 @@ describe('TopNavComponent', () => {
     expect(host.querySelector('.profile-menu')).toBeNull();
   });
 });
-

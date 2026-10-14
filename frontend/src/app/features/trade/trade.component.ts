@@ -1,4 +1,4 @@
-import { Component, OnDestroy, inject, signal } from '@angular/core';
+import { Component, Input, OnDestroy, inject, signal } from '@angular/core';
 import { CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -19,6 +19,7 @@ import { CandleChartComponent } from './candle-chart.component';
   styleUrl: './trade.component.css',
 })
 export class TradeComponent implements OnDestroy {
+  @Input() embedded = false;
   private readonly marketData = inject(MarketDataService);
   private requests = new Subscription();
   readonly symbol = signal('');
@@ -31,9 +32,16 @@ export class TradeComponent implements OnDestroy {
   readonly quoteError = signal('');
   readonly notFound = signal('');
   private readonly routeSubscription = inject(ActivatedRoute).paramMap.subscribe((params) => {
+    const symbol = params.get('symbol');
+    if (symbol) this.changeSymbol(symbol);
+  });
+  @Input() set catalogSymbol(symbol: string) {
+    if (symbol) this.changeSymbol(symbol);
+  }
+  private changeSymbol(symbol: string) {
     this.requests.unsubscribe();
     this.requests = new Subscription();
-    this.symbol.set((params.get('symbol') ?? '').trim().toUpperCase());
+    this.symbol.set(symbol.trim().toUpperCase());
     this.quote.set(null);
     this.candleResponse.set(null);
     this.candles.set([]);
@@ -43,8 +51,7 @@ export class TradeComponent implements OnDestroy {
     this.loadingQuote.set(false);
     this.loadCandles();
     this.refreshQuote();
-  });
-
+  }
   loadCandles() {
     this.loadingCandles.set(true);
     this.candleError.set('');
