@@ -83,6 +83,7 @@ public class AppUserServiceImpl implements AppUserService {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public AppUser setUserRoles(Integer id, SetAppUserRolesRequestDto request) {
         validateId(id);
         if (request == null) {

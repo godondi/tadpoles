@@ -20,8 +20,10 @@ services:
     ports:
       - "${BACKEND_HOST_PORT}:${BACKEND_CONTAINER_PORT}"
     depends_on:
-      - database
-      - auth-stub
+      database-demo-seed:
+        condition: service_completed_successfully
+      auth-stub:
+        condition: service_started
 
   frontend:
     build:
@@ -50,6 +52,27 @@ services:
     volumes:
       - tadpole-db-data:/var/lib/postgresql/data
       - ./database/schema:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  database-demo-seed:
+    image: postgres:15
+    env_file:
+      - .env
+    environment:
+      PGHOST: database
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+    volumes:
+      - ./database/demo/role_workspaces.sql:/role_workspaces.sql:ro
+    command: ["psql", "-v", "ON_ERROR_STOP=1", "-f", "/role_workspaces.sql"]
+    depends_on:
+      database:
+        condition: service_healthy
 
   auth-stub:
     build:

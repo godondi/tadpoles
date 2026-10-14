@@ -63,14 +63,23 @@ class TradeSuggestionControllerTest {
     }
 
     @Test
-    void listClientTradeSuggestionsReturnsJsonResponseForAuthorizedUser() throws Exception {
+    void listClientTradeSuggestionsReturnsJsonResponseForAuthorizedAdmin() throws Exception {
         when(tradeSuggestionService.listClientTradeSuggestions(7)).thenReturn(List.of(buildSuggestion()));
 
         mockMvc.perform(get("/api/clients/7/trade-suggestions")
-                        .with(jwtWithRoles("ANALYST")))
+                        .with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.suggestions[0].suggestionId").value(15))
                 .andExpect(jsonPath("$.suggestions[0].tradeType").value("BUY"));
+    }
+
+    @Test
+    void analystCannotReadIdentifiableSuggestions() throws Exception {
+        mockMvc.perform(get("/api/clients/7/trade-suggestions").with(jwtWithRoles("ANALYST")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/trade-suggestions/15").with(jwtWithRoles("ANALYST")))
+                .andExpect(status().isForbidden());
+        org.mockito.Mockito.verifyNoInteractions(tradeSuggestionService);
     }
 
     @Test

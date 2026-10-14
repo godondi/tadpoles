@@ -1,4 +1,4 @@
-<main class="trade-page">
+<section class="trade-page">
   @if (notFound()) {
     <section class="not-found" role="alert">
       <svg width="64" height="64" viewBox="0 0 64 64" aria-label="Warning" role="img">
@@ -12,15 +12,17 @@
         <path d="M32 23v16" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
         <circle cx="32" cy="47" r="2.5" fill="currentColor" />
       </svg>
-      <h1>Instrument unavailable</h1>
+      <h2>Market data unavailable</h2>
       <p>{{ notFound() }}</p>
     </section>
   } @else {
-    <header class="page-heading">
-      <p class="eyebrow">MARKET OVERVIEW</p>
-      <h1>{{ symbol() }}</h1>
-      <p>Daily price history and the latest quote</p>
-    </header>
+    @if (!embedded) {
+      <header class="page-heading">
+        <p class="eyebrow">MARKET OVERVIEW</p>
+        <h1>{{ symbol() }}</h1>
+        <p>Daily price history and the latest quote</p>
+      </header>
+    }
     <div class="trade-layout">
       <section
         class="chart-panel"
@@ -143,4 +145,4 @@
       </aside>
     </div>
   }
-</main>
+</section>

@@ -23,14 +23,15 @@ final class SecurityRoleSupport {
     static void requireAnyRole(Jwt jwt, String... requiredRoles) {
         requireAuthenticated(jwt);
         if (!hasAnyRole(jwt, requiredRoles)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, buildRoleMessage(requiredRoles));
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, buildRoleMessage(requiredRoles));
         }
     }
 
     static void requireClientOwnership(Jwt jwt, AppUserService appUserService, Integer clientId) {
         requireAuthenticated(jwt);
         if (!hasAnyRole(jwt, "CLIENT")) {
-            return;
+            if (hasAnyRole(jwt, "ADMIN", "AUDITOR", "ADVISOR")) return;
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Client workspace access required.");
         }
 
         AppUser currentUser = resolveCurrentUser(jwt, appUserService);
@@ -67,10 +68,6 @@ final class SecurityRoleSupport {
                     .map(String::valueOf)
                     .map(SecurityRoleSupport::normalizeRole)
                     .anyMatch(normalizedRequiredRoles::contains);
-        }
-
-        if (rolesClaim != null) {
-            return normalizedRequiredRoles.contains(normalizeRole(String.valueOf(rolesClaim)));
         }
 
         return false;
