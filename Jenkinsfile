@@ -2,6 +2,8 @@ pipeline {
     agent any
     options {
         timestamps()
+        timeout(time: 45, unit: 'MINUTES')
+        disableConcurrentBuilds()
     }
     stages {
         stage('Checkout') {
@@ -17,9 +19,24 @@ pipeline {
             }
             post {
                 always {
-                    junit testResults: 'backend/target/surefire-reports/*.xml', allowEmptyResults: true
+                    junit testResults: 'backend/target/surefire-reports/*.xml', allowEmptyResults: false
                     archiveArtifacts artifacts: 'backend/target/surefire-reports/*.xml', fingerprint: true, onlyIfSuccessful: false
                     archiveArtifacts artifacts: 'backend/target/site/jacoco/**', fingerprint: false, onlyIfSuccessful: false
+                }
+            }
+        }
+        stage('Frontend Full Suite') {
+            steps {
+                dir('frontend') {
+                    sh 'npm ci'
+                    sh 'npm test -- --watch=false'
+                    sh 'npm run test:qof-styles'
+                    sh 'npm run build'
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'frontend/dist/**', fingerprint: false, onlyIfSuccessful: false
                 }
             }
         }
@@ -30,14 +47,24 @@ pipeline {
             }
             post {
                 always {
-                    junit testResults: 'testing/target/surefire-reports/*.xml', allowEmptyResults: true
+                    junit testResults: 'testing/target/surefire-reports/*.xml', allowEmptyResults: false
                     archiveArtifacts artifacts: 'testing/target/surefire-reports/*.xml', fingerprint: true, onlyIfSuccessful: false
                 }
             }
         }
+        stage('Archive Build Artifacts') {
+            steps {
+                archiveArtifacts artifacts: 'backend/target/*.jar', fingerprint: true
+                archiveArtifacts artifacts: 'frontend/dist/**', fingerprint: false
+            }
+        }
         stage('Build Backend Image') {
             steps {
-                sh 'docker build -t tadpole-app:latest -f backend/Dockerfile backend'
+                sh '''
+                    set -eux
+                    image_tag="${GIT_COMMIT:-${BUILD_TAG:-latest}}"
+                    docker build -t "tadpole-app:${image_tag}" -t tadpole-app:latest -f backend/Dockerfile backend
+                '''
             }
         }
         stage('Archive Build Artifacts') {
