@@ -25,6 +25,12 @@ services:
       TRADING_LOCAL_DEMO_SETUP: ${TRADING_LOCAL_DEMO_SETUP:-true}
       # Fictitious local demo only. Hardened deployments require a separately provisioned key.
       BANKING_ENCRYPTION_KEY: ${BANKING_ENCRYPTION_KEY:-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
+      SERVER_PORT: ${SERVER_PORT}
+      FAUX_SERVER_URL: ${FAUX_SERVER_URL}
+      FAUX_API_KEY: ${FAUX_API_KEY}
+      FAUX_DEFAULT_INTERVAL: ${FAUX_DEFAULT_INTERVAL}
+      FAUX_CONNECT_TIMEOUT_SECONDS: ${FAUX_CONNECT_TIMEOUT_SECONDS}
+      FAUX_READ_TIMEOUT_SECONDS: ${FAUX_READ_TIMEOUT_SECONDS}
     ports:
       - "${BACKEND_HOST_PORT}:${BACKEND_CONTAINER_PORT}"
     depends_on:
@@ -88,7 +94,10 @@ services:
       database-migrate:
         condition: service_completed_successfully
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> fb4997d (Added Docker-Compose to Smoke Test Stage)
 #  testing:
 #    build:
 #      context: .
