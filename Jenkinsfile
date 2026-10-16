@@ -58,12 +58,14 @@ pipeline {
                 archiveArtifacts artifacts: 'frontend/dist/**', fingerprint: false
             }
         }
-        stage('Build Backend Image') {
+                stage('Build Runtime Images') {
             steps {
                 sh '''
                     set -eux
                     image_tag="${GIT_COMMIT:-${BUILD_TAG:-latest}}"
                     docker build -t "tadpole-app:${image_tag}" -t tadpole-app:latest -f backend/Dockerfile backend
+                                        docker build -t "tadpole-frontend:${image_tag}" -t tadpole-frontend:latest -f frontend/Dockerfile frontend
+                                        docker build -t "tadpole-auth-stub:${image_tag}" -t tadpole-auth-stub:latest -f auth-stub/Dockerfile auth-stub
                 '''
             }
         }

@@ -112,9 +112,6 @@ services:
       context: ./auth-stub
       dockerfile: Dockerfile
     image: tadpole-auth-stub:latest
-    container_name: tadpole-auth-stub
-    env_file:
-      - .env
     environment:
       PORT: ${AUTH_STUB_PORT}
       JWT_SECRET: ${JWT_SECRET}
