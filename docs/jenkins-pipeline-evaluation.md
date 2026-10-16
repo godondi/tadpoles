@@ -57,7 +57,7 @@ The first implementation slice adds the frontend verification stage and strength
 - Pipeline timeout and concurrent-build controls are added.
 - The backend image is tagged with the Jenkins commit/build identity in addition to `latest` where available.
 
-These changes are intentionally separate from the next runtime-contract work. SonarQube credentials/server naming, health endpoints, and full-stack API test identities are not currently defined in the repository and must be agreed before enabling those gates.
+The runtime-contract slice is now implemented: Compose owns the E2E stack, `.env.ci.template` supplies non-secret CI values, `/health` is implemented, fixed container names are removed, and Jenkins waits on HTTP endpoints before cleanup. SonarQube credentials/server naming and full-stack API test identities still need to be agreed before enabling quality-gate and authenticated API assertions.
 
 ## Target Pipeline
 
@@ -94,6 +94,8 @@ These changes are intentionally separate from the next runtime-contract work. So
 9. Build backend, frontend, and auth-stub images with `${GIT_COMMIT}` or a sanitized build identifier. Do not use `latest` as the only identity.
 
 ### Phase 3: Full-stack integration
+
+The current Jenkins implementation now builds backend, frontend, and auth-stub images, starts the full Compose topology with an isolated project name, waits for auth-stub `/health`, backend `/health`, and frontend `/login`, archives Compose logs, and always runs `down -v --remove-orphans`.
 
 10. Add a CI-specific Compose override or environment file with deterministic secrets, required Fauxnance settings, isolated project naming, and seeded database initialization.
 11. Add healthchecks for backend, frontend, and auth stub where meaningful. Implement or document a real unauthenticated readiness endpoint; `/health` is currently permitted by security configuration but was not found as an implemented controller endpoint.

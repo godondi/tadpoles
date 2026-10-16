@@ -58,73 +58,55 @@ pipeline {
                 archiveArtifacts artifacts: 'frontend/dist/**', fingerprint: false
             }
         }
-        stage('Build Backend Image') {
+                stage('Build Runtime Images') {
             steps {
                 sh '''
                     set -eux
                     image_tag="${GIT_COMMIT:-${BUILD_TAG:-latest}}"
                     docker build -t "tadpole-app:${image_tag}" -t tadpole-app:latest -f backend/Dockerfile backend
+                                        docker build -t "tadpole-frontend:${image_tag}" -t tadpole-frontend:latest -f frontend/Dockerfile frontend
+                                        docker build -t "tadpole-auth-stub:${image_tag}" -t tadpole-auth-stub:latest -f auth-stub/Dockerfile auth-stub
                 '''
             }
         }
-        stage('Smoke Test') {
+                stage('Compose E2E Smoke Test') {
             steps {
                 sh '''
                     set -eux
 
-                    docker rm -f tadpole-smoke-app tadpole-smoke-db >/dev/null 2>&1 || true
-                    docker network rm tadpole-smoke >/dev/null 2>&1 || true
-                    docker network create tadpole-smoke
+                                        export COMPOSE_PROJECT_NAME="tadpole-ci-${BUILD_NUMBER:-local}"
+                                        export CI_ENV_FILE=".env.ci"
+                                        cp .env.ci.template "$CI_ENV_FILE"
 
-                    docker run -d \
-                      --name tadpole-smoke-db \
-                      --network tadpole-smoke \
-                      -e POSTGRES_DB=tadpoles \
-                      -e POSTGRES_USER=postgres \
-                      -e POSTGRES_PASSWORD=postgres \
-                      postgres:15
+                                        docker-compose --env-file "$CI_ENV_FILE" -p "$COMPOSE_PROJECT_NAME" up -d --build
 
-                    for i in $(seq 1 30); do
-                      if docker exec tadpole-smoke-db pg_isready -U postgres -d tadpoles; then
-                        break
-                      fi
-                      sleep 2
-                    done
-
-                    docker run -d \
-                      --name tadpole-smoke-app \
-                      --network tadpole-smoke \
-                      -e DB_URL=jdbc:postgresql://tadpole-smoke-db:5432/tadpoles \
-                      -e DB_USERNAME=postgres \
-                      -e DB_PASSWORD=postgres \
-                      -e JWT_SECRET=test-jwt-secret-test-jwt-secret-123456 \
-                      tadpole-app:latest
-
-                    for i in $(seq 1 30); do
-                      if ! docker ps --format '{{.Names}}' | grep -q '^tadpole-smoke-app$'; then
-                        docker logs tadpole-smoke-app || true
-                        exit 1
-                      fi
-
-                      if docker logs tadpole-smoke-app 2>&1 | grep -q 'Started Main'; then
-                        exit 0
-                      fi
-
-                      sleep 2
-                    done
-
-                    docker logs tadpole-smoke-app
-                    exit 1
+                                        for url in \
+                                            http://localhost:8081/health \
+                                            http://localhost:8082/health \
+                                            http://localhost:8086/login; do
+                                            for i in $(seq 1 60); do
+                                                if curl --fail --silent --show-error "$url" >/dev/null; then
+                                                    break
+                                                fi
+                                                if [ "$i" -eq 60 ]; then
+                                                    echo "Timed out waiting for $url"
+                                                    exit 1
+                                                fi
+                                                sleep 2
+                                            done
+                                        done
                 '''
             }
             post {
                 always {
                     sh '''
-                        docker logs tadpole-smoke-app || true
-                        docker logs tadpole-smoke-db || true
-                        docker rm -f tadpole-smoke-app tadpole-smoke-db >/dev/null 2>&1 || true
-                        docker network rm tadpole-smoke >/dev/null 2>&1 || true
+                                                export COMPOSE_PROJECT_NAME="tadpole-ci-${BUILD_NUMBER:-local}"
+                                                docker-compose --env-file .env.ci -p "$COMPOSE_PROJECT_NAME" ps || true
+                                                docker-compose --env-file .env.ci -p "$COMPOSE_PROJECT_NAME" logs > compose.log 2>&1 || true
+                                                docker-compose --env-file .env.ci -p "$COMPOSE_PROJECT_NAME" down -v --remove-orphans || true
+                                                rm -f .env.ci
                     '''
+                                        archiveArtifacts artifacts: 'compose.log', allowEmptyArchive: true, onlyIfSuccessful: false
                 }
             }
         }

@@ -7,16 +7,18 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     image: tadpole-app:latest
-    container_name: tadpole-backend
-    env_file:
-      - .env
     environment:
       DB_URL: ${DB_URL}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       AUTH_STUB_URL: ${AUTH_STUB_URL}
       JWT_SECRET: ${JWT_SECRET}
-      PORT: ${SERVER_PORT}
+      SERVER_PORT: ${SERVER_PORT}
+      FAUX_SERVER_URL: ${FAUX_SERVER_URL}
+      FAUX_API_KEY: ${FAUX_API_KEY}
+      FAUX_DEFAULT_INTERVAL: ${FAUX_DEFAULT_INTERVAL}
+      FAUX_CONNECT_TIMEOUT_SECONDS: ${FAUX_CONNECT_TIMEOUT_SECONDS}
+      FAUX_READ_TIMEOUT_SECONDS: ${FAUX_READ_TIMEOUT_SECONDS}
     ports:
       - "${BACKEND_HOST_PORT}:${BACKEND_CONTAINER_PORT}"
     depends_on:
@@ -30,9 +32,6 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     image: tadpole-frontend:latest
-    container_name: tadpole-frontend
-    env_file:
-      - .env
     environment:
       PORT: ${FRONTEND_CONTAINER_PORT}
     ports:
@@ -40,9 +39,6 @@ services:
 
   database:
     image: postgres:15
-    container_name: tadpole-database
-    env_file:
-      - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -60,8 +56,6 @@ services:
 
   database-demo-seed:
     image: postgres:15
-    env_file:
-      - .env
     environment:
       PGHOST: database
       PGUSER: ${POSTGRES_USER}
@@ -79,9 +73,6 @@ services:
       context: ./auth-stub
       dockerfile: Dockerfile
     image: tadpole-auth-stub:latest
-    container_name: tadpole-auth-stub
-    env_file:
-      - .env
     environment:
       PORT: ${AUTH_STUB_PORT}
       JWT_SECRET: ${JWT_SECRET}
