@@ -57,7 +57,19 @@ The first implementation slice adds the frontend verification stage and strength
 - Pipeline timeout and concurrent-build controls are added.
 - The backend image is tagged with the Jenkins commit/build identity in addition to `latest` where available.
 
+<<<<<<< HEAD
 The runtime-contract slice is now implemented: Compose owns the E2E stack, `.env.ci.template` supplies non-secret CI values, `/health` is implemented, fixed container names are removed, and Jenkins waits on HTTP endpoints before cleanup. SonarQube credentials/server naming and full-stack API test identities still need to be agreed before enabling quality-gate and authenticated API assertions.
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+The runtime-contract slice is now implemented: Compose owns the E2E stack, `.env.ci.template` supplies non-secret CI values, `/health` is implemented, fixed container names are removed, and Jenkins waits on HTTP endpoints before cleanup. SonarQube credentials/server naming and full-stack API test identities still need to be agreed before enabling quality-gate and authenticated API assertions.
+=======
+These changes are intentionally separate from the next runtime-contract work. SonarQube credentials/server naming, health endpoints, and full-stack API test identities are not currently defined in the repository and must be agreed before enabling those gates.
+>>>>>>> a505320 (Added frontend tests + general improvements to jenkins)
+=======
+The runtime-contract slice is now implemented: Compose owns the E2E stack, `.env.ci.template` supplies non-secret CI values, `/health` is implemented, fixed container names are removed, and Jenkins waits on HTTP endpoints before cleanup. SonarQube credentials/server naming and full-stack API test identities still need to be agreed before enabling quality-gate and authenticated API assertions.
+>>>>>>> fb4997d (Added Docker-Compose to Smoke Test Stage)
+>>>>>>> 5c37992 (Added Docker-Compose to Smoke Test Stage)
 
 ## Target Pipeline
 
@@ -95,8 +107,21 @@ The runtime-contract slice is now implemented: Compose owns the E2E stack, `.env
 
 ### Phase 3: Full-stack integration
 
+<<<<<<< HEAD
 The current Jenkins implementation now builds backend, frontend, and auth-stub images, starts the full Compose topology with an isolated project name, waits for auth-stub `/health`, backend `/health`, and frontend `/login`, archives Compose logs, and always runs `down -v --remove-orphans`.
 
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+The current Jenkins implementation now builds backend, frontend, and auth-stub images, starts the full Compose topology with an isolated project name, waits for auth-stub `/health`, backend `/health`, and frontend `/login`, archives Compose logs, and always runs `down -v --remove-orphans`.
+
+=======
+>>>>>>> a505320 (Added frontend tests + general improvements to jenkins)
+=======
+The current Jenkins implementation now builds backend, frontend, and auth-stub images, starts the full Compose topology with an isolated project name, waits for auth-stub `/health`, backend `/health`, and frontend `/login`, archives Compose logs, and always runs `down -v --remove-orphans`.
+
+>>>>>>> fb4997d (Added Docker-Compose to Smoke Test Stage)
+>>>>>>> 5c37992 (Added Docker-Compose to Smoke Test Stage)
 10. Add a CI-specific Compose override or environment file with deterministic secrets, required Fauxnance settings, isolated project naming, and seeded database initialization.
 11. Add healthchecks for backend, frontend, and auth stub where meaningful. Implement or document a real unauthenticated readiness endpoint; `/health` is currently permitted by security configuration but was not found as an implemented controller endpoint.
 12. Replace manual `docker run` log polling with Compose startup, health/readiness polling, HTTP assertions, and service-log capture on failure.
