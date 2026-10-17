@@ -110,5 +110,16 @@ pipeline {
                 }
             }
         }
+        stage('Frontend Suite') {
+            steps {
+                sh 'docker run --rm --user "$(id -u):$(id -g)" -e npm_config_cache=/tmp/npm -v "$PWD":/workspace -w /workspace/frontend node:22-bookworm-slim sh -c "npm ci && npm test -- --watch=false && npm run test:qof-styles && npm run build"'
+            }
+        }
+        stage('Compose Startup and Upgrade') {
+            steps {
+                sh 'python3 scripts/test-client-compose.py'
+                sh 'python3 scripts/test-hardened-config.py'
+            }
+        }
     }
 }

@@ -19,6 +19,12 @@ services:
       FAUX_DEFAULT_INTERVAL: ${FAUX_DEFAULT_INTERVAL}
       FAUX_CONNECT_TIMEOUT_SECONDS: ${FAUX_CONNECT_TIMEOUT_SECONDS}
       FAUX_READ_TIMEOUT_SECONDS: ${FAUX_READ_TIMEOUT_SECONDS}
+      PORT: ${SERVER_PORT}
+      TRADING_ADMISSION_ENABLED: ${TRADING_ADMISSION_ENABLED:-true}
+      TRADING_WORKER_ENABLED: ${TRADING_WORKER_ENABLED:-true}
+      TRADING_LOCAL_DEMO_SETUP: ${TRADING_LOCAL_DEMO_SETUP:-true}
+      # Fictitious local demo only. Hardened deployments require a separately provisioned key.
+      BANKING_ENCRYPTION_KEY: ${BANKING_ENCRYPTION_KEY:-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
     ports:
       - "${BACKEND_HOST_PORT}:${BACKEND_CONTAINER_PORT}"
     depends_on:
@@ -45,12 +51,28 @@ services:
       - "${POSTGRES_HOST_PORT}:5432"
     volumes:
       - tadpole-db-data:/var/lib/postgresql/data
-      - ./database/schema:/docker-entrypoint-initdb.d:ro
+      - ./database/fresh:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 5s
       timeout: 5s
       retries: 12
+
+  database-migrate:
+    image: postgres:15
+    env_file: [.env]
+    environment:
+      PGHOST: database
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+    volumes:
+      - ./database/migrations:/migrations:ro
+      - ./database/migrate.sh:/migrate.sh:ro
+    command: ["sh", "/migrate.sh"]
+    depends_on:
+      database:
+        condition: service_healthy
 
   database-demo-seed:
     image: postgres:15
@@ -63,8 +85,8 @@ services:
       - ./database/demo/role_workspaces.sql:/role_workspaces.sql:ro
     command: ["psql", "-v", "ON_ERROR_STOP=1", "-f", "/role_workspaces.sql"]
     depends_on:
-      database:
-        condition: service_healthy
+      database-migrate:
+        condition: service_completed_successfully
 
 
 #  testing:
