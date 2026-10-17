@@ -22,3 +22,8 @@ fauxnance:
   default-interval: ${FAUX_DEFAULT_INTERVAL}
   connect-timeout-seconds: ${FAUX_CONNECT_TIMEOUT_SECONDS}
   read-timeout-seconds: ${FAUX_READ_TIMEOUT_SECONDS}
+
+trading:
+  admission-enabled: ${TRADING_ADMISSION_ENABLED:false}
+  worker-enabled: ${TRADING_WORKER_ENABLED:false}
+  local-demo-setup: ${TRADING_LOCAL_DEMO_SETUP:false}

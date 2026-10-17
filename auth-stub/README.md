@@ -1,3 +1,5 @@
+> Historical development stub. Current client authentication uses the Spring application and persisted sessions; this stub does not grant trading access. Hardened Compose excludes it by default. See the [current setup guide](../impDocs/Frontend/ClientPageImplementation/ClientRefactorCrashCourse.MD).
+
 # Mission Auth Stub
 
 A minimal Node.js service that issues JWTs. Used from Module 9 onward as the "separate identity

@@ -40,65 +40,15 @@ pipeline {
                 sh 'docker build -t tadpole-app:latest -f backend/Dockerfile backend'
             }
         }
-        stage('Smoke Test') {
+        stage('Frontend Suite') {
             steps {
-                sh '''
-                    set -eux
-
-                    docker rm -f tadpole-smoke-app tadpole-smoke-db >/dev/null 2>&1 || true
-                    docker network rm tadpole-smoke >/dev/null 2>&1 || true
-                    docker network create tadpole-smoke
-
-                    docker run -d \
-                      --name tadpole-smoke-db \
-                      --network tadpole-smoke \
-                      -e POSTGRES_DB=tadpoles \
-                      -e POSTGRES_USER=postgres \
-                      -e POSTGRES_PASSWORD=postgres \
-                      postgres:15
-
-                    for i in $(seq 1 30); do
-                      if docker exec tadpole-smoke-db pg_isready -U postgres -d tadpoles; then
-                        break
-                      fi
-                      sleep 2
-                    done
-
-                    docker run -d \
-                      --name tadpole-smoke-app \
-                      --network tadpole-smoke \
-                      -e DB_URL=jdbc:postgresql://tadpole-smoke-db:5432/tadpoles \
-                      -e DB_USERNAME=postgres \
-                      -e DB_PASSWORD=postgres \
-                      -e JWT_SECRET=test-jwt-secret-test-jwt-secret-123456 \
-                      tadpole-app:latest
-
-                    for i in $(seq 1 30); do
-                      if ! docker ps --format '{{.Names}}' | grep -q '^tadpole-smoke-app$'; then
-                        docker logs tadpole-smoke-app || true
-                        exit 1
-                      fi
-
-                      if docker logs tadpole-smoke-app 2>&1 | grep -q 'Started Main'; then
-                        exit 0
-                      fi
-
-                      sleep 2
-                    done
-
-                    docker logs tadpole-smoke-app
-                    exit 1
-                '''
+                sh 'docker run --rm --user "$(id -u):$(id -g)" -e npm_config_cache=/tmp/npm -v "$PWD":/workspace -w /workspace/frontend node:22-bookworm-slim sh -c "npm ci && npm test -- --watch=false && npm run test:qof-styles && npm run build"'
             }
-            post {
-                always {
-                    sh '''
-                        docker logs tadpole-smoke-app || true
-                        docker logs tadpole-smoke-db || true
-                        docker rm -f tadpole-smoke-app tadpole-smoke-db >/dev/null 2>&1 || true
-                        docker network rm tadpole-smoke >/dev/null 2>&1 || true
-                    '''
-                }
+        }
+        stage('Compose Startup and Upgrade') {
+            steps {
+                sh 'python3 scripts/test-client-compose.py'
+                sh 'python3 scripts/test-hardened-config.py'
             }
         }
         stage('Archive Backend Artifact') {
