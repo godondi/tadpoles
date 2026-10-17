@@ -1,3 +1,5 @@
+> **Current implementation:** See the [provider-backed USD trading guide](../ClientPageImplementation/ClientRefactorCrashCourse.MD) for startup, banking, execution, roles and recovery. The material below is historical implementation evidence and may describe retired behavior.
+
 # Local role credentials for Compose debugging
 
 Run `docker compose up --build`, then open the login page at `http://localhost:8086/login` with the default `.env.template` ports. The Compose `database-demo-seed` service creates these accounts in the Compose PostgreSQL database before the backend starts. Sign in with the **username** shown below. Every account uses the password **`RoleDemo2026!`**.

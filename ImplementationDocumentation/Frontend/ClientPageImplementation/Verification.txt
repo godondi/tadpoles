@@ -1,0 +1,11 @@
+Final verification, 15 October 2026
+Backend: 317 passed, 0 failures/errors/skipped
+Database: 16 passed, 0 failures/errors/skipped
+Frontend: 108 passed in 16 files
+QoF styles: passed
+Angular production build: passed
+Migration/fresh schema equality: passed
+Git whitespace check: passed
+PASS: filled + accepted backup restored; admission disabled; worker drained; same-key replay; second restart; two restored fills + one non-owner runtime fill; zero active reservations/jobs; cash/units/outbox reconciled; migration runner repeated; temporary non-owner grants and evidence denials checked.
+Hardened Compose config: passed; app environments omit DB-owner credentials
+Visual limitation: final post-build browser selection blocked by browser URL policy; earlier desktop/mobile buy/partial-sell/full-sell walkthrough passed.
