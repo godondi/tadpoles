@@ -153,17 +153,25 @@ pipeline {
             post {
                 always {
                     sh '''
-                        docker logs tadpole-smoke-app || true
-                        docker logs tadpole-smoke-db || true
-                        docker rm -f tadpole-smoke-app tadpole-smoke-db >/dev/null 2>&1 || true
-                        docker network rm tadpole-smoke >/dev/null 2>&1 || true
+                                                export COMPOSE_PROJECT_NAME="tadpole-ci-${BUILD_NUMBER:-local}"
+                                                docker-compose --env-file .env.ci -p "$COMPOSE_PROJECT_NAME" ps || true
+                                                docker-compose --env-file .env.ci -p "$COMPOSE_PROJECT_NAME" logs > compose.log 2>&1 || true
+                                                docker-compose --env-file .env.ci -p "$COMPOSE_PROJECT_NAME" down -v --remove-orphans || true
+                                                rm -f .env.ci
                     '''
+                                        archiveArtifacts artifacts: 'compose.log', allowEmptyArchive: true, onlyIfSuccessful: false
                 }
             }
         }
-        stage('Archive Backend Artifact') {
+        stage('Frontend Suite') {
             steps {
-                archiveArtifacts artifacts: 'backend/target/*.jar', fingerprint: true
+                sh 'docker run --rm --user "$(id -u):$(id -g)" -e npm_config_cache=/tmp/npm -v "$PWD":/workspace -w /workspace/frontend node:22-bookworm-slim sh -c "npm ci && npm test -- --watch=false && npm run test:qof-styles && npm run build"'
+            }
+        }
+        stage('Compose Startup and Upgrade') {
+            steps {
+                sh 'python3 scripts/test-client-compose.py'
+                sh 'python3 scripts/test-hardened-config.py'
             }
         }
     }
