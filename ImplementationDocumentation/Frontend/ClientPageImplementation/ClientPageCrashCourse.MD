@@ -180,8 +180,8 @@ The SQL files are **versions of one PostgreSQL application schema**, not four se
 | --- | --- |
 | [`001_tadpoles_schema.sql`](../../../database/schema/001_tadpoles_schema.sql) | Original identity, advisory/portfolio, catalog, legacy trade, token and audit tables. |
 | [`002_tadpoles_test_data.sql`](../../../database/schema/002_tadpoles_test_data.sql) | Inserts baseline example data. Despite its location, it **does not define a new schema** or grant trading eligibility to its tickers. |
-| [`003_workspace_roles.sql`](../../../database/schema/003_workspace_roles.sql) | Adds `TRADING_OPS` and `FINANCE` roles and read indexes; no new tables. |
-| [`004_client_simulation.sql`](../../../database/schema/004_client_simulation.sql) | Adds the simulated self-directed order/account model, durable execution evidence and sessions; extends `clients` and `client_trades`. |
+| [`003_workspace_roles.sql`](../../../database/migrations/003_workspace_roles.sql) | Adds `TRADING_OPS` and `FINANCE` roles and read indexes; no new tables. |
+| [`004_client_simulation.sql`](../../../database/migrations/004_client_simulation.sql) | Adds the simulated self-directed order/account model, durable execution evidence and sessions; extends `clients` and `client_trades`. |
 
 The current tables, grouped by their purpose, are:
 
