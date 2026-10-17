@@ -1,55 +1,41 @@
-import { Component, computed, input } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  afterNextRender,
+  effect,
+  inject,
+  input,
+  signal,
+  viewChild,
+  DestroyRef,
+} from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import type { IChartApi, ISeriesApi, CandlestickData, Time } from 'lightweight-charts';
 import { Candle } from '../../core/api/market-data.service';
 
 @Component({
   selector: 'app-candle-chart',
   imports: [DecimalPipe],
   template: `
-    <svg
-      viewBox="0 0 800 360"
+    <div
+      #canvas
+      class="daily-canvas"
       role="img"
       [attr.aria-label]="
         symbol() +
-        ' daily OHLC candlestick chart, ' +
-        candles().length +
-        ' sessions in ' +
-        currency()
+        ' daily OHLC chart in ' +
+        currency() +
+        '. Daily values are available in the table below.'
       "
-    >
-      <title>{{ symbol() }} daily prices ({{ currency() }})</title>
-      <desc>
-        Each candle shows the open, high, low and close. Filled candles close higher; outlined
-        candles close lower. Daily values are available in the table below.
-      </desc>
-      @for (tick of ticks(); track tick.y) {
-        <line x1="10" x2="725" [attr.y1]="tick.y" [attr.y2]="tick.y" class="grid" />
-        <text x="738" [attr.y]="tick.y + 4">{{ tick.price | number: '1.2-2' }}</text>
-      }
-      @for (bar of bars(); track bar.candle.date) {
-        <g
-          [attr.data-candle]="bar.candle.date"
-          [class.up]="bar.candle.close >= bar.candle.open"
-          [class.down]="bar.candle.close < bar.candle.open"
-        >
-          <title>
-            {{ bar.candle.date }} · Open {{ bar.candle.open }} · High {{ bar.candle.high }} · Low
-            {{ bar.candle.low }} · Close {{ bar.candle.close }} {{ currency() }}
-          </title>
-          <line [attr.x1]="bar.x" [attr.x2]="bar.x" [attr.y1]="bar.high" [attr.y2]="bar.low" />
-          <rect
-            [attr.x]="bar.x - bar.width / 2"
-            [attr.y]="bar.top"
-            [attr.width]="bar.width"
-            [attr.height]="bar.height"
-          />
-        </g>
-      }
-      <text x="10" y="348">{{ candles()[0]?.date }}</text>
-      <text x="725" y="348" text-anchor="end">{{ candles()[candles().length - 1]?.date }}</text>
-    </svg>
-    <p class="legend">
-      <span>● Up day</span><span>○ Down day</span><span>Prices in {{ currency() }}</span>
+    ></div>
+    @if (unavailable()) {
+      <p class="notice">Interactive chart unavailable. Use the daily price table below.</p>
+    }
+    <p class="muted">
+      Daily, unadjusted OHLC · pan, zoom and crosshair · chart by
+      <a href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer"
+        >TradingView</a
+      >
     </p>
     <details>
       <summary>View daily price data</summary>
@@ -77,14 +63,22 @@ import { Candle } from '../../core/api/market-data.service';
           </thead>
           <tbody>
             @for (candle of candles(); track candle.date) {
-              <tr>
+              <tr [attr.data-candle]="candle.date">
                 <th scope="row">{{ candle.date }}</th>
                 <td>{{ candle.open | number: '1.2-2' }}</td>
                 <td>{{ candle.high | number: '1.2-2' }}</td>
                 <td>{{ candle.low | number: '1.2-2' }}</td>
                 <td>{{ candle.close | number: '1.2-2' }}</td>
                 <td>{{ candle.volume === null ? '—' : (candle.volume | number) }}</td>
-                <td>{{ candle.synthetic ? 'Synthetic' : 'Stored' }}</td>
+                <td>
+                  {{
+                    candle.synthetic === true
+                      ? 'Synthetic'
+                      : candle.synthetic === false
+                        ? 'Stored'
+                        : 'Unknown provenance'
+                  }}
+                </td>
               </tr>
             }
           </tbody>
@@ -96,59 +90,28 @@ import { Candle } from '../../core/api/market-data.service';
     :host {
       display: block;
     }
-    svg {
-      display: block;
-      width: 100%;
-      height: auto;
-    }
-    svg text {
-      font:
-        12px Arial,
-        sans-serif;
-      fill: var(--text-secondary);
-    }
-    .grid {
-      stroke: var(--border-gray);
-      stroke-dasharray: 3 5;
-    }
-    .up {
-      stroke: var(--dark-green);
-      fill: var(--dark-green);
-    }
-    .down {
-      stroke: var(--negative);
-      fill: var(--surface);
-    }
-    g line,
-    g rect {
-      stroke-width: 1.5;
-    }
-    .legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
-      font-size: 0.8rem;
-      color: var(--text-secondary);
+    .daily-canvas {
+      height: 360px;
+      min-width: 0;
     }
     summary {
       cursor: pointer;
       margin: 24px 0 12px;
     }
     table {
-      border-collapse: collapse;
       width: 100%;
-      font-size: 0.8rem;
+      border-collapse: collapse;
+      font-size: 0.85rem;
     }
     th,
     td {
       padding: 10px;
       text-align: right;
-      border-bottom: 1px solid var(--border-gray);
       white-space: nowrap;
+      border-bottom: 1px solid var(--border-gray);
     }
     caption {
       text-align: left;
-      padding: 10px;
     }
   `,
 })
@@ -156,33 +119,91 @@ export class CandleChartComponent {
   readonly candles = input.required<Candle[]>();
   readonly symbol = input.required<string>();
   readonly currency = input.required<string>();
-  private readonly scale = computed(() => {
-    const rows = this.candles();
-    const low = Math.min(...rows.map((c) => c.low));
-    const high = Math.max(...rows.map((c) => c.high));
-    const padding = Math.max((high - low) * 0.12, Math.abs(high) * 0.005, 0.01);
-    return { min: low - padding, max: high + padding };
-  });
-  private y(price: number) {
-    const { min, max } = this.scale();
-    return 20 + ((max - price) / (max - min)) * 290;
+  readonly unavailable = signal(false);
+  private readonly canvas = viewChild<ElementRef<HTMLElement>>('canvas');
+  private chart?: IChartApi;
+  private series?: ISeriesApi<'Candlestick'>;
+  private destroyed = false;
+  private theme?: MutationObserver;
+
+  constructor() {
+    effect(() => {
+      this.candles();
+      this.draw();
+    });
+    afterNextRender(() => {
+      void this.initialize();
+    });
+    inject(DestroyRef).onDestroy(() => {
+      this.destroyed = true;
+      this.theme?.disconnect();
+      this.chart?.remove();
+    });
   }
-  readonly ticks = computed(() => {
-    const { min, max } = this.scale();
-    return Array.from({ length: 5 }, (_, i) => ({
-      y: 20 + i * 72.5,
-      price: max - ((max - min) * i) / 4,
-    }));
-  });
-  readonly bars = computed(() =>
-    this.candles().map((candle, i, rows) => ({
-      candle,
-      x: 10 + ((i + 0.5) * 715) / rows.length,
-      width: Math.min(14, (715 / rows.length) * 0.6),
-      high: this.y(candle.high),
-      low: this.y(candle.low),
-      top: this.y(Math.max(candle.open, candle.close)),
-      height: Math.max(1, Math.abs(this.y(candle.open) - this.y(candle.close))),
-    })),
-  );
+
+  private async initialize() {
+    const host = this.canvas()?.nativeElement;
+    if (!host || typeof ResizeObserver === 'undefined') {
+      this.unavailable.set(true);
+      return;
+    }
+    try {
+      const library = await import('lightweight-charts');
+      if (this.destroyed) return;
+      this.chart = library.createChart(host, {
+        autoSize: true,
+        layout: { attributionLogo: true },
+        timeScale: { timeVisible: false },
+        rightPriceScale: { borderVisible: false },
+      });
+      this.series = this.chart.addSeries(library.CandlestickSeries, {
+        upColor: '#216b4a',
+        downColor: '#a72c3d',
+        wickUpColor: '#216b4a',
+        wickDownColor: '#a72c3d',
+        borderVisible: false,
+      });
+      const applyTheme = () => {
+        const style = getComputedStyle(host);
+        this.chart?.applyOptions({
+          layout: {
+            background: {
+              type: library.ColorType.Solid,
+              color: style.getPropertyValue('--surface').trim() || '#ffffff',
+            },
+            textColor: style.getPropertyValue('--text-primary').trim() || '#172b23',
+          },
+          grid: {
+            vertLines: { visible: false },
+            horzLines: { color: style.getPropertyValue('--border-gray').trim() || '#dbe1dd' },
+          },
+        });
+      };
+      applyTheme();
+      this.theme = new MutationObserver(applyTheme);
+      this.theme.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class', 'data-theme', 'style'],
+      });
+      this.draw();
+    } catch {
+      this.unavailable.set(true);
+      this.chart?.remove();
+      this.chart = undefined;
+    }
+  }
+
+  private draw() {
+    if (!this.series) return;
+    this.series.setData(
+      this.candles().map((c) => ({
+        time: c.date,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+      })) as CandlestickData<Time>[],
+    );
+    this.chart?.timeScale().fitContent();
+  }
 }

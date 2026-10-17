@@ -21,13 +21,12 @@ describe('Daily candle chart', () => {
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     expect(el.innerHTML).not.toMatch(/NaN|Infinity/);
-    const body = el.querySelector('svg rect')!;
-    expect(Number(body.getAttribute('height'))).toBeGreaterThan(0);
-    expect(el.querySelector('svg')!.getAttribute('aria-label')).toContain('EUR');
+    expect(el.querySelector('[role="img"]')!.getAttribute('aria-label')).toContain('EUR');
+    expect(el.querySelector('[data-candle]')!.textContent).toContain('5.00');
     expect(el.querySelector('table')!.textContent).toContain('Synthetic');
     expect(el.querySelector('table')!.textContent).toContain('—');
   });
-  it('maps wick and body coordinates to OHLC prices and distinguishes down days', () => {
+  it('keeps exact daily OHLC values accessible independently of canvas rendering', () => {
     const fixture = TestBed.createComponent(CandleChartComponent);
     fixture.componentRef.setInput('symbol', 'TEST');
     fixture.componentRef.setInput('currency', 'USD');
@@ -45,12 +44,11 @@ describe('Daily candle chart', () => {
     ]);
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
-    const body = el.querySelector('svg rect')!;
-    const wick = el.querySelector('[data-candle] line')!;
-    const top = Number(body.getAttribute('y'));
-    const bottom = top + Number(body.getAttribute('height'));
-    expect(Number(wick.getAttribute('y1'))).toBeLessThan(top);
-    expect(Number(wick.getAttribute('y2'))).toBeGreaterThan(bottom);
-    expect(el.querySelector('[data-candle]')!.classList.contains('down')).toBe(true);
+    const values = [...el.querySelectorAll('[data-candle] td')].map((cell) =>
+      cell.textContent?.trim(),
+    );
+    expect(values.slice(0, 4)).toEqual(['10.00', '15.00', '5.00', '8.00']);
+    expect(values[5]).toBe('Stored');
+    fixture.destroy();
   });
 });

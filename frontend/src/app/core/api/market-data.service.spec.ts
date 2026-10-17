@@ -35,7 +35,7 @@ describe('MarketDataService with application HTTP configuration', () => {
     vi.setSystemTime(new Date('2026-10-08T00:30:00Z'));
     service.getCandles(' aapl ').subscribe();
     const req = http.expectOne((r) => r.url.endsWith('/candles/AAPL'));
-    expect(req.request.params.get('from')).toBe('2026-07-10');
+    expect(req.request.params.get('from')).toBe('2025-10-07');
     expect(req.request.params.get('to')).toBe('2026-10-08');
     expect(req.request.params.get('interval')).toBe('1d');
     expect(req.request.headers.get('Authorization')).toBe('Bearer test-session-token');

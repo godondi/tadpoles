@@ -1,5 +1,7 @@
 # Pole
 
+For the current client, Banking, Trading Operations and Finance flows, see the [USD trading guide](../ImplementationDocumentation/Frontend/ClientPageImplementation/ClientRefactorCrashCourse.MD). Use Node 22. Verify with `npm ci`, `npm test -- --watch=false`, `npm run test:qof-styles` and `npm run build`. Charts use pinned Lightweight Charts 5.2.1 with an accessible daily OHLC table and bundled attribution.
+
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.0.
 
 ## Development server
