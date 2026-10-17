@@ -33,8 +33,7 @@ public class ClientTradeController {
     public ClientTradeController(
             AppUserService appUserService,
             ClientTradeService clientTradeService,
-            OrderFillService orderFillService
-    ) {
+            OrderFillService orderFillService) {
         this.appUserService = appUserService;
         this.clientTradeService = clientTradeService;
         this.orderFillService = orderFillService;
@@ -49,7 +48,7 @@ public class ClientTradeController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN') and !hasRole('CLIENT')")
+    @PreAuthorize("denyAll()")
     public ClientTradeResponseDto createTrade(
             @PathVariable Integer clientId,
             @RequestBody CreateClientTradeRequestDto request,
@@ -73,7 +72,7 @@ public class ClientTradeController {
     }
 
     @PatchMapping("/{tradeId}")
-    @PreAuthorize("hasRole('ADMIN') and !hasRole('CLIENT')")
+    @PreAuthorize("denyAll()")
     public ClientTradeResponseDto updateTrade(
             @PathVariable Integer clientId,
             @PathVariable Integer tradeId,
@@ -86,13 +85,13 @@ public class ClientTradeController {
     }
 
     @PostMapping("/{tradeId}/fill")
-    @PreAuthorize("hasRole('ADMIN') and !hasRole('CLIENT')")
+    @PreAuthorize("denyAll()")
     public OrderFillResponseDto fillTrade(
             @PathVariable Integer clientId,
             @PathVariable Integer tradeId,
             @RequestBody(required = false) FillOrderRequestDto request,
             @AuthenticationPrincipal Jwt jwt
-    ) {
+        ) {
         SecurityRoleSupport.requireClientOwnership(jwt, appUserService, clientId);
         return orderFillService.fillTrade(clientId, tradeId, request);
     }

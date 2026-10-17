@@ -48,7 +48,8 @@ public class ClientController {
 
     @GetMapping("/clients/{clientId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'CLIENT')")
-    public ClientResponseDto getClient(@PathVariable Integer clientId, @AuthenticationPrincipal Jwt jwt) {
+    public ClientResponseDto getClient(
+            @PathVariable Integer clientId, @AuthenticationPrincipal Jwt jwt) {
         SecurityRoleSupport.requireClientOwnership(jwt, appUserService, clientId);
         Client client = clientService.getClient(clientId);
         return ClientResponseDto.fromEntity(client);
@@ -59,8 +60,7 @@ public class ClientController {
     public ClientResponseDto updateClient(
             @PathVariable Integer clientId,
             @RequestBody UpdateClientRequestDto request,
-            @AuthenticationPrincipal Jwt jwt
-    ) {
+            @AuthenticationPrincipal Jwt jwt) {
         SecurityRoleSupport.requireClientOwnership(jwt, appUserService, clientId);
         Client client = clientService.updateClient(clientId, request);
         return ClientResponseDto.fromEntity(client);
@@ -68,8 +68,12 @@ public class ClientController {
 
     @GetMapping("/clients/{clientId}/balance")
     @PreAuthorize("hasAnyRole('ADMIN', 'CLIENT')")
-    public ClientBalanceResponseDto getClientBalance(@PathVariable Integer clientId, @AuthenticationPrincipal Jwt jwt) {
+    public ClientBalanceResponseDto getClientBalance(
+            @PathVariable Integer clientId, @AuthenticationPrincipal Jwt jwt) {
         SecurityRoleSupport.requireClientOwnership(jwt, appUserService, clientId);
-        return new ClientBalanceResponseDto(clientId, clientService.getClientBalance(clientId));
+        throw new org.springframework.web.server.ResponseStatusException(
+                HttpStatus.GONE,
+                "Use the owned USD portfolio endpoint; historical scalar cash is not a spendable"
+                        + " balance");
     }
 }
