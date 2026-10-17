@@ -1,3 +1,5 @@
+> **Current implementation:** See the [provider-backed USD trading guide](../ClientPageImplementation/ClientRefactorCrashCourse.MD) for startup, banking, execution, roles and recovery. The material below is historical implementation evidence and may describe retired behavior.
+
 # Separate role workspaces — implementation record
 
 ## 1. Baseline — 13 October 2026
