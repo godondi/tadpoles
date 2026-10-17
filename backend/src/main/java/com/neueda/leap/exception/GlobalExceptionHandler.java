@@ -12,142 +12,134 @@ import org.springframework.web.server.ResponseStatusException;
 public class GlobalExceptionHandler {
     @ExceptionHandler(ClientNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleClientNotFound(
-            ClientNotFoundException exception,
-            HttpServletRequest request
-    ) {
-        return buildErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
+            ClientNotFoundException exception, HttpServletRequest request) {
+        return buildErrorResponse(
+                HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(AppUserNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleAppUserNotFound(
-            AppUserNotFoundException exception,
-            HttpServletRequest request
-    ) {
-        return buildErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
+            AppUserNotFoundException exception, HttpServletRequest request) {
+        return buildErrorResponse(
+                HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(AdvisorNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleAdvisorNotFound(
-            AdvisorNotFoundException exception,
-            HttpServletRequest request
-    ) {
-        return buildErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
+            AdvisorNotFoundException exception, HttpServletRequest request) {
+        return buildErrorResponse(
+                HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(AuditLogNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleAuditLogNotFound(
-            AuditLogNotFoundException exception,
-            HttpServletRequest request
-    ) {
-        return buildErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
+            AuditLogNotFoundException exception, HttpServletRequest request) {
+        return buildErrorResponse(
+                HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(InstrumentNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleInstrumentNotFound(
-            InstrumentNotFoundException exception,
-            HttpServletRequest request
-    ) {
-        return buildErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
+            InstrumentNotFoundException exception, HttpServletRequest request) {
+        return buildErrorResponse(
+                HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(ClientHoldingNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleClientHoldingNotFound(
-            ClientHoldingNotFoundException exception,
-            HttpServletRequest request
-    ) {
-        return buildErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
+            ClientHoldingNotFoundException exception, HttpServletRequest request) {
+        return buildErrorResponse(
+                HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(ClientTradeNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleClientTradeNotFound(
-            ClientTradeNotFoundException exception,
-            HttpServletRequest request
-    ) {
-        return buildErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
+            ClientTradeNotFoundException exception, HttpServletRequest request) {
+        return buildErrorResponse(
+                HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(ClientSubscriptionNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleClientSubscriptionNotFound(
-            ClientSubscriptionNotFoundException exception,
-            HttpServletRequest request
-    ) {
-        return buildErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
+            ClientSubscriptionNotFoundException exception, HttpServletRequest request) {
+        return buildErrorResponse(
+                HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(ModelPortfolioNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleModelPortfolioNotFound(
-            ModelPortfolioNotFoundException exception,
-            HttpServletRequest request
-    ) {
-        return buildErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
+            ModelPortfolioNotFoundException exception, HttpServletRequest request) {
+        return buildErrorResponse(
+                HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(ModelPortfolioHoldingNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleModelPortfolioHoldingNotFound(
-            ModelPortfolioHoldingNotFoundException exception,
-            HttpServletRequest request
-    ) {
-        return buildErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
+            ModelPortfolioHoldingNotFoundException exception, HttpServletRequest request) {
+        return buildErrorResponse(
+                HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(RoleNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleRoleNotFound(
-            RoleNotFoundException exception,
-            HttpServletRequest request
-    ) {
-        return buildErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
+            RoleNotFoundException exception, HttpServletRequest request) {
+        return buildErrorResponse(
+                HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(TradeSuggestionNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleTradeSuggestionNotFound(
-            TradeSuggestionNotFoundException exception,
-            HttpServletRequest request
-    ) {
-        return buildErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
+            TradeSuggestionNotFoundException exception, HttpServletRequest request) {
+        return buildErrorResponse(
+                HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(RefreshTokenNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleRefreshTokenNotFound(
-            RefreshTokenNotFoundException exception,
-            HttpServletRequest request
-    ) {
-        return buildErrorResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
+            RefreshTokenNotFoundException exception, HttpServletRequest request) {
+        return buildErrorResponse(
+                HttpStatus.NOT_FOUND, exception.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiErrorResponse> handleBadRequest(
-            IllegalArgumentException exception,
-            HttpServletRequest request
-    ) {
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, exception.getMessage(), request.getRequestURI());
+            IllegalArgumentException exception, HttpServletRequest request) {
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST, exception.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiErrorResponse> handleResponseStatusException(
-            ResponseStatusException exception,
-            HttpServletRequest request
-    ) {
+            ResponseStatusException exception, HttpServletRequest request) {
         HttpStatus status = HttpStatus.resolve(exception.getStatusCode().value());
         if (status == null) {
             status = HttpStatus.INTERNAL_SERVER_ERROR;
         }
 
-        String message = exception.getReason() == null ? status.getReasonPhrase() : exception.getReason();
+        String message =
+                exception.getReason() == null ? status.getReasonPhrase() : exception.getReason();
         return buildErrorResponse(status, message, request.getRequestURI());
     }
 
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ApiErrorResponse> handleIntegrity(
+            org.springframework.dao.DataIntegrityViolationException exception,
+            HttpServletRequest request) {
+        return buildErrorResponse(
+                HttpStatus.CONFLICT,
+                "This change conflicts with protected account state",
+                request.getRequestURI());
+    }
+
     private ResponseEntity<ApiErrorResponse> buildErrorResponse(
-            HttpStatus status,
-            String message,
-            String path
-    ) {
-        ApiErrorResponse response = new ApiErrorResponse(
-                OffsetDateTime.now(),
-                status.value(),
-                status.getReasonPhrase(),
-                message,
-                path
-        );
+            HttpStatus status, String message, String path) {
+        ApiErrorResponse response =
+                new ApiErrorResponse(
+                        OffsetDateTime.now(),
+                        status.value(),
+                        status.getReasonPhrase(),
+                        message,
+                        path);
 
         return ResponseEntity.status(status).body(response);
     }
