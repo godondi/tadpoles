@@ -45,71 +45,68 @@ class ClientHoldingControllerTest {
         when(clientHoldingService.listClientHoldings(7)).thenReturn(List.of(buildHolding()));
         when(appUserService.getUserByUsername("client01")).thenReturn(buildCurrentUser(7));
 
-        mockMvc.perform(get("/api/clients/7/holdings")
-                        .with(jwtWithSubjectAndRoles("client01", "CLIENT")))
+        mockMvc.perform(
+                        get("/api/clients/7/holdings")
+                                .with(jwtWithSubjectAndRoles("client01", "CLIENT")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.holdings[0].holdingId").value(13))
                 .andExpect(jsonPath("$.holdings[0].quantity").value(9.5));
     }
 
     @Test
-    void createHoldingReturnsCreatedResponse() throws Exception {
-        when(clientHoldingService.createHolding(org.mockito.ArgumentMatchers.eq(7), org.mockito.ArgumentMatchers.any()))
-                .thenReturn(buildHolding());
-
-        mockMvc.perform(post("/api/clients/7/holdings")
-                        .with(jwtWithRoles("ADMIN"))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "instrumentId": 11,
-                                  "quantity": 9.5,
-                                  "asOfDate": "2026-09-24"
-                                }
-                                """))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.holdingId").value(13))
-                .andExpect(jsonPath("$.instrumentId").value(11));
+    void createHoldingRejectsRetiredWritePath() throws Exception {
+        mockMvc.perform(
+                        post("/api/clients/7/holdings")
+                                .with(jwtWithRoles("ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "instrumentId": 11,
+                                          "quantity": 9.5,
+                                          "asOfDate": "2026-09-24"
+                                        }
+                                        """))
+                .andExpect(status().isForbidden());
+        org.mockito.Mockito.verifyNoInteractions(clientHoldingService);
     }
 
     @Test
     void getHoldingReturnsJsonResponse() throws Exception {
         when(clientHoldingService.getHolding(7, 13)).thenReturn(buildHolding());
 
-        mockMvc.perform(get("/api/clients/7/holdings/13")
-                        .with(jwtWithRoles("ADMIN")))
+        mockMvc.perform(get("/api/clients/7/holdings/13").with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.holdingId").value(13))
                 .andExpect(jsonPath("$.clientId").value(7));
     }
 
     @Test
-    void updateHoldingReturnsJsonResponse() throws Exception {
-        ClientHolding holding = buildHolding();
-        holding.setQuantity(new BigDecimal("12.000000"));
-        when(clientHoldingService.updateHolding(org.mockito.ArgumentMatchers.eq(7), org.mockito.ArgumentMatchers.eq(13), org.mockito.ArgumentMatchers.any()))
-                .thenReturn(holding);
-
-        mockMvc.perform(patch("/api/clients/7/holdings/13")
-                        .with(jwtWithRoles("ADMIN"))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "quantity": 12.0
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.quantity").value(12.0));
+    void updateHoldingRejectsRetiredWritePath() throws Exception {
+        mockMvc.perform(
+                        patch("/api/clients/7/holdings/13")
+                                .with(jwtWithRoles("ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "quantity": 12.0
+                                        }
+                                        """))
+                .andExpect(status().isForbidden());
+        org.mockito.Mockito.verifyNoInteractions(clientHoldingService);
     }
 
     @Test
     void listHoldingsReturnsForbiddenWhenClientRequestsAnotherClient() throws Exception {
         when(appUserService.getUserByUsername("client01")).thenReturn(buildCurrentUser(7));
 
-        mockMvc.perform(get("/api/clients/8/holdings")
-                        .with(jwtWithSubjectAndRoles("client01", "CLIENT")))
+        mockMvc.perform(
+                        get("/api/clients/8/holdings")
+                                .with(jwtWithSubjectAndRoles("client01", "CLIENT")))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message").value("Clients may only access their own records."));
+                .andExpect(
+                        jsonPath("$.message").value("Clients may only access their own records."));
     }
 
     private ClientHolding buildHolding() {

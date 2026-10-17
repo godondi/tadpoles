@@ -43,19 +43,22 @@ public class ClientServiceImpl implements ClientService {
         if (request.clientName() == null || request.clientName().isBlank()) {
             throw new IllegalArgumentException("Client name is required.");
         }
-        if (request.cashBalance() != null && request.cashBalance().signum() < 0) {
-            throw new IllegalArgumentException("Client cash balance cannot be negative.");
+        if (request.cashBalance() != null && request.cashBalance().signum() != 0) {
+            throw new IllegalArgumentException(
+                    "Use the banking cash-movement workflow to fund a client.");
         }
         validateOptionalPositiveId(request.advisorId(), "Advisor id must be a positive integer.");
-        validateOptionalPositiveId(request.modelPortfolioId(), "Model portfolio id must be a positive integer.");
-        validateOptionalPositiveId(request.createdByUserId(), "Created-by user id must be a positive integer.");
+        validateOptionalPositiveId(
+                request.modelPortfolioId(), "Model portfolio id must be a positive integer.");
+        validateOptionalPositiveId(
+                request.createdByUserId(), "Created-by user id must be a positive integer.");
 
         Client client = new Client();
         client.setClientName(request.clientName().trim());
         client.setAdvisorId(request.advisorId());
         client.setModelPortfolioId(request.modelPortfolioId());
         client.setCreatedByUserId(request.createdByUserId());
-        client.setCashBalance(request.cashBalance() == null ? BigDecimal.ZERO : request.cashBalance());
+        client.setCashBalance(BigDecimal.ZERO);
 
         clientMapper.insertClient(client);
         return getClient(client.getClientId());
@@ -70,11 +73,13 @@ public class ClientServiceImpl implements ClientService {
         if (request.clientName() != null && request.clientName().isBlank()) {
             throw new IllegalArgumentException("Client name cannot be blank.");
         }
-        if (request.cashBalance() != null && request.cashBalance().signum() < 0) {
-            throw new IllegalArgumentException("Client cash balance cannot be negative.");
+        if (request.cashBalance() != null) {
+            throw new IllegalArgumentException(
+                    "Use the banking cash-movement workflow to change cash.");
         }
         validateOptionalPositiveId(request.advisorId(), "Advisor id must be a positive integer.");
-        validateOptionalPositiveId(request.modelPortfolioId(), "Model portfolio id must be a positive integer.");
+        validateOptionalPositiveId(
+                request.modelPortfolioId(), "Model portfolio id must be a positive integer.");
         if (request.clientName() == null
                 && request.advisorId() == null
                 && request.modelPortfolioId() == null
@@ -87,7 +92,6 @@ public class ClientServiceImpl implements ClientService {
         update.setClientName(request.clientName() == null ? null : request.clientName().trim());
         update.setAdvisorId(request.advisorId());
         update.setModelPortfolioId(request.modelPortfolioId());
-        update.setCashBalance(request.cashBalance());
 
         int rows = clientMapper.updateClient(update);
         if (rows == 0) {
