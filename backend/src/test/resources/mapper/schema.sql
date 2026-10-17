@@ -115,3 +115,5 @@ CREATE TABLE client_holdings (
     as_of_date DATE NOT NULL,
     UNIQUE (client_id, instrument_id, as_of_date)
 );
+
+ALTER TABLE client_trades ADD COLUMN submitted_at TIMESTAMP WITH TIME ZONE;
