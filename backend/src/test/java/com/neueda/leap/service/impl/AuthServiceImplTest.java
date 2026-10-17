@@ -45,11 +45,23 @@ class AuthServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        SecretKey jwtSigningKey = new SecretKeySpec(
-                "test-jwt-secret-test-jwt-secret-123456".getBytes(StandardCharsets.UTF_8),
-                "HmacSHA256"
-        );
-        authService = new AuthServiceImpl(userMapper, userService, clientProfileMapper, clientMapper, jwtSigningKey);
+        SecretKey jwtSigningKey =
+                new SecretKeySpec(
+                        "test-jwt-secret-test-jwt-secret-123456".getBytes(StandardCharsets.UTF_8),
+                        "HmacSHA256");
+        authService =
+                new AuthServiceImpl(
+                        userMapper,
+                        userService,
+                        clientProfileMapper,
+                        clientMapper,
+                        new com.neueda.leap.service.SessionService(
+                                org.mockito.Mockito.mock(
+                                        com.neueda.leap.mapper.AuthSessionMapper.class),
+                                jwtSigningKey,
+                                java.time.Clock.systemUTC(),
+                                "tadpoles",
+                                "tadpoles-workspace"));
     }
 
     @Test
@@ -74,7 +86,9 @@ class AuthServiceImplTest {
         when(userMapper.findRolesByUserId(14)).thenReturn(List.of("CLIENT"));
         when(clientProfileMapper.findByUserId(14)).thenReturn(profile);
 
-        LoginResponseDto response = authService.login(new LoginRequestDto("client01@tadpoles.dev", "StrongPassword123!"));
+        LoginResponseDto response =
+                authService.login(
+                        new LoginRequestDto("client01@tadpoles.dev", "StrongPassword123!"));
 
         assertNotNull(response.token());
         assertEquals("Bearer", response.tokenType());
@@ -94,10 +108,13 @@ class AuthServiceImplTest {
 
         when(userMapper.findByUsername("client01@tadpoles.dev")).thenReturn(user);
 
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
-                () -> authService.login(new LoginRequestDto("client01@tadpoles.dev", "WrongPassword123!"))
-        );
+        ResponseStatusException exception =
+                assertThrows(
+                        ResponseStatusException.class,
+                        () ->
+                                authService.login(
+                                        new LoginRequestDto(
+                                                "client01@tadpoles.dev", "WrongPassword123!")));
 
         assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatusCode());
     }
@@ -110,10 +127,13 @@ class AuthServiceImplTest {
         user.setEmail("jane@example.com");
         user.setDisplayName("Jane Doe");
 
-        when(userService.createClientAccount(new SignupRequestDto("jane@example.com", "StrongPassword123!", "Jane Doe")))
+        when(userService.createClientAccount(
+                        new SignupRequestDto("jane@example.com", "StrongPassword123!", "Jane Doe")))
                 .thenReturn(user);
 
-        SignupResponseDto response = authService.signup(new SignupRequestDto("jane@example.com", "StrongPassword123!", "Jane Doe"));
+        SignupResponseDto response =
+                authService.signup(
+                        new SignupRequestDto("jane@example.com", "StrongPassword123!", "Jane Doe"));
 
         assertEquals(24, response.userId());
         assertEquals("CLIENT", response.role());
@@ -121,4 +141,3 @@ class AuthServiceImplTest {
         assertNotNull(response.token());
     }
 }
-
