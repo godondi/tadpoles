@@ -10,6 +10,7 @@ export class PageResource<T> {
   readonly error = signal('');
   readonly status = signal(0);
   private request?: Subscription;
+
   constructor() {
     const clear = inject(AuthService).sessionChanged.subscribe(() => {
       this.request?.unsubscribe();
@@ -22,9 +23,10 @@ export class PageResource<T> {
       clear.unsubscribe();
     });
   }
-  load(source: Observable<T>): void {
+
+  load(source: Observable<T>, preserveData = false): void {
     this.request?.unsubscribe();
-    this.data.set(null);
+    if (!preserveData) this.data.set(null);
     this.error.set('');
     this.status.set(0);
     this.loading.set(true);

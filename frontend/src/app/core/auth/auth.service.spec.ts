@@ -32,7 +32,7 @@ describe('AuthService authoritative initialization', () => {
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => {
-    TestBed.inject(AuthService).logout();
+    TestBed.inject(AuthService).logout(false);
     http.verify();
     localStorage.clear();
   });
@@ -53,7 +53,7 @@ describe('AuthService authoritative initialization', () => {
   it('bootstraps staff identity without a client profile', async () => {
     const auth = await login(['TRADING_OPS']);
     expect(auth.roles()).toEqual(['TRADING_OPS']);
-    expect(auth.home()).toBe('/operations/orders');
+    expect(auth.home()).toBe('/operations/instruments');
     http.expectNone((r) => r.url.endsWith('/profile'));
   });
   it('loads client profile only on entering client context', async () => {
@@ -106,7 +106,7 @@ describe('AuthService authoritative initialization', () => {
     request('/auth/login').flush(session);
     await Promise.resolve();
     const req = request('/api/users/me');
-    auth.logout();
+    auth.logout(false);
     expect(req.cancelled).toBe(true);
     await pending;
     expect(auth.identity()).toBeNull();
@@ -133,5 +133,29 @@ describe('AuthService authoritative initialization', () => {
     request('/api/users/me').flush({ ...identity, roles: ['FINANCE'] });
     expect(await pending).toBe(true);
     expect(auth.roles()).toEqual(['FINANCE']);
+  });
+  it('revokes the server session with the current token before clearing local state', async () => {
+    const auth = await login();
+    auth.logout();
+    const req = request('/api/auth/logout');
+    expect(req.request.headers.get('Authorization')).toBe('Bearer test-token');
+    expect(auth.identity()).toBeNull();
+    req.flush(null, { status: 204, statusText: 'No Content' });
+    expect(auth.logoutNotice()).toBe('Signed out.');
+  });
+  it('clears local state when offline without claiming server revocation', async () => {
+    const auth = await login();
+    auth.logout();
+    request('/api/auth/logout').error(new ProgressEvent('offline'));
+    expect(auth.identity()).toBeNull();
+    expect(auth.logoutNotice()).toContain('could not be confirmed');
+  });
+  it('clears the current identity on another tab logout', async () => {
+    const auth = await login();
+    window.dispatchEvent(
+      new StorageEvent('storage', { key: 'tadpoles.auth.session', newValue: null }),
+    );
+    expect(auth.identity()).toBeNull();
+    expect(auth.getAccessToken()).toBeNull();
   });
 });

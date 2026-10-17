@@ -1,93 +1,204 @@
 import { Component, inject } from '@angular/core';
-import { DatePipe, DecimalPipe } from '@angular/common';
-import { ActivatedRoute, RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
-import { WorkspaceApi, Portfolio, Page, Order } from '../../core/api/workspace-api.service';
+import { DisplayCurrencyComponent } from './display-currency.component';
+import { DatePipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import {
+  WorkspaceApi,
+  Portfolio,
+  PortfolioValuation,
+  Page,
+  Order,
+} from '../../core/api/workspace-api.service';
+import { OrderStatusService } from '../../core/api/order-status.service';
 import { PageResource } from '../../shared/workspace/page-resource';
 import { RequestStateComponent } from '../../shared/workspace/request-state.component';
 import { OrdersTableComponent } from '../../shared/workspace/orders-table.component';
+
 @Component({
   selector: 'app-account-page',
-  imports: [DatePipe, DecimalPipe, RouterLink, RequestStateComponent, OrdersTableComponent],
-  template: ` <header class="workspace-heading">
+  imports: [
+    DisplayCurrencyComponent,
+    DatePipe,
+    RouterLink,
+    RequestStateComponent,
+    OrdersTableComponent,
+  ],
+  template: `
+    <header class="workspace-heading">
       <p class="eyebrow">MY ACCOUNT</p>
-      <h1 tabindex="-1">{{ portfolioOnly ? 'Portfolio' : 'Your account at a glance' }}</h1>
-      <p>
-        {{
-          portfolioOnly
-            ? 'Your recorded cash and latest holding snapshots.'
-            : 'Review your account, explore markets and follow your orders.'
-        }}
-      </p>
+      <h1 tabindex="-1">Your account at a glance</h1>
+      <p>See what is available, explore instruments and follow your orders.</p>
     </header>
     <app-request-state
-      [loading]="resource.loading()"
+      [loading]="resource.loading() && !resource.data()"
       [error]="resource.error()"
       [status]="resource.status()"
       (retry)="load()"
     />
     @if (resource.data(); as data) {
-      <div class="summary-grid">
-        <section class="panel">
-          <p class="eyebrow">RECORDED CASH</p>
-          <h2 class="mono-value">{{ data.portfolio.postedCash | number: '1.2-2' }}</h2>
-          <p>Currency not recorded</p>
-          <p class="muted">Available to spend: unavailable</p>
-        </section>
-        <section class="panel">
-          <p class="eyebrow">HOLDING SNAPSHOTS</p>
-          <h2>{{ data.portfolio.positions.length }} instruments</h2>
-          <p>Latest recorded positions</p>
-          <a routerLink="/app/markets">Explore the market catalog →</a>
-        </section>
-        <section class="panel">
-          <p class="eyebrow">TRADING STATUS</p>
-          <h2>Not enabled yet</h2>
-          <p>
-            You can browse instruments and review existing records. New orders are not available.
-          </p>
-          <a routerLink="/app/orders">View order history →</a>
-        </section>
+      <div class="section-heading">
+        <p class="eyebrow">USD ACCOUNT · INTERNAL BOOKING</p>
+        <div class="actions">
+          <a routerLink="/app/banking">Deposit / withdraw</a>
+          <a routerLink="/app/markets">Find an instrument →</a>
+        </div>
       </div>
-      <p class="as-of">Retrieved {{ data.portfolio.retrievedAt | date: 'medium' : 'UTC' }} UTC</p>
-      <aside class="notice">
-        <h2>About these account values</h2>
-        <p>{{ data.portfolio.limitation }}</p>
-      </aside>
+      <div class="account-balances">
+        <section
+          class="panel"
+          aria-labelledby="investing-heading"
+          [attr.aria-busy]="valuation.loading()"
+        >
+          <h2 id="investing-heading" class="eyebrow">Investing</h2>
+          @if (valuation.data(); as estimate) {
+            <p class="mono-value metric-value">
+              {{ valuation.error() ? 'Unavailable' : (estimate.totalValue ?? 'Unavailable') }}
+              @if (!valuation.error() && estimate.totalValue !== null) {
+                <small>USD</small>
+              }
+            </p>
+            @if (!valuation.error()) {
+              <p>
+                Holdings estimate: {{ estimate.holdingsValue ?? 'Unavailable' }}
+                @if (estimate.holdingsValue !== null) {
+                  USD
+                }
+              </p>
+              <p>
+                Cash balance: {{ estimate.cashBalance ?? 'Unavailable' }}
+                @if (estimate.cashBalance !== null) {
+                  USD
+                }
+              </p>
+              @if (estimate.unpricedTickers.length) {
+                <p class="muted">
+                  Prices unavailable for {{ estimate.unpricedTickers.join(', ') }}. The full total
+                  cannot be calculated.
+                </p>
+              }
+              <p class="as-of">
+                Account snapshot {{ estimate.snapshotAt | date: 'medium' : 'UTC' }} UTC
+              </p>
+              @if (estimate.quoteAsOf) {
+                <p class="as-of">
+                  Oldest quote {{ estimate.quoteAsOf | date: 'medium' : 'UTC' }} UTC
+                </p>
+              }
+            }
+          } @else {
+            <p class="mono-value metric-value">
+              {{ valuation.loading() ? 'Calculating…' : 'Unavailable' }}
+            </p>
+          }
+          <p class="muted">
+            Estimated holdings value plus total cash. This is not cash available to spend.
+          </p>
+          <p class="metric-status" role="status">
+            @if (valuation.loading()) {
+              Updating estimate…
+            }
+            @if (valuation.error()) {
+              Prices could not be loaded. Your settled cash is unaffected.
+            }
+          </p>
+          <button type="button" (click)="loadValuation()" [disabled]="valuation.loading()">
+            Refresh estimate
+          </button>
+        </section>
+        <section class="panel" aria-labelledby="settled-balance-heading">
+          <h2 id="settled-balance-heading" class="eyebrow">Settled balance</h2>
+          @for (balance of data.balances; track balance.currency) {
+            <p class="mono-value metric-value">
+              {{ balance.available }}
+              <small>{{ balance.currency }}</small>
+            </p>
+            <p>Available to invest or withdraw</p>
+            <p>Reserved for pending buys: {{ balance.reserved }} {{ balance.currency }}</p>
+            <p>Total settled cash: {{ balance.posted }} {{ balance.currency }}</p>
+            <p class="as-of">Committed {{ balance.updatedAt | date: 'medium' : 'UTC' }} UTC</p>
+          } @empty {
+            <p class="mono-value metric-value">Unavailable</p>
+            <p class="muted">Your USD cash account is not available.</p>
+          }
+        </section>
+        @for (balance of data.balances; track balance.currency) {
+          @if (balance.currency === 'USD') {
+            <app-display-currency [availableUsd]="balance.available" />
+          }
+        } @empty {
+          <section class="panel">
+            <h2>Available cash in another currency</h2>
+            <p class="muted">A USD cash balance is needed for a display estimate.</p>
+          </section>
+        }
+      </div>
+      <p class="muted">
+        Available cash is your posted balance minus amounts reserved for pending buys. Sales settle
+        internally when the fill commits.
+      </p>
+      @if (!data.tradingEnabled) {
+        <p class="notice">
+          New order admission is currently unavailable. Your orders and balances remain saved.
+        </p>
+      }
       <section class="panel">
-        <h2>Recorded holdings</h2>
-        @if (!data.portfolio.positions.length) {
+        <div class="section-heading">
+          <h2>Your positions</h2>
+          <a routerLink="/app/markets">Browse markets</a>
+        </div>
+        @if (!data.currentPositions?.length) {
           <div class="empty">
-            <h3>No holdings recorded</h3>
-            <p>There are no recorded positions in this account.</p>
-            <a routerLink="/app/markets">Browse markets</a>
+            <h3>Your first investment starts here</h3>
+            <p>Choose an instrument and review its estimated impact before buying.</p>
+            <p>
+              If your available cash is zero, add a bank reference and make an internal deposit.
+            </p>
           </div>
         } @else {
-          <div class="table-wrapper" tabindex="0" aria-label="Holdings, scroll horizontally">
+          <div
+            class="table-wrapper"
+            tabindex="0"
+            aria-label="Current positions, scroll horizontally"
+          >
             <table>
-              <caption>
-                Latest snapshot per instrument · not an available-to-sell balance
-              </caption>
+              <caption>Committed positions · pending buys are not included</caption>
               <thead>
                 <tr>
-                  <th scope="col">Instrument</th>
-                  <th scope="col">Recorded quantity</th>
-                  <th scope="col">Currency</th>
-                  <th scope="col">Snapshot date</th>
+                  <th>Instrument</th>
+                  <th>Owned</th>
+                  <th>Reserved to sell</th>
+                  <th>Available to sell</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                @for (position of data.portfolio.positions; track position.holdingId) {
+                @for (p of data.currentPositions; track p.instrumentId) {
                   <tr>
                     <td>
-                      <a [routerLink]="['/app/instruments', position.instrumentId]">{{
-                        position.ticker
-                      }}</a
-                      ><small>{{ position.name }}</small>
+                      <a [routerLink]="['/app/instruments', p.instrumentId]">{{ p.ticker }}</a>
+                      <small>{{ p.name }} · {{ p.currency }}</small>
                     </td>
-                    <td class="mono-value">{{ position.quantity | number: '1.0-6' }}</td>
-                    <td>{{ position.currency }}</td>
-                    <td>{{ position.asOfDate }}</td>
+                    <td>{{ p.owned }}</td>
+                    <td>{{ p.reserved }}</td>
+                    <td>{{ p.available }}</td>
+                    <td>
+                      <a
+                        [routerLink]="['/app/trade', p.instrumentId]"
+                        [queryParams]="{ side: 'BUY' }"
+                      >
+                        Buy
+                      </a>
+                      @if (hasUnits(p.available)) {
+                        <a
+                          class="position-sell"
+                          [routerLink]="['/app/trade', p.instrumentId]"
+                          [queryParams]="{ side: 'SELL' }"
+                        >
+                          Sell
+                        </a>
+                      }
+                    </td>
                   </tr>
                 }
               </tbody>
@@ -95,27 +206,67 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
           </div>
         }
       </section>
-      @if (!portfolioOnly) {
-        <section class="panel">
-          <div class="section-heading">
-            <h2>Recent orders</h2>
-            <a routerLink="/app/orders">All orders →</a>
-          </div>
-          <app-orders-table [orders]="data.orders.items" />
+      @if (data.migrationExceptions?.length) {
+        <section class="notice">
+          <h2>Historical records need review</h2>
+          <p>These records are preserved separately and cannot be spent or sold.</p>
+          @for (e of data.migrationExceptions; track e.id) {
+            <p>Reference {{ e.id }} · {{ e.kind }}</p>
+          }
         </section>
       }
-    }`,
+      <p class="as-of">
+        Retrieved {{ data.retrievedAt | date: 'medium' : 'UTC' }} UTC · automatic updates for up to
+        10 minutes; refresh to resume.
+      </p>
+      <p class="muted">{{ data.limitation }}</p>
+    }
+    <section class="panel">
+      <div class="section-heading">
+        <h2>Recent orders</h2>
+        <a routerLink="/app/orders">All orders →</a>
+      </div>
+      <app-request-state
+        [loading]="recent.loading() && !recent.data()"
+        [error]="recent.error()"
+        [status]="recent.status()"
+        (retry)="loadOrders()"
+      />
+      @if (recent.data(); as orders) {
+        <app-orders-table [orders]="orders.items" />
+      }
+    </section>
+  `,
 })
 export class AccountPageComponent {
   private readonly api = inject(WorkspaceApi);
-  readonly portfolioOnly = inject(ActivatedRoute).snapshot.data['portfolioOnly'] === true;
-  readonly resource = new PageResource<{ portfolio: Portfolio; orders: Page<Order> }>();
+  readonly resource = new PageResource<Portfolio>();
+  readonly recent = new PageResource<Page<Order>>();
+  readonly valuation = new PageResource<PortfolioValuation>();
+
   constructor() {
     this.load();
+    inject(OrderStatusService)
+      .watch()
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.load());
   }
+
   load() {
-    this.resource.load(
-      forkJoin({ portfolio: this.api.portfolio(), orders: this.api.orders({ pageSize: 5 }) }),
-    );
+    this.resource.load(this.api.portfolio(), true);
+    this.loadOrders();
+    this.loadValuation();
+  }
+
+  loadValuation() {
+    this.valuation.load(this.api.portfolioValuation(), true);
+  }
+
+  loadOrders() {
+    this.recent.load(this.api.orders({ pageSize: 5 }), true);
+  }
+
+  hasUnits(value: string) {
+    return /[1-9]/.test(value);
   }
 }

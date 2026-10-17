@@ -6,15 +6,19 @@ export const WORKSPACES = [
     links: [
       ['Overview', '/app/overview'],
       ['Markets', '/app/markets'],
-      ['Portfolio', '/app/portfolio'],
       ['Orders', '/app/orders'],
+      ['Banking & cash', '/app/banking'],
     ],
   },
   {
     role: 'TRADING_OPS',
     label: 'Trading operations',
-    home: '/operations/orders',
-    links: [['Orders & monitoring', '/operations/orders']],
+    home: '/operations/instruments',
+    links: [
+      ['Orders & monitoring', '/operations/orders'],
+      ['Instruments', '/operations/instruments'],
+      ['Add instrument', '/operations/instruments/new'],
+    ],
   },
   {
     role: 'COMPLIANCE',
@@ -38,7 +42,7 @@ export const WORKSPACES = [
   {
     role: 'FINANCE',
     label: 'Finance',
-    home: '/finance/overview',
+    home: '/finance/reconciliation',
     links: [
       ['Overview', '/finance/overview'],
       ['Reconciliation', '/finance/reconciliation'],
@@ -57,11 +61,12 @@ export function landingPage(roles: readonly string[]): string {
 export function routeRole(url: string): WorkspaceRole | null {
   const path = url.split(/[?#]/)[0];
   if (
-    /^\/(app\/(overview|markets|portfolio|orders(?:\/\d+)?|instruments\/\d+|trade\/\d+)|profile|onboarding|trades|trade\/[A-Za-z0-9.^=-]+)$/.test(
+    /^\/(app\/(overview|markets|portfolio|banking|orders(?:\/\d+)?|instruments\/\d+|trade\/\d+)|profile|onboarding|trades|trade\/[A-Za-z0-9.^=-]+)$/.test(
       path,
     )
   )
     return 'CLIENT';
+  if (isInstrumentManagementRoute(path)) return 'TRADING_OPS';
   if (/^\/operations\/orders(?:\/\d+)?$/.test(path)) return 'TRADING_OPS';
   if (/^\/compliance\/(investigations(?:\/\d+)?|evidence)$/.test(path)) return 'COMPLIANCE';
   if (/^\/analytics\/(overview|trends|instruments)$/.test(path)) return 'ANALYST';
@@ -76,6 +81,11 @@ export function safeReturnUrl(value: string | null, roles: readonly string[]): s
     /[\\\s%;]/.test(value.split('?')[0])
   )
     return landingPage(roles);
+  if (isInstrumentManagementRoute(value) && roles.includes('CLIENT')) return landingPage(roles);
   const role = routeRole(value);
   return role && roles.includes(role) ? value : landingPage(roles);
+}
+
+export function isInstrumentManagementRoute(url: string): boolean {
+  return /^\/operations\/instruments(?:\/(?:new|[1-9]\d*))?$/.test(url.split(/[?#]/)[0]);
 }
