@@ -38,6 +38,11 @@ services:
       TRADING_LOCAL_DEMO_SETUP: ${TRADING_LOCAL_DEMO_SETUP:-true}
       # Fictitious local demo only. Hardened deployments require a separately provisioned key.
       BANKING_ENCRYPTION_KEY: ${BANKING_ENCRYPTION_KEY:-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
+      TRADING_ADMISSION_ENABLED: ${TRADING_ADMISSION_ENABLED:-true}
+      TRADING_WORKER_ENABLED: ${TRADING_WORKER_ENABLED:-true}
+      TRADING_LOCAL_DEMO_SETUP: ${TRADING_LOCAL_DEMO_SETUP:-true}
+      # Fictitious local demo only. Hardened deployments require a separately provisioned key.
+      BANKING_ENCRYPTION_KEY: ${BANKING_ENCRYPTION_KEY:-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
     ports:
       - "${BACKEND_HOST_PORT}:${BACKEND_CONTAINER_PORT}"
@@ -99,8 +104,22 @@ services:
       - ./database/demo/role_workspaces.sql:/role_workspaces.sql:ro
     command: ["psql", "-v", "ON_ERROR_STOP=1", "-f", "/role_workspaces.sql"]
     depends_on:
-      database-migrate:
-        condition: service_completed_successfully
+      database:
+        condition: service_healthy
+
+  auth-stub:
+    build:
+      context: ./auth-stub
+      dockerfile: Dockerfile
+    image: tadpole-auth-stub:latest
+    container_name: tadpole-auth-stub
+    env_file:
+      - .env
+    environment:
+      PORT: ${AUTH_STUB_PORT}
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "${AUTH_STUB_HOST_PORT}:${AUTH_STUB_CONTAINER_PORT}"
 
 #  testing:
 #    build:

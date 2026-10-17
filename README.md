@@ -4,8 +4,6 @@ The current application uses one USD ledger, Fauxnance market data, internally b
 
 Default local startup is `docker compose up --build -d` after configuring `.env` from `.env.template` with provider credentials. Do not overwrite an existing environment file or delete retained database volumes.
 
-Database startup, migrations, fixtures and permissions are explained in the [database guide](database/README.md), including the SQL dependency diagram.
-
 ## Team Member Names
 - Devon: Dates
 - Grace: Grapes
@@ -19,6 +17,9 @@ For our project, we opted to use Git-Flow Development, for the purpose of mainta
 
 We will impose a rule that all pull requests must be reviewed by at least one other team member and pass all Jenkins testing within pipeline.
 
+## Historical role overview
+
+Current scoped permissions are documented in the guide above; ADMIN does not bypass Trading Operations instrument controls.
 ## Historical role overview
 
 Current scoped permissions are documented in the guide above; ADMIN does not bypass Trading Operations instrument controls.
@@ -43,6 +44,7 @@ Current scoped permissions are documented in the guide above; ADMIN does not byp
 - View reports and recommendations provided by their advisor.
 
 ## Database Integration Testing
+- Schema under test: `database/fresh/001_schema.sql` plus the retained upgrade migrations
 - Schema under test: `database/fresh/001_schema.sql` plus the retained upgrade migrations
 - Test suite location: `testing/src/test/java/com/neueda/leap/db`
 - Local run (requires Docker daemon for Testcontainers):
