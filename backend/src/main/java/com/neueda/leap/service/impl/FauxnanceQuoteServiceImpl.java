@@ -26,7 +26,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class FauxnanceQuoteServiceImpl implements FauxnanceQuoteService {
     private static final String API_KEY_HEADER = "X-Api-Key";
     private static final String DEFAULT_DISCLAIMER = "Educational data. Not for investment use.";
-    private static final String DEFAULT_SPREAD_SOURCE = "modelled";
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
@@ -37,12 +36,12 @@ public class FauxnanceQuoteServiceImpl implements FauxnanceQuoteService {
     public FauxnanceQuoteServiceImpl(
             RestTemplateBuilder restTemplateBuilder,
             ObjectMapper objectMapper,
-            @Value("${fauxnance.base-url:${FAUX_SERVER_URL:https://y4t9nq2bqf.execute-api.eu-west-2.amazonaws.com/v1}}")
-            String baseUrl,
+            @Value(
+                            "${fauxnance.base-url:${FAUX_SERVER_URL:https://y4t9nq2bqf.execute-api.eu-west-2.amazonaws.com/v1}}")
+                    String baseUrl,
             @Value("${fauxnance.api-key:${FAUX_API_KEY:}}") String apiKey,
             @Value("${fauxnance.connect-timeout-seconds:10}") long connectTimeoutSeconds,
-            @Value("${fauxnance.read-timeout-seconds:20}") long readTimeoutSeconds
-    ) {
+            @Value("${fauxnance.read-timeout-seconds:20}") long readTimeoutSeconds) {
         this(
                 restTemplateBuilder
                         .setConnectTimeout(Duration.ofSeconds(connectTimeoutSeconds))
@@ -50,16 +49,11 @@ public class FauxnanceQuoteServiceImpl implements FauxnanceQuoteService {
                         .build(),
                 objectMapper,
                 baseUrl,
-                apiKey
-        );
+                apiKey);
     }
 
     FauxnanceQuoteServiceImpl(
-            RestTemplate restTemplate,
-            ObjectMapper objectMapper,
-            String baseUrl,
-            String apiKey
-    ) {
+            RestTemplate restTemplate, ObjectMapper objectMapper, String baseUrl, String apiKey) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.baseUrl = trimTrailingSlash(baseUrl);
@@ -71,41 +65,40 @@ public class FauxnanceQuoteServiceImpl implements FauxnanceQuoteService {
         String normalizedSymbol = normalizeSymbol(symbol);
 
         if (!StringUtils.hasText(apiKey)) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Fauxnance API key is not configured.");
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Fauxnance API key is not configured.");
         }
 
-        URI uri = UriComponentsBuilder.fromUriString(baseUrl)
-                .pathSegment("quotes", normalizedSymbol)
-                .build(true)
-                .toUri();
+        URI uri =
+                UriComponentsBuilder.fromUriString(baseUrl)
+                        .pathSegment("quotes", normalizedSymbol)
+                        .build(true)
+                        .toUri();
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(API_KEY_HEADER, apiKey);
 
         try {
-            ResponseEntity<FauxnanceQuoteResponse> response = restTemplate.exchange(
-                    uri,
-                    HttpMethod.GET,
-                    new HttpEntity<>(headers),
-                    FauxnanceQuoteResponse.class
-            );
+            ResponseEntity<FauxnanceQuoteResponse> response =
+                    restTemplate.exchange(
+                            uri,
+                            HttpMethod.GET,
+                            new HttpEntity<>(headers),
+                            FauxnanceQuoteResponse.class);
 
             FauxnanceQuoteResponse body = response.getBody();
             if (body == null || body.getData() == null || body.getMeta() == null) {
-                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Fauxnance returned an empty quote response.");
+                throw new ResponseStatusException(
+                        HttpStatus.SERVICE_UNAVAILABLE,
+                        "Fauxnance returned an empty quote response.");
             }
 
             if (!StringUtils.hasText(body.getMeta().getDisclaimer())) {
                 body.getMeta().setDisclaimer(DEFAULT_DISCLAIMER);
             }
 
-            if (!StringUtils.hasText(body.getMeta().getSpreadSource())) {
-                body.getMeta().setSpreadSource(DEFAULT_SPREAD_SOURCE);
-            }
-
-            if (body.getMeta().getStale() == null) {
-                body.getMeta().setStale(false);
-            }
+            // Preserve unknown provider facts. In particular, absent freshness is not
+            // evidence of a fresh quote, and an absent spread source is not "modelled".
 
             return body;
         } catch (HttpStatusCodeException exception) {
@@ -123,7 +116,9 @@ public class FauxnanceQuoteServiceImpl implements FauxnanceQuoteService {
     private RuntimeException translateUpstreamException(HttpStatusCodeException exception) {
         HttpStatus status = HttpStatus.resolve(exception.getStatusCode().value());
         HttpStatus resolvedStatus = status == null ? HttpStatus.SERVICE_UNAVAILABLE : status;
-        String message = extractErrorMessage(exception.getResponseBodyAsString(), resolvedStatus.getReasonPhrase());
+        String message =
+                extractErrorMessage(
+                        exception.getResponseBodyAsString(), resolvedStatus.getReasonPhrase());
 
         if (resolvedStatus == HttpStatus.BAD_REQUEST) {
             return new IllegalArgumentException(message);
@@ -162,4 +157,3 @@ public class FauxnanceQuoteServiceImpl implements FauxnanceQuoteService {
         return trimmed;
     }
 }
-
