@@ -9,6 +9,8 @@ import {
 import { AuthenticatedShellComponent } from './layout/authenticated-shell.component';
 const staff = () =>
   import('./shared/workspace/staff-page.component').then((m) => m.StaffPageComponent);
+const analytics = () =>
+  import('./features/analytics/analytics-page.component').then((m) => m.AnalyticsPageComponent);
 const message = () =>
   import('./shared/workspace/message-page.component').then((m) => m.MessagePageComponent);
 const client = [clientGuard];
@@ -136,6 +138,33 @@ export const routes: Routes = [
                 (m) => m.LegacyInstrumentComponent,
               ),
           },
+            {
+              path: 'analytics/overview',
+              loadComponent: analytics,
+              data: {
+                analyticsView: 'overview',
+                title: 'Analytics overview',
+                description: 'A read-only view of aggregate trading activity with explicit freshness and metric definitions.',
+              },
+            },
+            {
+              path: 'analytics/trends',
+              loadComponent: analytics,
+              data: {
+                analyticsView: 'trends',
+                title: 'Activity trends',
+                description: 'Explore historical activity over an explicit reporting period and granularity.',
+              },
+            },
+            {
+              path: 'analytics/instruments',
+              loadComponent: analytics,
+              data: {
+                analyticsView: 'instruments',
+                title: 'Instrument analysis',
+                description: 'Compare approved aggregate activity by instrument, market, unit, and currency.',
+              },
+            },
           ...[
             [
               'operations/orders',
@@ -180,33 +209,6 @@ export const routes: Routes = [
               'Review approved evidence requests and access purposes.',
               'Export history and protected downloads after purpose, redaction and retention policies are approved.',
               '/api/compliance/evidence',
-              '',
-            ],
-            [
-              'analytics/overview',
-              'Analytics overview',
-              'Business analytics',
-              'Understand aggregate trading activity.',
-              'Submitted, accepted, filled and rejected counts by currency, with source freshness.',
-              '/api/analytics/summary',
-              '',
-            ],
-            [
-              'analytics/trends',
-              'Activity trends',
-              'Business analytics',
-              'Explore activity over time.',
-              'Historical daily, weekly and monthly aggregates from a separate reporting source.',
-              '/api/analytics/trends',
-              '',
-            ],
-            [
-              'analytics/instruments',
-              'Instrument analysis',
-              'Business analytics',
-              'Compare activity across instruments and markets.',
-              'Aggregate order and fill counts with separate currency totals.',
-              '/api/analytics/instruments',
               '',
             ],
             [

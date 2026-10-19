@@ -16,7 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(properties="jwt.secret=test-jwt-secret-test-jwt-secret-123456")
 class StaffWorkspaceControllerTest {
     @Autowired MockMvc mvc;
-    @ParameterizedTest @CsvSource({"TRADING_OPS,/api/operations/orders","TRADING_OPS,/api/operations/orders/7","COMPLIANCE,/api/compliance/investigations","COMPLIANCE,/api/compliance/orders/7/evidence","COMPLIANCE,/api/compliance/evidence","ANALYST,/api/analytics/summary","ANALYST,/api/analytics/trends","ANALYST,/api/analytics/instruments","FINANCE,/api/finance/summary","FINANCE,/api/finance/reconciliations"})
+    @ParameterizedTest @CsvSource({"TRADING_OPS,/api/operations/orders","TRADING_OPS,/api/operations/orders/7","COMPLIANCE,/api/compliance/investigations","COMPLIANCE,/api/compliance/orders/7/evidence","COMPLIANCE,/api/compliance/evidence","FINANCE,/api/finance/summary","FINANCE,/api/finance/reconciliations"})
     void authorizedRoleSeesUnavailableInsteadOfInventedData(String role,String path) throws Exception {
         mvc.perform(get(path).with(jwtWithRoles(role))).andExpect(status().isServiceUnavailable()).andExpect(jsonPath("$.message").isString());
         mvc.perform(get(path).with(jwtWithRoles("CLIENT"))).andExpect(status().isForbidden());

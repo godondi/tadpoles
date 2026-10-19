@@ -15,9 +15,6 @@ public class StaffWorkspaceController {
     @GetMapping({"/compliance/investigations", "/compliance/orders/{id}/evidence", "/compliance/evidence"})
     @PreAuthorize("hasRole('COMPLIANCE')")
     public void compliance() { unavailable("Investigation evidence is not available yet. Approved access scopes, purposes and evidence policies must be configured. Exports are disabled."); }
-    @GetMapping({"/analytics/summary", "/analytics/trends", "/analytics/instruments", "/analytics/freshness"})
-    @PreAuthorize("hasRole('ANALYST')")
-    public void analytics() { unavailable("Reports are not available yet. The separate reporting source and approved metrics have not been connected. Data freshness is unavailable."); }
     @GetMapping({"/finance/summary", "/finance/reconciliations"})
     @PreAuthorize("hasRole('FINANCE')")
     public void finance() { unavailable("Reconciliation is not available yet. Verified cash and position postings and approved matching rules are required. Totals and fees are unavailable."); }

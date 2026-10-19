@@ -1,0 +1,5 @@
+GRANT USAGE ON SCHEMA reporting TO analytics_reader;
+GRANT SELECT ON ALL TABLES IN SCHEMA reporting TO analytics_reader;
+GRANT SELECT ON ALL SEQUENCES IN SCHEMA reporting TO analytics_reader;
+ALTER DEFAULT PRIVILEGES IN SCHEMA reporting GRANT SELECT ON TABLES TO analytics_reader;
+ALTER DEFAULT PRIVILEGES IN SCHEMA reporting GRANT SELECT ON SEQUENCES TO analytics_reader;
