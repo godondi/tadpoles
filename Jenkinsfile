@@ -54,6 +54,7 @@ pipeline {
                     docker build -t "tadpole-app:${image_tag}" -t tadpole-app:latest -f backend/Dockerfile backend
                                         docker build -t "tadpole-frontend:${image_tag}" -t tadpole-frontend:latest -f frontend/Dockerfile frontend
                                         docker build -t "tadpole-auth-stub:${image_tag}" -t tadpole-auth-stub:latest -f auth-stub/Dockerfile auth-stub
+                    docker build -t "tadpole-nginx:${image_tag}" -t tadpole-nginx:latest -f nginx/Dockerfile nginx
                 '''
             }
         }
@@ -82,9 +83,8 @@ pipeline {
                                         docker-compose --env-file "$CI_ENV_FILE" -p "$COMPOSE_PROJECT_NAME" up -d --build
 
                                         for url in \
-                                            http://localhost:8081/health \
-                                            http://localhost:8082/health \
-                                            http://localhost:8086/login; do
+                                            http://localhost:8080/health \
+                                            http://localhost:8080/login; do
                                             for i in $(seq 1 60); do
                                                 if curl --fail --silent --show-error "$url" >/dev/null; then
                                                     break

@@ -34,7 +34,7 @@ describe('MarketDataService with application HTTP configuration', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-10-08T00:30:00Z'));
     service.getCandles(' aapl ').subscribe();
-    const req = http.expectOne((r) => r.url.endsWith('/candles/AAPL'));
+    const req = http.expectOne((r) => r.url.endsWith('/api/candles/AAPL'));
     expect(req.request.params.get('from')).toBe('2025-10-07');
     expect(req.request.params.get('to')).toBe('2026-10-08');
     expect(req.request.params.get('interval')).toBe('1d');
@@ -43,7 +43,7 @@ describe('MarketDataService with application HTTP configuration', () => {
   });
   it('encodes special symbols into a single path segment and authenticates quotes', () => {
     service.getQuote('^gspc').subscribe();
-    const req = http.expectOne((r) => r.url.endsWith('/quotes/%5EGSPC'));
+    const req = http.expectOne((r) => r.url.endsWith('/api/quotes/%5EGSPC'));
     expect(req.request.method).toBe('GET');
     expect(req.request.headers.get('Authorization')).toBe('Bearer test-session-token');
     expect(req.request.params.keys()).toEqual([]);
