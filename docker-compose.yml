@@ -107,16 +107,6 @@ services:
       database:
         condition: service_healthy
 
-  auth-stub:
-    build:
-      context: ./auth-stub
-      dockerfile: Dockerfile
-    image: tadpole-auth-stub:latest
-    environment:
-      PORT: ${AUTH_STUB_PORT}
-      JWT_SECRET: ${JWT_SECRET}
-    ports:
-      - "${AUTH_STUB_HOST_PORT}:${AUTH_STUB_CONTAINER_PORT}"
 
 #  testing:
 #    build:
