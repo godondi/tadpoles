@@ -1,5 +1,6 @@
--- Revised schema for a Spring Boot application with JWT, Spring Security, admin dashboard support, and audit/history tracking.
--- This extends the original portfolio-management model with explicit user, role, token, and audit tables.
+-- LEGACY BASELINE: reconstructs the pre-migration schema for regression/upgrade tests.
+-- New application databases use ../fresh/001_schema.sql, not this file.
+-- Load optional 002_tadpoles_test_data.sql before migrations when testing historical data.
 
 CREATE TABLE users (
     user_id         SERIAL PRIMARY KEY,

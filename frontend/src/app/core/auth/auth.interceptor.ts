@@ -16,6 +16,7 @@ export class AuthInterceptor implements HttpInterceptor {
   private readonly auth = inject(AuthService);
   private readonly platform = inject(PLATFORM_ID);
   private readonly router = inject(Router);
+
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     const backend = new URL(buildApiUrl('/', this.platform));
     const url = new URL(request.url, backend);
@@ -33,7 +34,7 @@ export class AuthInterceptor implements HttpInterceptor {
           error.status === 401 &&
           token === this.auth.getAccessToken()
         ) {
-          this.auth.logout();
+          this.auth.logout(false);
           void this.router.navigate(['/login'], { queryParams: { expired: 'true' } });
         }
         return throwError(() => error);

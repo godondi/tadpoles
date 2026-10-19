@@ -20,6 +20,9 @@ interface LoginForm {
           <p class="login-subtitle">Sign in to your account or staff workspace.</p>
         </div>
 
+        @if (authService.logoutNotice()) {
+          <p role="status">{{ authService.logoutNotice() }}</p>
+        }
         <form class="login-form" (ngSubmit)="handleLogin()">
           <div class="form-group">
             <label for="email">Email or username</label>
@@ -278,7 +281,7 @@ interface LoginForm {
 export class LoginComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
-  private readonly authService = inject(AuthService);
+  readonly authService = inject(AuthService);
 
   readonly loginForm = signal<LoginForm>({
     email: '',

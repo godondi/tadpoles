@@ -14,7 +14,7 @@ public record FauxnanceDailyCandleDto(
         BigDecimal close,
         BigDecimal adjclose,
         Long volume,
-        boolean synthetic
+        Boolean synthetic
 ) {
     public static FauxnanceDailyCandleDto fromEntity(FauxnanceDailyCandle candle) {
         return new FauxnanceDailyCandleDto(

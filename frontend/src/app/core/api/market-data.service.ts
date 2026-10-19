@@ -9,8 +9,8 @@ export interface Candle {
   low: number;
   close: number;
   adjclose: number;
-  volume: number | null;
-  synthetic: boolean;
+  volume?: number | null;
+  synthetic: boolean | null;
 }
 export interface MarketMeta {
   asOf: string;
@@ -39,7 +39,7 @@ export interface QuoteResponse {
     asOf: string;
     marketState: 'open' | 'closed' | 'pre' | 'post' | 'unknown';
   };
-  meta: MarketMeta & { spreadSource: string };
+  meta: MarketMeta & { spreadSource: string | null };
 }
 
 @Injectable({ providedIn: 'root' })
@@ -50,8 +50,8 @@ export class MarketDataService {
   getCandles(symbol: string) {
     const to = new Date();
     const from = new Date(to);
-    // Fetch extra calendar days so weekends/holidays do not shrink the 30-session view.
-    from.setUTCDate(from.getUTCDate() - 90);
+    // Fetch daily history for visible 1M/3M/1Y ranges; the interval remains one day.
+    from.setUTCDate(from.getUTCDate() - 366);
     return this.http.get<CandlesResponse>(this.url('candles', symbol), {
       params: {
         interval: '1d',
@@ -60,9 +60,11 @@ export class MarketDataService {
       },
     });
   }
+
   getQuote(symbol: string) {
     return this.http.get<QuoteResponse>(this.url('quotes', symbol));
   }
+
   private url(kind: string, symbol: string) {
     return buildApiUrl(
       `/${kind}/${encodeURIComponent(symbol.trim().toUpperCase())}`,

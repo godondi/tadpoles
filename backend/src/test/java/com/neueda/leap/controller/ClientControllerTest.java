@@ -1,8 +1,8 @@
 package com.neueda.leap.controller;
 
-import static org.mockito.Mockito.when;
 import static com.neueda.leap.support.TestSecurityUtils.jwtWithRoles;
 import static com.neueda.leap.support.TestSecurityUtils.jwtWithSubjectAndRoles;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -44,8 +44,7 @@ class ClientControllerTest {
         Client client = buildClient();
         when(clientService.listClients()).thenReturn(List.of(client));
 
-        mockMvc.perform(get("/api/clients")
-                        .with(jwtWithRoles("ADMIN")))
+        mockMvc.perform(get("/api/clients").with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.clients[0].clientId").value(7))
                 .andExpect(jsonPath("$.clients[0].clientName").value("Alice Investor"))
@@ -57,18 +56,20 @@ class ClientControllerTest {
         Client client = buildClient();
         when(clientService.createClient(org.mockito.ArgumentMatchers.any())).thenReturn(client);
 
-        mockMvc.perform(post("/api/clients")
-                        .with(jwtWithRoles("ADMIN"))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "clientName": "Alice Investor",
-                                  "advisorId": 3,
-                                  "modelPortfolioId": 5,
-                                  "createdByUserId": 1,
-                                  "cashBalance": 1200.50
-                                }
-                                """))
+        mockMvc.perform(
+                        post("/api/clients")
+                                .with(jwtWithRoles("ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "clientName": "Alice Investor",
+                                          "advisorId": 3,
+                                          "modelPortfolioId": 5,
+                                          "createdByUserId": 1,
+                                          "cashBalance": 1200.50
+                                        }
+                                        """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.clientId").value(7))
                 .andExpect(jsonPath("$.clientName").value("Alice Investor"));
@@ -79,8 +80,7 @@ class ClientControllerTest {
         Client client = buildClient();
         when(clientService.getClient(7)).thenReturn(client);
 
-        mockMvc.perform(get("/api/clients/7")
-                        .with(jwtWithRoles("ADMIN")))
+        mockMvc.perform(get("/api/clients/7").with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.clientId").value(7))
                 .andExpect(jsonPath("$.clientName").value("Alice Investor"))
@@ -93,49 +93,48 @@ class ClientControllerTest {
     void getClientReturnsForbiddenWhenClientRequestsAnotherClient() throws Exception {
         when(appUserService.getUserByUsername("client01")).thenReturn(buildCurrentUser(7));
 
-        mockMvc.perform(get("/api/clients/8")
-                        .with(jwtWithSubjectAndRoles("client01", "CLIENT")))
+        mockMvc.perform(get("/api/clients/8").with(jwtWithSubjectAndRoles("client01", "CLIENT")))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message").value("Clients may only access their own records."));
+                .andExpect(
+                        jsonPath("$.message").value("Clients may only access their own records."));
     }
 
     @Test
     void updateClientReturnsJsonResponse() throws Exception {
         Client client = buildClient();
         client.setClientName("Alice Updated");
-        when(clientService.updateClient(org.mockito.ArgumentMatchers.eq(7), org.mockito.ArgumentMatchers.any()))
+        when(clientService.updateClient(
+                        org.mockito.ArgumentMatchers.eq(7), org.mockito.ArgumentMatchers.any()))
                 .thenReturn(client);
 
-        mockMvc.perform(patch("/api/clients/7")
-                        .with(jwtWithRoles("ADMIN"))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "clientName": "Alice Updated",
-                                  "cashBalance": 1400.00
-                                }
-                                """))
+        mockMvc.perform(
+                        patch("/api/clients/7")
+                                .with(jwtWithRoles("ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "clientName": "Alice Updated",
+                                          "cashBalance": 1400.00
+                                        }
+                                        """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.clientName").value("Alice Updated"));
     }
 
     @Test
-    void getClientBalanceReturnsJsonResponse() throws Exception {
-        when(clientService.getClientBalance(7)).thenReturn(new BigDecimal("1200.50"));
-
-        mockMvc.perform(get("/api/clients/7/balance")
-                        .with(jwtWithRoles("ADMIN")))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.clientId").value(7))
-                .andExpect(jsonPath("$.cashBalance").value(1200.5));
+    void scalarBalanceEndpointIsRetired() throws Exception {
+        mockMvc.perform(get("/api/clients/7/balance").with(jwtWithRoles("ADMIN")))
+                .andExpect(status().isGone());
+        org.mockito.Mockito.verifyNoInteractions(clientService);
     }
 
     @Test
     void getClientReturnsBadRequestForInvalidId() throws Exception {
-        when(clientService.getClient(0)).thenThrow(new IllegalArgumentException("Client id must be a positive integer."));
+        when(clientService.getClient(0))
+                .thenThrow(new IllegalArgumentException("Client id must be a positive integer."));
 
-        mockMvc.perform(get("/api/clients/0")
-                        .with(jwtWithRoles("ADMIN")))
+        mockMvc.perform(get("/api/clients/0").with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Client id must be a positive integer."));
     }

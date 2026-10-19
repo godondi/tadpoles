@@ -1,7 +1,7 @@
 import { CanActivateFn, CanActivateChildFn, Router } from '@angular/router';
 import { inject } from '@angular/core';
 import { AuthService } from './auth.service';
-import { routeRole } from './workspace-policy';
+import { isInstrumentManagementRoute, routeRole } from './workspace-policy';
 
 export const authGuard: CanActivateFn = async (_route, state) => {
   const auth = inject(AuthService),
@@ -17,6 +17,8 @@ export const workspaceGuard: CanActivateChildFn = async (_route, state) => {
   const auth = inject(AuthService),
     router = inject(Router);
   if (!(await auth.ensureInitialized())) return router.createUrlTree(['/login']);
+  if (isInstrumentManagementRoute(state.url) && auth.roles().includes('CLIENT'))
+    return router.createUrlTree(['/unauthorized']);
   const role = routeRole(state.url);
   return role && auth.roles().includes(role) ? true : router.createUrlTree(['/unauthorized']);
 };

@@ -11,7 +11,6 @@ import static org.mockito.Mockito.when;
 
 import com.neueda.leap.domain.AppUser;
 import com.neueda.leap.domain.RefreshToken;
-import com.neueda.leap.dto.AuthTokensResponseDto;
 import com.neueda.leap.dto.CreateRefreshTokenRequestDto;
 import com.neueda.leap.dto.IssuedRefreshTokenResponseDto;
 import com.neueda.leap.dto.RefreshTokenRequestDto;
@@ -55,7 +54,8 @@ class RefreshTokenServiceImplTest {
     @Test
     void listUserRefreshTokensReturnsTokens() {
         when(appUserService.getUser(1)).thenReturn(buildUser());
-        when(refreshTokenMapper.listUserRefreshTokens(1)).thenReturn(List.of(buildStoredRefreshToken()));
+        when(refreshTokenMapper.listUserRefreshTokens(1))
+                .thenReturn(List.of(buildStoredRefreshToken()));
 
         List<RefreshToken> results = refreshTokenService.listUserRefreshTokens(1);
 
@@ -67,12 +67,14 @@ class RefreshTokenServiceImplTest {
     void issueRefreshTokenCreatesHashedTokenAndReturnsRawValue() {
         CreateRefreshTokenRequestDto request = new CreateRefreshTokenRequestDto(3600L);
         when(appUserService.getUser(1)).thenReturn(buildUser());
-        when(refreshTokenMapper.insertRefreshToken(any())).thenAnswer(invocation -> {
-            RefreshToken token = invocation.getArgument(0, RefreshToken.class);
-            token.setRefreshTokenId(33);
-            token.setCreatedAt(LocalDateTime.of(2026, 9, 30, 9, 0));
-            return 1;
-        });
+        when(refreshTokenMapper.insertRefreshToken(any()))
+                .thenAnswer(
+                        invocation -> {
+                            RefreshToken token = invocation.getArgument(0, RefreshToken.class);
+                            token.setRefreshTokenId(33);
+                            token.setCreatedAt(LocalDateTime.of(2026, 9, 30, 9, 0));
+                            return 1;
+                        });
         when(refreshTokenMapper.getRefreshToken(33)).thenReturn(buildIssuedRefreshToken());
 
         IssuedRefreshTokenResponseDto result = refreshTokenService.issueRefreshToken(1, request);
@@ -86,26 +88,16 @@ class RefreshTokenServiceImplTest {
     }
 
     @Test
-    void refreshAccessTokenRotatesRefreshToken() {
-        String rawRefreshToken = "raw-refresh-token";
-        RefreshToken stored = buildStoredRefreshToken();
-        stored.setTokenHash(refreshTokenService.hashTokenForTesting(rawRefreshToken));
-        when(refreshTokenMapper.getRefreshTokenByTokenHash(stored.getTokenHash())).thenReturn(stored);
-        when(appUserService.getUser(1)).thenReturn(buildUser());
-        when(refreshTokenMapper.revokeRefreshToken(eq(21), any())).thenReturn(1);
-        when(refreshTokenMapper.insertRefreshToken(any())).thenAnswer(invocation -> {
-            RefreshToken token = invocation.getArgument(0, RefreshToken.class);
-            token.setRefreshTokenId(34);
-            return 1;
-        });
-        when(refreshTokenMapper.getRefreshToken(34)).thenReturn(buildRotatedRefreshToken());
-
-        AuthTokensResponseDto result = refreshTokenService.refreshAccessToken(new RefreshTokenRequestDto(rawRefreshToken));
-
-        assertNotNull(result.accessToken());
-        assertNotNull(result.refreshToken());
-        assertNotEquals(rawRefreshToken, result.refreshToken());
-        assertEquals("Bearer", result.tokenType());
+    void refreshCannotReturnAnOpaqueStringAsAnAccessJwt() {
+        var error =
+                assertThrows(
+                        ResponseStatusException.class,
+                        () ->
+                                refreshTokenService.refreshAccessToken(
+                                        new RefreshTokenRequestDto("raw-refresh-token")));
+        assertEquals(
+                org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE, error.getStatusCode());
+        org.mockito.Mockito.verifyNoInteractions(refreshTokenMapper, appUserService);
     }
 
     @Test
@@ -113,7 +105,8 @@ class RefreshTokenServiceImplTest {
         String rawRefreshToken = "raw-refresh-token";
         RefreshToken stored = buildStoredRefreshToken();
         stored.setTokenHash(refreshTokenService.hashTokenForTesting(rawRefreshToken));
-        when(refreshTokenMapper.getRefreshTokenByTokenHash(stored.getTokenHash())).thenReturn(stored);
+        when(refreshTokenMapper.getRefreshTokenByTokenHash(stored.getTokenHash()))
+                .thenReturn(stored);
         when(refreshTokenMapper.revokeRefreshToken(eq(21), any())).thenReturn(1);
 
         refreshTokenService.revokeRefreshToken(new RefreshTokenRequestDto(rawRefreshToken));
@@ -125,15 +118,17 @@ class RefreshTokenServiceImplTest {
     void getRefreshTokenThrowsWhenMissing() {
         when(refreshTokenMapper.getRefreshToken(99)).thenReturn(null);
 
-        assertThrows(RefreshTokenNotFoundException.class, () -> refreshTokenService.getRefreshToken(99));
+        assertThrows(
+                RefreshTokenNotFoundException.class, () -> refreshTokenService.getRefreshToken(99));
     }
 
     @Test
     void refreshAccessTokenThrowsUnauthorizedWhenTokenIsInvalid() {
-        when(refreshTokenMapper.getRefreshTokenByTokenHash(any())).thenReturn(null);
-
-        assertThrows(ResponseStatusException.class,
-                () -> refreshTokenService.refreshAccessToken(new RefreshTokenRequestDto("missing-token")));
+        assertThrows(
+                ResponseStatusException.class,
+                () ->
+                        refreshTokenService.refreshAccessToken(
+                                new RefreshTokenRequestDto("missing-token")));
     }
 
     private AppUser buildUser() {
@@ -175,5 +170,3 @@ class RefreshTokenServiceImplTest {
         return refreshToken;
     }
 }
-
-
