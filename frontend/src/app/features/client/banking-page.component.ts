@@ -13,6 +13,7 @@ import {
 import { WorkspaceApi } from '../../core/api/workspace-api.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { safeReturnUrl } from '../../core/auth/workspace-policy';
+import { createIdempotencyKey } from '../../core/idempotency-key';
 interface PendingMovement {
   key: string;
   command: MovementCommand;
@@ -473,7 +474,12 @@ export class BankingPageComponent {
   confirm() {
     const command = this.reviewing();
     if (!command || this.busy() || this.pending()) return;
-    const p = { key: crypto.randomUUID(), command: { ...command } };
+    const key = createIdempotencyKey();
+    if (!key) {
+      this.message.set('Unable to create a secure request reference. Please reload and try again.');
+      return;
+    }
+    const p = { key, command: { ...command } };
     try {
       const key = this.storageKey();
       if (!key) throw Error();
