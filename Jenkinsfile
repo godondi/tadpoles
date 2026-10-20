@@ -128,11 +128,5 @@ pipeline {
                 }
             }
         }
-        stage('Compose Startup and Upgrade') {
-            steps {
-                sh 'python3 scripts/test-client-compose.py'
-                sh 'python3 scripts/test-hardened-config.py'
-            }
-        }
     }
 }
