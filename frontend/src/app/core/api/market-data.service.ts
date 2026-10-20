@@ -67,7 +67,7 @@ export class MarketDataService {
 
   private url(kind: string, symbol: string) {
     return buildApiUrl(
-      `/${kind}/${encodeURIComponent(symbol.trim().toUpperCase())}`,
+      `/api/${kind}/${encodeURIComponent(symbol.trim().toUpperCase())}`,
       this.platformId,
     );
   }

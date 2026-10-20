@@ -5,7 +5,6 @@ The current application uses one USD ledger, Fauxnance market data, internally b
 Default local startup is `docker compose up --build -d` after configuring `.env` from `.env.template` with provider credentials. Do not overwrite an existing environment file or delete retained database volumes.
 
 Database startup, migrations, fixtures and permissions are explained in the [database guide](database/README.md), including the SQL dependency diagram.
-
 ## Team Member Names
 - Devon: Dates
 - Grace: Grapes
