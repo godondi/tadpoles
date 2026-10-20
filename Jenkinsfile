@@ -97,12 +97,19 @@ pipeline {
                                         export CI_ENV_FILE=".env.ci"
                                         cp .env.ci.template "$CI_ENV_FILE"
                                         export COMPOSE_ENV_FILE="$CI_ENV_FILE"
+                                        build_number="${BUILD_NUMBER:-0}"
+                                        port_base=$((18000 + (build_number % 1000) * 10))
+                                        export NGINX_HOST_PORT="$port_base"
+                                        export BACKEND_HOST_PORT="$((port_base + 1))"
+                                        export POSTGRES_HOST_PORT="$((port_base + 2))"
+                                        export FRONTEND_HOST_PORT="$((port_base + 3))"
+                                        export CORS_ALLOWED_ORIGINS="http://localhost:${NGINX_HOST_PORT},http://localhost:${FRONTEND_HOST_PORT}"
 
                                         docker-compose --env-file "$CI_ENV_FILE" -p "$COMPOSE_PROJECT_NAME" up -d --build
 
                                         for url in \
-                                            http://localhost:8080/health \
-                                            http://localhost:8080/login; do
+                                            "http://localhost:${NGINX_HOST_PORT}/health" \
+                                            "http://localhost:${NGINX_HOST_PORT}/login"; do
                                             for i in $(seq 1 60); do
                                                 if curl --fail --silent --show-error "$url" >/dev/null; then
                                                     break
@@ -121,6 +128,12 @@ pipeline {
                     sh '''
                                                 export COMPOSE_PROJECT_NAME="tadpole-ci-${BUILD_NUMBER:-local}"
                                                 export COMPOSE_ENV_FILE=".env.ci"
+                                                build_number="${BUILD_NUMBER:-0}"
+                                                port_base=$((18000 + (build_number % 1000) * 10))
+                                                export NGINX_HOST_PORT="$port_base"
+                                                export BACKEND_HOST_PORT="$((port_base + 1))"
+                                                export POSTGRES_HOST_PORT="$((port_base + 2))"
+                                                export FRONTEND_HOST_PORT="$((port_base + 3))"
                                                 docker-compose --env-file .env.ci -p "$COMPOSE_PROJECT_NAME" ps || true
                                                 docker-compose --env-file .env.ci -p "$COMPOSE_PROJECT_NAME" logs > compose.log 2>&1 || true
                                                 docker-compose --env-file .env.ci -p "$COMPOSE_PROJECT_NAME" down -v --remove-orphans || true
