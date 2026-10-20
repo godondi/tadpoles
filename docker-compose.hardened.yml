@@ -23,5 +23,3 @@ services:
     env_file: !reset []
   database-demo-seed:
     profiles: [local-demo]
-  auth-stub:
-    profiles: [local-demo]
