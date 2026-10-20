@@ -22,7 +22,7 @@ services:
     image: tadpole-app:latest
     container_name: tadpole-backend
     env_file:
-      - .env
+      - ${COMPOSE_ENV_FILE:-.env}
     environment:
       DB_URL: ${DB_URL}
       DB_USERNAME: ${DB_USERNAME}
@@ -55,7 +55,7 @@ services:
     image: tadpole-frontend:latest
     container_name: tadpole-frontend
     env_file:
-      - .env
+      - ${COMPOSE_ENV_FILE:-.env}
     environment:
       PORT: ${FRONTEND_CONTAINER_PORT}
     ports:
@@ -65,7 +65,7 @@ services:
     image: postgres:15
     container_name: tadpole-database
     env_file:
-      - .env
+      - ${COMPOSE_ENV_FILE:-.env}
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -83,7 +83,8 @@ services:
 
   database-migrate:
     image: postgres:15
-    env_file: [.env]
+    env_file:
+      - "${COMPOSE_ENV_FILE:-.env}"
     environment:
       PGHOST: database
       PGUSER: ${POSTGRES_USER}
@@ -100,7 +101,7 @@ services:
   database-demo-seed:
     image: postgres:15
     env_file:
-      - .env
+      - ${COMPOSE_ENV_FILE:-.env}
     environment:
       PGHOST: database
       PGUSER: ${POSTGRES_USER}

@@ -96,6 +96,7 @@ pipeline {
                                         export COMPOSE_PROJECT_NAME="tadpole-ci-${BUILD_NUMBER:-local}"
                                         export CI_ENV_FILE=".env.ci"
                                         cp .env.ci.template "$CI_ENV_FILE"
+                                        export COMPOSE_ENV_FILE="$CI_ENV_FILE"
 
                                         docker-compose --env-file "$CI_ENV_FILE" -p "$COMPOSE_PROJECT_NAME" up -d --build
 
@@ -119,6 +120,7 @@ pipeline {
                 always {
                     sh '''
                                                 export COMPOSE_PROJECT_NAME="tadpole-ci-${BUILD_NUMBER:-local}"
+                                                export COMPOSE_ENV_FILE=".env.ci"
                                                 docker-compose --env-file .env.ci -p "$COMPOSE_PROJECT_NAME" ps || true
                                                 docker-compose --env-file .env.ci -p "$COMPOSE_PROJECT_NAME" logs > compose.log 2>&1 || true
                                                 docker-compose --env-file .env.ci -p "$COMPOSE_PROJECT_NAME" down -v --remove-orphans || true
