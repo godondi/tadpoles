@@ -22,9 +22,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 public class RefreshTokenController {
     private final RefreshTokenService refreshTokenService;
+    private final com.neueda.leap.service.SessionService sessions;
 
-    public RefreshTokenController(RefreshTokenService refreshTokenService) {
+    public RefreshTokenController(RefreshTokenService refreshTokenService, com.neueda.leap.service.SessionService sessions) {
         this.refreshTokenService = refreshTokenService;
+        this.sessions = sessions;
     }
 
     @PostMapping("/auth/refresh")
@@ -35,15 +37,17 @@ public class RefreshTokenController {
     @PostMapping("/auth/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("isAuthenticated()")
-    public void logout(@RequestBody RefreshTokenRequestDto request) {
-        refreshTokenService.revokeRefreshToken(request);
+    public void logout(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal
+                    org.springframework.security.oauth2.jwt.Jwt jwt) {
+        sessions.revoke(jwt);
     }
 
     @GetMapping("/users/{userId}/refresh-tokens")
     @PreAuthorize("hasRole('ADMIN')")
     public RefreshTokenListResponseDto listUserRefreshTokens(
             @PathVariable Integer userId
-    ) {
+        ) {
         return RefreshTokenListResponseDto.fromEntities(refreshTokenService.listUserRefreshTokens(userId));
     }
 

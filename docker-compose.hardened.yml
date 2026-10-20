@@ -1,0 +1,25 @@
+# Explicit opt-in; requires Compose with !reset support (validated with Compose 5.6).
+# An administrator provisions the non-owner login and applies database/runtime-grants.sql first.
+services:
+  backend:
+    depends_on: !override
+      database-migrate:
+        condition: service_completed_successfully
+    # Do not inherit the development .env containing database-owner credentials.
+    env_file: !reset []
+    environment:
+      DB_USERNAME: ${TRADING_RUNTIME_DB_USER:?Set a separately provisioned non-owner runtime identity}
+      DB_PASSWORD: ${TRADING_RUNTIME_DB_PASSWORD:?Set its secret through your deployment environment}
+      TRADING_LOCAL_DEMO_SETUP: "false"
+      BANKING_ENCRYPTION_KEY: ${BANKING_ENCRYPTION_KEY:?Set a unique base64 32-byte encryption key}
+      SERVER_PORT: ${SERVER_PORT:-8080}
+      FAUX_SERVER_URL: ${FAUX_SERVER_URL}
+      FAUX_API_KEY: ${FAUX_API_KEY}
+      FAUX_DEFAULT_INTERVAL: ${FAUX_DEFAULT_INTERVAL:-1d}
+      FAUX_CONNECT_TIMEOUT_SECONDS: ${FAUX_CONNECT_TIMEOUT_SECONDS:-10}
+      FAUX_READ_TIMEOUT_SECONDS: ${FAUX_READ_TIMEOUT_SECONDS:-20}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:8086}
+  frontend:
+    env_file: !reset []
+  database-demo-seed:
+    profiles: [local-demo]

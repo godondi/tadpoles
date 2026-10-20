@@ -1,10 +1,11 @@
 import { Component, input } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Order } from '../../core/api/workspace-api.service';
+
 @Component({
   selector: 'app-orders-table',
-  imports: [RouterLink, DecimalPipe],
+  imports: [RouterLink, DatePipe],
   template: ` @if (!orders().length) {
       <section class="empty">
         <h3>No orders to show</h3>
@@ -40,11 +41,20 @@ import { Order } from '../../core/api/workspace-api.service';
                   {{ order.ticker }} <small>{{ order.currency }}</small>
                 </td>
                 <td>{{ order.side }}</td>
-                <td class="mono-value">{{ order.quantity | number: '1.0-6' }}</td>
+                <td class="mono-value">{{ order.exactQuantity ?? order.quantity }}</td>
                 <td>
-                  <span class="status-label">{{ order.status }}</span>
+                  <span class="status-label">{{ order.status }}</span
+                  ><small>{{
+                    order.recordKind === 'SELF_DIRECTED' ? 'Simulation' : 'Legacy record'
+                  }}</small>
                 </td>
-                <td class="mono-value">{{ order.tradeDate }}</td>
+                <td>
+                  @if (order.submittedAt) {
+                    {{ order.submittedAt | date: 'medium' : 'UTC' }} UTC
+                  } @else {
+                    {{ order.tradeDate }}
+                  }
+                </td>
               </tr>
             }
           </tbody>

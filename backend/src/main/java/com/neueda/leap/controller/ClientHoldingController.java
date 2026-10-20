@@ -40,12 +40,12 @@ public class ClientHoldingController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN') and !hasRole('CLIENT')")
+    @PreAuthorize("denyAll()")
     public ClientHoldingResponseDto createHolding(
             @PathVariable Integer clientId,
             @RequestBody CreateClientHoldingRequestDto request,
             @AuthenticationPrincipal Jwt jwt
-    ) {
+        ) {
         SecurityRoleSupport.requireClientOwnership(jwt, appUserService, clientId);
         ClientHolding holding = clientHoldingService.createHolding(clientId, request);
         return ClientHoldingResponseDto.fromEntity(holding);
@@ -57,14 +57,14 @@ public class ClientHoldingController {
             @PathVariable Integer clientId,
             @PathVariable Integer holdingId,
             @AuthenticationPrincipal Jwt jwt
-    ) {
+        ) {
         SecurityRoleSupport.requireClientOwnership(jwt, appUserService, clientId);
         ClientHolding holding = clientHoldingService.getHolding(clientId, holdingId);
         return ClientHoldingResponseDto.fromEntity(holding);
     }
 
     @PatchMapping("/{holdingId}")
-    @PreAuthorize("hasRole('ADMIN') and !hasRole('CLIENT')")
+    @PreAuthorize("denyAll()")
     public ClientHoldingResponseDto updateHolding(
             @PathVariable Integer clientId,
             @PathVariable Integer holdingId,

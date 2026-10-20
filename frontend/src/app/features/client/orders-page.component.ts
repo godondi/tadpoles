@@ -3,9 +3,11 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WorkspaceApi, Order, Page } from '../../core/api/workspace-api.service';
+import { OrderStatusService } from '../../core/api/order-status.service';
 import { PageResource } from '../../shared/workspace/page-resource';
 import { RequestStateComponent } from '../../shared/workspace/request-state.component';
 import { OrdersTableComponent } from '../../shared/workspace/orders-table.component';
+
 @Component({
   selector: 'app-orders-page',
   imports: [FormsModule, RequestStateComponent, OrdersTableComponent],
@@ -28,6 +30,12 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
           <option>BUY</option>
           <option>SELL</option>
         </select></label
+      ><label
+        >Rejection stage<select name="rejectionStage" [(ngModel)]="rejectionStage">
+          <option value="">Any stage</option>
+          <option value="ADMISSION">Before acceptance</option>
+          <option value="EXECUTION">After acceptance</option>
+        </select></label
       ><label>From date<input name="from" type="date" [(ngModel)]="from" /></label
       ><label>To date<input name="to" type="date" [(ngModel)]="to" /></label
       ><button type="submit">Apply filters</button>
@@ -39,11 +47,11 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
       </p>
     }
     <p class="muted">
-      These are older order records. A pending or approved status does not confirm that an order was
-      accepted. Open an order to see its recorded outcome and any missing details.
+      Accepted orders are awaiting execution; filled orders have a booked result. Older pending or
+      approved records have incomplete evidence. Open a reference for details.
     </p>
     <app-request-state
-      [loading]="resource.loading()"
+      [loading]="resource.loading() && !resource.data()"
       [error]="resource.error()"
       [status]="resource.status()"
       (retry)="load()"
@@ -64,17 +72,32 @@ export class OrdersPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   readonly resource = new PageResource<Page<Order>>();
-  readonly states = ['PENDING', 'APPROVED', 'REJECTED', 'EXECUTED'];
+  readonly states = [
+    'ACCEPTED',
+    'EXECUTING',
+    'FILLED',
+    'REJECTED',
+    'PENDING',
+    'APPROVED',
+    'EXECUTED',
+  ];
   status = '';
   side = '';
+  rejectionStage = '';
   from = '';
   to = '';
   instrumentId = '';
   page = 0;
+
   constructor() {
+    inject(OrderStatusService)
+      .watch()
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.load(true));
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       this.status = params.get('status') ?? '';
       this.side = params.get('side') ?? '';
+      this.rejectionStage = params.get('rejectionStage') ?? '';
       this.from = params.get('from') ?? '';
       this.to = params.get('to') ?? '';
       this.instrumentId = params.get('instrumentId') ?? '';
@@ -82,21 +105,25 @@ export class OrdersPageComponent {
       this.load();
     });
   }
+
   params(): Record<string, string | number> {
     return Object.fromEntries(
       Object.entries({
         page: this.page,
         status: this.status,
         side: this.side,
+        rejectionStage: this.rejectionStage,
         from: this.from,
         to: this.to,
         instrumentId: this.instrumentId,
       }).filter(([, value]) => value !== '' && value !== null),
     );
   }
-  load() {
-    this.resource.load(this.api.orders(this.params()));
+
+  load(background = false) {
+    this.resource.load(this.api.orders(this.params()), background);
   }
+
   go(page: number) {
     this.page = page;
     void this.router.navigate([], { relativeTo: this.route, queryParams: this.params() });

@@ -27,30 +27,30 @@ public class InstrumentController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'CLIENT')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CLIENT', 'TRADING_OPS')")
     public InstrumentListResponseDto listInstruments() {
         return InstrumentListResponseDto.fromEntities(instrumentService.listInstruments());
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN') and !hasRole('CLIENT')")
+    @PreAuthorize("denyAll()")
     public InstrumentResponseDto createInstrument(@RequestBody CreateInstrumentRequestDto request) {
         Instrument instrument = instrumentService.createInstrument(request);
         return InstrumentResponseDto.fromEntity(instrument);
     }
 
     @GetMapping("/{instrumentId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CLIENT')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CLIENT', 'TRADING_OPS')")
     public InstrumentResponseDto getInstrument(@PathVariable Integer instrumentId) {
         Instrument instrument = instrumentService.getInstrument(instrumentId);
         return InstrumentResponseDto.fromEntity(instrument);
     }
 
     @PatchMapping("/{instrumentId}")
-    @PreAuthorize("hasRole('ADMIN') and !hasRole('CLIENT')")
+    @PreAuthorize("denyAll()")
     public InstrumentResponseDto updateInstrument(
-            @PathVariable Integer instrumentId,
+            @PathVariable Integer instrumentId, 
             @RequestBody UpdateInstrumentRequestDto request
     ) {
         Instrument instrument = instrumentService.updateInstrument(instrumentId, request);

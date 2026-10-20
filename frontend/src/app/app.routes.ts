@@ -69,6 +69,36 @@ export const routes: Routes = [
         canActivateChild: [workspaceGuard],
         children: [
           {
+            path: 'finance/reconciliation',
+            loadComponent: () =>
+              import('./shared/workspace/reconciliation-page.component').then(
+                (m) => m.ReconciliationPageComponent,
+              ),
+          },
+          {
+            path: 'operations/instruments',
+            pathMatch: 'full',
+            loadComponent: () =>
+              import('./features/operations/instruments-page.component').then(
+                (m) => m.OperationsInstrumentsComponent,
+              ),
+          },
+          {
+            path: 'operations/instruments/:id',
+            loadComponent: () =>
+              import('./features/operations/instrument-policy-editor.component').then(
+                (m) => m.InstrumentPolicyEditorComponent,
+              ),
+          },
+          {
+            path: 'app/banking',
+            canActivate: client,
+            loadComponent: () =>
+              import('./features/client/banking-page.component').then(
+                (m) => m.BankingPageComponent,
+              ),
+          },
+          {
             path: 'app/overview',
             canActivate: client,
             loadComponent: () =>
@@ -78,12 +108,8 @@ export const routes: Routes = [
           },
           {
             path: 'app/portfolio',
-            canActivate: client,
-            loadComponent: () =>
-              import('./features/client/account-page.component').then(
-                (m) => m.AccountPageComponent,
-              ),
-            data: { portfolioOnly: true },
+            pathMatch: 'full',
+            redirectTo: '/app/overview',
           },
           {
             path: 'app/markets',
@@ -218,15 +244,6 @@ export const routes: Routes = [
               'Review booked movements and accounting evidence.',
               'Verified fill and cash-movement totals by period and currency.',
               '/api/finance/summary',
-              '',
-            ],
-            [
-              'finance/reconciliation',
-              'Reconciliation',
-              'Finance',
-              'Investigate matching results and exceptions.',
-              'Matched, unmatched and unknown results based on genuine cash and position postings.',
-              '/api/finance/reconciliations',
               '',
             ],
           ].map(([path, title, section, description, expectation, endpoint, back]) => ({

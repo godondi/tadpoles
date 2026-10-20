@@ -27,3 +27,21 @@ describe('workspace routing policy', () => {
   it('unknown roles get access denied', () =>
     expect(landingPage(['OPERATIONS'])).toBe('/unauthorized'));
 });
+
+describe('implemented staff landing pages', () => {
+  it('opens real Operations and Finance workflows after login', () => {
+    expect(landingPage(['TRADING_OPS'])).toBe('/operations/instruments');
+    expect(landingPage(['FINANCE'])).toBe('/finance/reconciliation');
+  });
+});
+
+describe('Operations instrument editor routes', () => {
+  it.each(['/operations/instruments/new', '/operations/instruments/42'])(
+    'allows the editor only for an unmixed Operations identity: %s',
+    (path) => {
+      expect(safeReturnUrl(path, ['TRADING_OPS'])).toBe(path);
+      expect(safeReturnUrl(path, ['TRADING_OPS', 'CLIENT'])).toBe('/app/overview');
+      expect(safeReturnUrl(path, ['CLIENT'])).toBe('/app/overview');
+    },
+  );
+});

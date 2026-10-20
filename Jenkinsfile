@@ -2,6 +2,8 @@ pipeline {
     agent any
     options {
         timestamps()
+        timeout(time: 45, unit: 'MINUTES')
+        disableConcurrentBuilds()
     }
     stages {
         stage('Checkout') {
@@ -17,9 +19,24 @@ pipeline {
             }
             post {
                 always {
-                    junit testResults: 'backend/target/surefire-reports/*.xml', allowEmptyResults: true
+                    junit testResults: 'backend/target/surefire-reports/*.xml', allowEmptyResults: false
                     archiveArtifacts artifacts: 'backend/target/surefire-reports/*.xml', fingerprint: true, onlyIfSuccessful: false
                     archiveArtifacts artifacts: 'backend/target/site/jacoco/**', fingerprint: false, onlyIfSuccessful: false
+                }
+            }
+        }
+        stage('Frontend Full Suite') {
+            steps {
+                dir('frontend') {
+                    sh 'npm ci'
+                    sh 'npm test -- --watch=false'
+                    sh 'npm run test:qof-styles'
+                    sh 'npm run build'
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'frontend/dist/**', fingerprint: false, onlyIfSuccessful: false
                 }
             }
         }
@@ -30,7 +47,7 @@ pipeline {
             }
             post {
                 always {
-                    junit testResults: 'testing/target/surefire-reports/*.xml', allowEmptyResults: true
+                    junit testResults: 'testing/target/surefire-reports/*.xml', allowEmptyResults: false
                     archiveArtifacts artifacts: 'testing/target/surefire-reports/*.xml', fingerprint: true, onlyIfSuccessful: false
                 }
             }
@@ -40,70 +57,90 @@ pipeline {
                 sh 'docker build -t tadpole-app:latest -f backend/Dockerfile backend'
             }
         }
-        stage('Smoke Test') {
+        stage('Archive Build Artifacts') {
+            steps {
+                archiveArtifacts artifacts: 'backend/target/*.jar', fingerprint: true
+                archiveArtifacts artifacts: 'frontend/dist/**', fingerprint: false
+            }
+        }
+        stage('Build Runtime Images') {
+            steps {
+                sh '''
+                    set -eux
+                    image_tag="${GIT_COMMIT:-${BUILD_TAG:-latest}}"
+                    docker build -t "tadpole-app:${image_tag}" -t tadpole-app:latest -f backend/Dockerfile backend
+                    docker build -t "tadpole-frontend:${image_tag}" -t tadpole-frontend:latest -f frontend/Dockerfile frontend
+                    docker build -t "tadpole-nginx:${image_tag}" -t tadpole-nginx:latest -f nginx/Dockerfile nginx
+                '''
+            }
+        }
+
+        // stage('Compose Startup and Upgrade') {
+        //     steps {
+        //         sh 'python3 scripts/test-client-compose.py'
+        //         sh 'python3 scripts/test-hardened-config.py'
+        //     }
+        // }
+        
+        stage('Archive Backend Artifact') {
+            steps {
+                archiveArtifacts artifacts: 'backend/target/*.jar', fingerprint: true
+            }
+        }
+
+        stage('Compose E2E Smoke Test') {
             steps {
                 sh '''
                     set -eux
 
-                    docker rm -f tadpole-smoke-app tadpole-smoke-db >/dev/null 2>&1 || true
-                    docker network rm tadpole-smoke >/dev/null 2>&1 || true
-                    docker network create tadpole-smoke
+                                        export COMPOSE_PROJECT_NAME="tadpole-ci-${BUILD_NUMBER:-local}"
+                                        export CI_ENV_FILE=".env.ci"
+                                        cp .env.ci.template "$CI_ENV_FILE"
+                                        export COMPOSE_ENV_FILE="$CI_ENV_FILE"
+                                        build_number="${BUILD_NUMBER:-0}"
+                                        port_base=$((18000 + (build_number % 1000) * 10))
+                                        export NGINX_HOST_PORT="$port_base"
+                                        export BACKEND_HOST_PORT="$((port_base + 1))"
+                                        export POSTGRES_HOST_PORT="$((port_base + 2))"
+                                        export FRONTEND_HOST_PORT="$((port_base + 3))"
+                                        export CORS_ALLOWED_ORIGINS="http://localhost:${NGINX_HOST_PORT},http://localhost:${FRONTEND_HOST_PORT}"
 
-                    docker run -d \
-                      --name tadpole-smoke-db \
-                      --network tadpole-smoke \
-                      -e POSTGRES_DB=tadpoles \
-                      -e POSTGRES_USER=postgres \
-                      -e POSTGRES_PASSWORD=postgres \
-                      postgres:15
+                                        docker-compose --env-file "$CI_ENV_FILE" -p "$COMPOSE_PROJECT_NAME" up -d --build
 
-                    for i in $(seq 1 30); do
-                      if docker exec tadpole-smoke-db pg_isready -U postgres -d tadpoles; then
-                        break
-                      fi
-                      sleep 2
-                    done
-
-                    docker run -d \
-                      --name tadpole-smoke-app \
-                      --network tadpole-smoke \
-                      -e DB_URL=jdbc:postgresql://tadpole-smoke-db:5432/tadpoles \
-                      -e DB_USERNAME=postgres \
-                      -e DB_PASSWORD=postgres \
-                      -e JWT_SECRET=test-jwt-secret-test-jwt-secret-123456 \
-                      tadpole-app:latest
-
-                    for i in $(seq 1 30); do
-                      if ! docker ps --format '{{.Names}}' | grep -q '^tadpole-smoke-app$'; then
-                        docker logs tadpole-smoke-app || true
-                        exit 1
-                      fi
-
-                      if docker logs tadpole-smoke-app 2>&1 | grep -q 'Started Main'; then
-                        exit 0
-                      fi
-
-                      sleep 2
-                    done
-
-                    docker logs tadpole-smoke-app
-                    exit 1
+                                        for url in \
+                                            "http://localhost:${NGINX_HOST_PORT}/health" \
+                                            "http://localhost:${NGINX_HOST_PORT}/login"; do
+                                            for i in $(seq 1 60); do
+                                                if curl --fail --silent --show-error "$url" >/dev/null; then
+                                                    break
+                                                fi
+                                                if [ "$i" -eq 60 ]; then
+                                                    echo "Timed out waiting for $url"
+                                                    exit 1
+                                                fi
+                                                sleep 2
+                                            done
+                                        done
                 '''
             }
             post {
                 always {
                     sh '''
-                        docker logs tadpole-smoke-app || true
-                        docker logs tadpole-smoke-db || true
-                        docker rm -f tadpole-smoke-app tadpole-smoke-db >/dev/null 2>&1 || true
-                        docker network rm tadpole-smoke >/dev/null 2>&1 || true
+                                                export COMPOSE_PROJECT_NAME="tadpole-ci-${BUILD_NUMBER:-local}"
+                                                export COMPOSE_ENV_FILE=".env.ci"
+                                                build_number="${BUILD_NUMBER:-0}"
+                                                port_base=$((18000 + (build_number % 1000) * 10))
+                                                export NGINX_HOST_PORT="$port_base"
+                                                export BACKEND_HOST_PORT="$((port_base + 1))"
+                                                export POSTGRES_HOST_PORT="$((port_base + 2))"
+                                                export FRONTEND_HOST_PORT="$((port_base + 3))"
+                                                docker-compose --env-file .env.ci -p "$COMPOSE_PROJECT_NAME" ps || true
+                                                docker-compose --env-file .env.ci -p "$COMPOSE_PROJECT_NAME" logs > compose.log 2>&1 || true
+                                                docker-compose --env-file .env.ci -p "$COMPOSE_PROJECT_NAME" down -v --remove-orphans || true
+                                                rm -f .env.ci
                     '''
+                                        archiveArtifacts artifacts: 'compose.log', allowEmptyArchive: true, onlyIfSuccessful: false
                 }
-            }
-        }
-        stage('Archive Backend Artifact') {
-            steps {
-                archiveArtifacts artifacts: 'backend/target/*.jar', fingerprint: true
             }
         }
     }

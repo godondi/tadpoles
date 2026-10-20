@@ -28,12 +28,12 @@ class FauxnanceQuoteServiceImplTest {
     void setUp() {
         restTemplate = new RestTemplate();
         server = MockRestServiceServer.bindTo(restTemplate).build();
-        service = new FauxnanceQuoteServiceImpl(
-                restTemplate,
-                new ObjectMapper().findAndRegisterModules(),
-                "http://localhost:9090/v1",
-                "fnx_dev_test_key"
-        );
+        service =
+                new FauxnanceQuoteServiceImpl(
+                        restTemplate,
+                        new ObjectMapper().findAndRegisterModules(),
+                        "http://localhost:9090/v1",
+                        "fnx_dev_test_key");
     }
 
     @Test
@@ -41,33 +41,35 @@ class FauxnanceQuoteServiceImplTest {
         server.expect(requestTo("http://localhost:9090/v1/quotes/AAPL"))
                 .andExpect(method(HttpMethod.GET))
                 .andExpect(header("X-Api-Key", "fnx_dev_test_key"))
-                .andRespond(withStatus(HttpStatus.OK)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body("""
-                                {
-                                  "data": {
-                                    "symbol": "AAPL",
-                                    "price": 313.53,
-                                    "bid": 313.5,
-                                    "ask": 313.56,
-                                    "spreadBps": 1.8587,
-                                    "currency": "USD",
-                                    "change": 3.63,
-                                    "changePercent": 1.1713,
-                                    "previousClose": 309.9,
-                                    "asOf": "2026-08-26T16:13:24Z",
-                                    "marketState": "open"
-                                  },
-                                  "meta": {
-                                    "asOf": "2026-08-26T16:13:24Z",
-                                    "disclaimer": "Educational data. Not for investment use.",
-                                    "symbol": "AAPL",
-                                    "source": "cache",
-                                    "spreadSource": "modelled",
-                                    "stale": false
-                                  }
-                                }
-                                """));
+                .andRespond(
+                        withStatus(HttpStatus.OK)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .body(
+                                        """
+{
+  "data": {
+    "symbol": "AAPL",
+    "price": 313.53,
+    "bid": 313.5,
+    "ask": 313.56,
+    "spreadBps": 1.8587,
+    "currency": "USD",
+    "change": 3.63,
+    "changePercent": 1.1713,
+    "previousClose": 309.9,
+    "asOf": "2026-08-26T16:13:24Z",
+    "marketState": "open"
+  },
+  "meta": {
+    "asOf": "2026-08-26T16:13:24Z",
+    "disclaimer": "Educational data. Not for investment use.",
+    "symbol": "AAPL",
+    "source": "cache",
+    "spreadSource": "modelled",
+    "stale": false
+  }
+}
+"""));
 
         FauxnanceQuoteResponse response = service.getQuote("AAPL");
 
@@ -85,33 +87,35 @@ class FauxnanceQuoteServiceImplTest {
         server.expect(requestTo("http://localhost:9090/v1/quotes/TSLA"))
                 .andExpect(method(HttpMethod.GET))
                 .andExpect(header("X-Api-Key", "fnx_dev_test_key"))
-                .andRespond(withStatus(HttpStatus.OK)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body("""
-                                {
-                                  "data": {
-                                    "symbol": "TSLA",
-                                    "price": 10,
-                                    "bid": 9.9,
-                                    "ask": 10.1,
-                                    "spreadBps": 2,
-                                    "currency": "USD",
-                                    "change": 0.1,
-                                    "changePercent": 1,
-                                    "previousClose": 9.9,
-                                    "asOf": "2026-08-26T16:13:24Z",
-                                    "marketState": "open"
-                                  },
-                                  "meta": {
-                                    "asOf": "2026-08-26T16:13:24Z",
-                                    "disclaimer": "Educational data. Not for investment use.",
-                                    "symbol": "TSLA",
-                                    "source": "cache",
-                                    "spreadSource": "modelled",
-                                    "stale": false
-                                  }
-                                }
-                                """));
+                .andRespond(
+                        withStatus(HttpStatus.OK)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .body(
+                                        """
+{
+  "data": {
+    "symbol": "TSLA",
+    "price": 10,
+    "bid": 9.9,
+    "ask": 10.1,
+    "spreadBps": 2,
+    "currency": "USD",
+    "change": 0.1,
+    "changePercent": 1,
+    "previousClose": 9.9,
+    "asOf": "2026-08-26T16:13:24Z",
+    "marketState": "open"
+  },
+  "meta": {
+    "asOf": "2026-08-26T16:13:24Z",
+    "disclaimer": "Educational data. Not for investment use.",
+    "symbol": "TSLA",
+    "source": "cache",
+    "spreadSource": "modelled",
+    "stale": false
+  }
+}
+"""));
 
         FauxnanceQuoteResponse response = service.getQuote("tsla");
 
@@ -123,26 +127,45 @@ class FauxnanceQuoteServiceImplTest {
     void getQuoteMapsNotFoundFromUpstream() {
         server.expect(requestTo("http://localhost:9090/v1/quotes/BAD"))
                 .andExpect(method(HttpMethod.GET))
-                .andRespond(withStatus(HttpStatus.NOT_FOUND)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body("""
-                                {
-                                  "error": {
-                                    "code": "SYMBOL_NOT_FOUND",
-                                    "message": "Symbol was not recognized.",
-                                    "details": {}
-                                  }
-                                }
-                                """));
+                .andRespond(
+                        withStatus(HttpStatus.NOT_FOUND)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .body(
+                                        """
+                                        {
+                                          "error": {
+                                            "code": "SYMBOL_NOT_FOUND",
+                                            "message": "Symbol was not recognized.",
+                                            "details": {}
+                                          }
+                                        }
+                                        """));
 
-        ResponseStatusException exception = assertThrows(
-                ResponseStatusException.class,
-                () -> service.getQuote("BAD")
-        );
+        ResponseStatusException exception =
+                assertThrows(ResponseStatusException.class, () -> service.getQuote("BAD"));
 
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
         assertEquals("Symbol was not recognized.", exception.getReason());
         server.verify();
     }
-}
 
+    @Test
+    void absentMetadataRemainsUnknownRatherThanInventingFreshnessOrSpreadProvenance() {
+        server.expect(requestTo("http://localhost:9090/v1/quotes/AAPL"))
+                .andRespond(
+                        withStatus(HttpStatus.OK)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .body(
+                                        """
+{"data":{"symbol":"AAPL","bid":49,"ask":50,"currency":"USD"},"meta":{}}
+"""));
+
+        var response = service.getQuote("AAPL");
+        org.junit.jupiter.api.Assertions.assertNull(
+                response.getMeta().getStale(), "Unknown provider freshness must not become fresh");
+        org.junit.jupiter.api.Assertions.assertNull(
+                response.getMeta().getSpreadSource(),
+                "Unknown spread provenance must not become modelled");
+        server.verify();
+    }
+}

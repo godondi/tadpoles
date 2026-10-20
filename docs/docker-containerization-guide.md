@@ -1,3 +1,5 @@
+> **Current implementation:** See the [provider-backed USD trading guide](../impDocs/Frontend/ClientPageImplementation/ClientRefactorCrashCourse.MD) for startup, banking, execution, roles and recovery. The material below is historical implementation evidence and may describe retired behavior.
+
 # Docker Containerization Guide
 
 This document explains how the backend, database, and auth stub should be run as containers in the Tadpoles project.
@@ -89,6 +91,8 @@ Recommended environment variables for `database`:
 - `POSTGRES_PASSWORD=tadpole_password`
 - `POSTGRES_DB=tadpole_db`
 
+See the [database guide](../database/README.md) for the current initialization and migration sequence. The abbreviated example below omits the migration and optional demo services; use the repository Compose file for actual startup.
+
 ## Suggested Compose structure
 
 ```yaml
@@ -103,7 +107,7 @@ services:
       - "5432:5432"
     volumes:
       - tadpole-db-data:/var/lib/postgresql/data
-      - ./database/schema:/docker-entrypoint-initdb.d:ro
+      - ./database/fresh:/docker-entrypoint-initdb.d:ro
 
   backend:
     build:

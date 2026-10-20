@@ -1,3 +1,4 @@
+import { isPlatformBrowser } from '@angular/common';
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import {
   HttpRequest,
@@ -16,8 +17,11 @@ export class AuthInterceptor implements HttpInterceptor {
   private readonly auth = inject(AuthService);
   private readonly platform = inject(PLATFORM_ID);
   private readonly router = inject(Router);
+
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    const backend = new URL(buildApiUrl('/', this.platform));
+    const backend = isPlatformBrowser(this.platform)
+      ? new URL(window.location.origin)
+      : new URL(buildApiUrl('/', this.platform));
     const analytics = new URL(buildAnalyticsApiUrl('/', this.platform));
     const url = new URL(request.url, backend);
     const publicPath = ['/auth/login', '/auth/signup', '/auth/register/client'].includes(
@@ -36,7 +40,7 @@ export class AuthInterceptor implements HttpInterceptor {
           error.status === 401 &&
           token === this.auth.getAccessToken()
         ) {
-          this.auth.logout();
+          this.auth.logout(false);
           void this.router.navigate(['/login'], { queryParams: { expired: 'true' } });
         }
         return throwError(() => error);

@@ -12,16 +12,11 @@ import com.neueda.leap.mapper.ClientProfileMapper;
 import com.neueda.leap.mapper.UserMapper;
 import com.neueda.leap.service.AuthService;
 import com.neueda.leap.service.UserService;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-
-import javax.crypto.SecretKey;
-import java.util.Date;
-import java.util.List;
 
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -31,7 +26,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserService userService;
     private final ClientProfileMapper clientProfileMapper;
     private final ClientMapper clientMapper;
-    private final SecretKey jwtSigningKey;
+    private final com.neueda.leap.service.SessionService sessions;
     private final BCryptPasswordEncoder passwordEncoder;
 
     public AuthServiceImpl(
@@ -39,27 +34,28 @@ public class AuthServiceImpl implements AuthService {
             UserService userService,
             ClientProfileMapper clientProfileMapper,
             ClientMapper clientMapper,
-            SecretKey jwtSigningKey
-    ) {
+            com.neueda.leap.service.SessionService sessions) {
         this.userMapper = userMapper;
         this.userService = userService;
         this.clientProfileMapper = clientProfileMapper;
         this.clientMapper = clientMapper;
-        this.jwtSigningKey = jwtSigningKey;
+        this.sessions = sessions;
         this.passwordEncoder = new BCryptPasswordEncoder();
     }
 
     @Override
     public LoginResponseDto login(LoginRequestDto request) {
         if (request == null || request.username() == null || request.password() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username and password are required");
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Username and password are required");
         }
 
         // Query database for user
         String normalizedUsername = normalizeLoginIdentifier(request.username());
         AppUser user = userMapper.findByUsername(normalizedUsername);
         if (user == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password");
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED, "Invalid username or password");
         }
 
         // Check if user is enabled
@@ -69,7 +65,8 @@ public class AuthServiceImpl implements AuthService {
 
         // Validate password against BCrypt hash
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password");
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED, "Invalid username or password");
         }
 
         // Get user roles from database
@@ -77,7 +74,9 @@ public class AuthServiceImpl implements AuthService {
         SessionMetadata sessionMetadata = resolveSessionMetadata(user, roles);
 
         // Generate JWT token
-        String token = generateToken(user.getUsername(), roles, user.getUserId(), sessionMetadata.clientId());
+        String token =
+                generateToken(
+                        user.getUsername(), roles, user.getUserId(), sessionMetadata.clientId());
         return new LoginResponseDto(
                 token,
                 "Bearer",
@@ -86,8 +85,7 @@ public class AuthServiceImpl implements AuthService {
                 user.getEmail(),
                 user.getDisplayName(),
                 sessionMetadata.clientId(),
-                sessionMetadata.onboardingComplete()
-        );
+                sessionMetadata.onboardingComplete());
     }
 
     @Override
@@ -105,8 +103,7 @@ public class AuthServiceImpl implements AuthService {
                 false,
                 token,
                 "Bearer",
-                TOKEN_EXPIRATION_MS / 1000
-        );
+                TOKEN_EXPIRATION_MS / 1000);
     }
 
     private SessionMetadata resolveSessionMetadata(AppUser user, List<String> roles) {
@@ -116,34 +113,25 @@ public class AuthServiceImpl implements AuthService {
 
         ClientProfile profile = clientProfileMapper.findByUserId(user.getUserId());
         if (profile != null) {
-            return new SessionMetadata(profile.getClientId(), Boolean.TRUE.equals(profile.getOnboardingComplete()));
+            return new SessionMetadata(
+                    profile.getClientId(), Boolean.TRUE.equals(profile.getOnboardingComplete()));
         }
 
         Client client = clientMapper.getClientByUserId(user.getUserId());
         return new SessionMetadata(client == null ? null : client.getClientId(), client != null);
     }
 
-    private String generateToken(String username, List<String> roles, Integer userId, Integer clientId) {
-        io.jsonwebtoken.JwtBuilder builder = Jwts.builder()
-                .subject(username)
-                .claim("roles", roles)
-                .claim("userId", userId)
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + TOKEN_EXPIRATION_MS))
-                .signWith(jwtSigningKey, SignatureAlgorithm.HS256);
-
-        if (clientId != null) {
-            builder.claim("clientId", clientId);
-        }
-
-        return builder.compact();
+    private String generateToken(
+            String username, List<String> roles, Integer userId, Integer clientId) {
+        return sessions.issue(username, roles, userId, clientId);
     }
 
     private String normalizeLoginIdentifier(String username) {
         String normalizedUsername = username.trim();
-        return normalizedUsername.contains("@") ? normalizedUsername.toLowerCase() : normalizedUsername;
+        return normalizedUsername.contains("@")
+                ? normalizedUsername.toLowerCase()
+                : normalizedUsername;
     }
 
-    private record SessionMetadata(Integer clientId, Boolean onboardingComplete) {
-    }
+    private record SessionMetadata(Integer clientId, Boolean onboardingComplete) {}
 }

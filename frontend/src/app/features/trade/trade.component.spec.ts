@@ -149,7 +149,11 @@ describe('Trade page', () => {
     await harness.navigateByUrl('/trade/MSFT');
     expect(oldCandles.cancelled).toBe(true);
     expect(oldQuote.cancelled).toBe(true);
-    request('candles', 'MSFT').flush({ ...candles, data: { ...candles.data, candles: [] } });
+    request('candles', 'MSFT').flush({
+      ...candles,
+      data: { ...candles.data, symbol: 'MSFT', candles: [] },
+      meta: { ...candles.meta, symbol: 'MSFT' },
+    });
     request('quotes', 'MSFT').flush({ ...quote, data: { ...quote.data, symbol: 'MSFT' } });
     expect(render().textContent).toContain('No daily candles available');
     expect(render().textContent).toContain('MSFT');

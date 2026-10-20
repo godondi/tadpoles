@@ -2,7 +2,9 @@ openapi: 3.1.0
 info:
   title: Tadpoles API Starter
   version: 1.0.0
-  description: OpenAPI contract for the Tadpoles Spring Boot application. Actual backend paths with role-enforced workspace reads. Staff data capabilities return 503 until approved policies and sources are configured. New order submission is disabled by decision; no acceptance or execution is implied.
+  description: Provider-backed USD internal trading and cash movements. Fauxnance supplies market data; this backend owns
+    execution and booking. No real bank transfer, exchange routing or custody is implied. Broader BR-12 markets are deferred.
+    Analyst/aggregate reporting remains unavailable pending a separate reporting source.
 servers:
 - url: /
   description: Application API root
@@ -489,19 +491,12 @@ paths:
     get:
       tags:
       - Clients
-      summary: Get the client cash balance
+      summary: Retired scalar balance endpoint; use owned USD portfolio
       operationId: getClientBalance
       responses:
-        '200':
-          description: Client cash balance
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ClientBalanceResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        '410':
+          description: Retired
+      deprecated: true
   /api/clients/{clientId}/subscriptions:
     parameters:
     - $ref: '#/components/parameters/ClientId'
@@ -565,7 +560,7 @@ paths:
     post:
       tags:
       - Clients
-      summary: Create a holding for a client
+      summary: Retired direct mutation path; use controlled trading or Trading Operations policy APIs
       operationId: createClientHolding
       requestBody:
         required: true
@@ -574,18 +569,9 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateClientHoldingRequest'
       responses:
-        '201':
-          description: Holding created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HoldingSummary'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        '403':
+          description: Direct write denied
+      deprecated: true
   /api/clients/{clientId}/holdings/{holdingId}:
     parameters:
     - $ref: '#/components/parameters/ClientId'
@@ -614,7 +600,7 @@ paths:
     patch:
       tags:
       - Clients
-      summary: Update a holding
+      summary: Retired direct mutation path; use controlled trading or Trading Operations policy APIs
       operationId: updateClientHolding
       requestBody:
         required: true
@@ -623,18 +609,9 @@ paths:
             schema:
               $ref: '#/components/schemas/UpdateClientHoldingRequest'
       responses:
-        '200':
-          description: Holding updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HoldingSummary'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        '403':
+          description: Direct write denied
+      deprecated: true
   /api/clients/{clientId}/trades:
     parameters:
     - $ref: '#/components/parameters/ClientId'
@@ -657,7 +634,7 @@ paths:
     post:
       tags:
       - Clients
-      summary: Submit an actual trade for a client
+      summary: Retired direct mutation path; use controlled trading or Trading Operations policy APIs
       operationId: createClientTrade
       requestBody:
         required: true
@@ -666,18 +643,9 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateClientTradeRequest'
       responses:
-        '201':
-          description: Trade created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TradeSummary'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        '403':
+          description: Direct write denied
+      deprecated: true
   /api/clients/{clientId}/trades/{tradeId}:
     parameters:
     - $ref: '#/components/parameters/ClientId'
@@ -701,7 +669,7 @@ paths:
     patch:
       tags:
       - Clients
-      summary: Update a client trade
+      summary: Retired direct mutation path; use controlled trading or Trading Operations policy APIs
       operationId: updateClientTrade
       requestBody:
         required: true
@@ -710,18 +678,9 @@ paths:
             schema:
               $ref: '#/components/schemas/UpdateClientTradeRequest'
       responses:
-        '200':
-          description: Trade updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TradeSummary'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        '403':
+          description: Direct write denied
+      deprecated: true
   /api/clients/{clientId}/trades/{tradeId}/fill:
     parameters:
     - $ref: '#/components/parameters/ClientId'
@@ -729,7 +688,7 @@ paths:
     post:
       tags:
       - Clients
-      summary: Fill a client trade order
+      summary: Retired direct mutation path; use controlled trading or Trading Operations policy APIs
       operationId: fillClientTrade
       requestBody:
         required: false
@@ -738,18 +697,9 @@ paths:
             schema:
               $ref: '#/components/schemas/FillOrderRequest'
       responses:
-        '200':
-          description: Order filled
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OrderFillResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        '403':
+          description: Direct write denied
+      deprecated: true
   /api/advisors/{advisorId}/clients/{clientId}/trade-suggestions:
     parameters:
     - $ref: '#/components/parameters/AdvisorId'
@@ -1008,7 +958,7 @@ paths:
     post:
       tags:
       - Instruments
-      summary: Create an instrument
+      summary: Retired direct mutation path; use controlled trading or Trading Operations policy APIs
       operationId: createInstrument
       requestBody:
         required: true
@@ -1017,18 +967,9 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateInstrumentRequest'
       responses:
-        '201':
-          description: Instrument created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/InstrumentSummary'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          description: Direct write denied
+      deprecated: true
   /api/instruments/{instrumentId}:
     parameters:
     - $ref: '#/components/parameters/InstrumentId'
@@ -1051,7 +992,7 @@ paths:
     patch:
       tags:
       - Instruments
-      summary: Update instrument metadata
+      summary: Retired direct mutation path; use controlled trading or Trading Operations policy APIs
       operationId: updateInstrument
       requestBody:
         required: true
@@ -1060,20 +1001,9 @@ paths:
             schema:
               $ref: '#/components/schemas/UpdateInstrumentRequest'
       responses:
-        '200':
-          description: Instrument updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/InstrumentSummary'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+          description: Direct write denied
+      deprecated: true
   /candles/{symbol}:
     parameters:
     - $ref: '#/components/parameters/FauxnanceSymbol'
@@ -1081,7 +1011,8 @@ paths:
       tags:
       - Market Data
       summary: Retrieve daily OHLCV candles from Fauxnance
-      description: Proxies the configured Fauxnance daily-candle endpoint. The backend currently supports the `1d` interval only and returns the Fauxnance-style success payload.
+      description: Proxies the configured Fauxnance daily-candle endpoint. The backend currently supports the `1d` interval
+        only and returns the Fauxnance-style success payload.
       operationId: getCandles
       parameters:
       - $ref: '#/components/parameters/CandleFrom'
@@ -1113,7 +1044,8 @@ paths:
       tags:
       - Market Data
       summary: Retrieve the latest Fauxnance quote
-      description: Proxies the configured Fauxnance latest-quote endpoint and returns the quote envelope expected by the marketplace contract.
+      description: Proxies the configured Fauxnance latest-quote endpoint and returns the quote envelope expected by the marketplace
+        contract.
       operationId: getQuote
       responses:
         '200':
@@ -1156,7 +1088,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
   /api/orders:
     get:
-      summary: Own legacy order history; owner derived from current identity; stable trade-date then ID descending
+      summary: Owned internal and retained historical order history, with explicit provenance
       x-required-roles:
       - CLIENT
       parameters:
@@ -1186,6 +1118,9 @@ paths:
           - APPROVED
           - REJECTED
           - EXECUTED
+          - ACCEPTED
+          - EXECUTING
+          - FILLED
       - name: side
         in: query
         required: false
@@ -1214,7 +1149,7 @@ paths:
           format: date
       responses:
         '200':
-          description: Own legacy order history; owner derived from current identity; stable trade-date then ID descending
+          description: Owner-scoped order history
           content:
             application/json:
               schema:
@@ -1228,20 +1163,53 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     post:
-      summary: Disabled pending approved execution policy; no order accepted or recorded
+      summary: Durable owned admission or same-key replay. 202 accepted/executing, 200 terminal, 422 persisted admission rejection.
       x-required-roles:
       - CLIENT
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{16,128}$
       responses:
-        '503':
-          description: Trading disabled
+        '200':
+          description: Successful response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/InternalOrderReceipt'
+        '202':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalOrderReceipt'
+        '422':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalOrderReceipt'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          description: Admission disabled or dependency unavailable; recover any saved key before creating another instruction.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InternalOrderCommand'
   /api/orders/{id}:
     get:
       summary: Own order record; missing quote, acceptance and posting provenance explicitly disclosed
@@ -1271,13 +1239,13 @@ paths:
           $ref: '#/components/responses/NotFound'
   /api/workspace/client/portfolio:
     get:
-      summary: Recorded scalar cash and latest holding snapshots; currency and available values unavailable
+      summary: Committed USD cash, reservations and currently owned positions
       x-required-roles:
       - CLIENT
       parameters: []
       responses:
         '200':
-          description: Recorded scalar cash and latest holding snapshots; currency and available values unavailable
+          description: Committed USD cash, reservations and currently owned positions
           content:
             application/json:
               schema:
@@ -1290,6 +1258,27 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/workspace/client/portfolio/valuation:
+    get:
+      summary: Informational USD value of the authenticated client's cash and holdings
+      description: >-
+        Reads one consistent ledger snapshot, then obtains verified provider prices outside
+        the database transaction. Includes posted cash and owned shares, including reservations.
+        Missing or invalid prices make the full total unavailable; no partial total is substituted.
+        Independent of the portfolio cash read and never used to authorize an order.
+      x-required-roles:
+      - CLIENT
+      responses:
+        '200':
+          description: Complete estimate or an explicitly unavailable valuation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortfolioValuation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/workspace/client/instruments:
     get:
       summary: Paginated catalog; active does not imply approved tradability
@@ -1687,22 +1676,53 @@ paths:
           $ref: '#/components/responses/Forbidden'
   /api/finance/reconciliations:
     get:
-      summary: Unavailable until approved scope and genuine data source are configured
+      summary: Latest persisted operational reconciliation; null runId means none has run
       x-required-roles:
       - FINANCE
-      x-implementation-status: availability-boundary-only
       parameters: []
       responses:
-        '503':
-          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
+        '200':
+          description: Successful response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/Reconciliation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      x-denied-roles:
+      - CLIENT
+    post:
+      summary: Persist a consistent snapshot check; never repairs records automatically
+      x-required-roles:
+      - FINANCE
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reconciliation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      x-denied-roles:
+      - CLIENT
   /api/users/me/profile:
     get:
       summary: Current client profile and onboarding status
@@ -1773,6 +1793,654 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ClientProfile'
+  /api/orders/preview:
+    post:
+      summary: Read-only estimate; reserves nothing and does not guarantee a fill price
+      x-required-roles:
+      - CLIENT
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalOrderPreview'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InternalOrderCommand'
+  /api/orders/by-request/{key}:
+    get:
+      summary: Recover the original client-scoped request receipt before new eligibility checks
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalOrderReceipt'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/orders/{id}/events:
+    get:
+      summary: Paged owned lifecycle events
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                  page:
+                    type: integer
+                  pageSize:
+                    type: integer
+                  total:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/workspace/client/order-events/stream:
+    get:
+      summary: Resumable authenticated cursor polling, not SSE
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                  cursor:
+                    type: integer
+                  reset:
+                    type: boolean
+                  hasMore:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/workspace/client/banks:
+    get:
+      summary: List owned active masked references
+      x-required-roles:
+      - CLIENT
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BankReference'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    post:
+      summary: Add encrypted, format-checked internal funding reference
+      x-required-roles:
+      - CLIENT
+      parameters: []
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankReference'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BankReferenceRequest'
+  /api/workspace/client/banks/{id}:
+    put:
+      summary: Versioned owned reference edit; pending orders block replacement of numbers
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankReference'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BankReferenceRequest'
+    delete:
+      summary: Deactivate owned reference; preserve historical receipt snapshots
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: version
+        in: query
+        required: true
+        schema:
+          type: integer
+      responses:
+        '204':
+          description: Deactivated
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/workspace/client/cash-movements:
+    post:
+      summary: Synchronous atomic internal USD posting or durable rejection; no real bank transfer
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{16,128}$
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashMovement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CashMovementCommand'
+    get:
+      summary: Paged owned immutable movement history
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CashMovement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/workspace/client/cash-movements/by-request/{key}:
+    get:
+      summary: Recover the owned movement; GET 404 alone does not settle an uncertain POST
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashMovement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/workspace/client/display-currency:
+    get:
+      summary: Display-only available-cash estimate from ECB reference rates; all accounting remains USD
+      x-required-roles:
+      - CLIENT
+      parameters:
+      - name: currency
+        in: query
+        required: true
+        schema:
+          enum:
+          - USD
+          - GBP
+          - INR
+          - EUR
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisplayCurrencyEstimate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          description: Reference rate unavailable, missing, unsafe, future-dated or older than seven calendar days. No conversion
+            performed.
+  /api/workspace/operations/instruments:
+    get:
+      summary: Search versioned trading policies, 100 rows per page
+      x-required-roles:
+      - TRADING_OPS
+      parameters:
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InstrumentPolicy'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      x-denied-roles:
+      - CLIENT
+    post:
+      summary: Create USD instrument after current provider validation with immutable identity
+      x-required-roles:
+      - TRADING_OPS
+      parameters: []
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstrumentPolicy'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      x-denied-roles:
+      - CLIENT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstrumentPolicyRequest'
+  /api/workspace/operations/instruments/{id}:
+    get:
+      summary: Load one instrument and its current policy revision for the routed editor
+      x-required-roles:
+      - TRADING_OPS
+      x-denied-roles:
+      - CLIENT
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Current catalog identity and policy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstrumentPolicy'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Audited versioned edit or full deactivation; held positions/evidence are preserved
+      x-required-roles:
+      - TRADING_OPS
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstrumentPolicy'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      x-denied-roles:
+      - CLIENT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstrumentPolicyRequest'
+  /api/workspace/operations/instruments/test:
+    get:
+      summary: Read-only symbol recognition, quote usability, chart capability and policy eligibility
+      x-required-roles:
+      - TRADING_OPS
+      parameters:
+      - name: symbol
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recognized:
+                    type: boolean
+                  symbol:
+                    type: string
+                  currency:
+                    type: string
+                  source:
+                    type: string
+                  asOf:
+                    type: string
+                    format: date-time
+                  spreadSource:
+                    type: string
+                  disclaimer:
+                    type: string
+                  quoteUsable:
+                    type: boolean
+                  eligible:
+                    type: boolean
+                  reason:
+                    type: string
+                  chartAvailable:
+                    type: boolean
+                  chartReason:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      x-denied-roles:
+      - CLIENT
+  /api/operations/readiness:
+    get:
+      summary: Schema, reference roles, effective permissions, worker poll times/lag, setup checks and last reconciliation
+      x-required-roles:
+      - TRADING_OPS
+      parameters: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  schemaReady:
+                    type: boolean
+                  referenceDataReady:
+                    type: boolean
+                  runtimePermissions:
+                    type: object
+                    properties:
+                      operationalAccess:
+                        type: boolean
+                      evidenceProtected:
+                        type: boolean
+                  admissionEnabled:
+                    type: boolean
+                  workerEnabled:
+                    type: boolean
+                  workerHealth:
+                    type: object
+                  providerConfigured:
+                    type: boolean
+                  enabledPolicies:
+                    type: integer
+                  pendingJobs:
+                    type: integer
+                  oldestPendingOrderAt:
+                    type:
+                    - string
+                    - 'null'
+                  overdueJobs:
+                    type: integer
+                  cashMovementProcessing:
+                    const: SYNCHRONOUS
+                  pendingCashMovements:
+                    const: 0
+                  historicalExceptions:
+                    type: integer
+                  setupChecks:
+                    type: array
+                    items:
+                      type: object
+                  reconciliation:
+                    $ref: '#/components/schemas/Reconciliation'
+                  note:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      x-denied-roles:
+      - CLIENT
 components:
   securitySchemes:
     bearerAuth:
@@ -1833,7 +2501,7 @@ components:
       schema:
         type: string
         format: date
-      example: 2026-01-01T00:00:00Z
+      example: 2026-01-01 00:00:00+00:00
     CandleTo:
       name: to
       in: query
@@ -1842,7 +2510,7 @@ components:
       schema:
         type: string
         format: date
-      example: 2026-01-31T00:00:00Z
+      example: 2026-01-31 00:00:00+00:00
     CandleInterval:
       name: interval
       in: query
@@ -1943,6 +2611,19 @@ components:
             $ref: '#/components/schemas/ErrorResponse'
     Conflict:
       description: Duplicate resource or conflicting state
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: Request limit exceeded. Retry according to Retry-After when supplied.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalServerError:
+      description: Unexpected server failure. An uncertain cash movement or order submission must be recovered using the original
+        request key.
       content:
         application/json:
           schema:
@@ -2297,6 +2978,8 @@ components:
         cashBalance:
           type: number
           format: double
+          description: Retired funding field. Creation permits only omitted/zero; metadata update rejects any value. Fund
+            through owned cash movements.
     UpdateClientRequest:
       type: object
       properties:
@@ -2313,6 +2996,8 @@ components:
         cashBalance:
           type: number
           format: double
+          description: Retired funding field. Creation permits only omitted/zero; metadata update rejects any value. Fund
+            through owned cash movements.
     ClientBalanceResponse:
       type: object
       properties:
@@ -2495,7 +3180,9 @@ components:
           format: int64
           nullable: true
         synthetic:
-          type: boolean
+          type:
+          - boolean
+          - 'null'
     FauxnanceCandlesData:
       type: object
       required:
@@ -2601,7 +3288,7 @@ components:
         asOf:
           type: string
           format: date-time
-          example: 2026-08-26T16:13:24Z
+          example: 2026-08-26 16:13:24+00:00
         marketState:
           type: string
           enum:
@@ -3254,6 +3941,24 @@ components:
           type:
           - string
           - 'null'
+        exactQuantity:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        recordKind:
+          type: string
+        executionMode:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+        acceptedAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+        rejectionStage:
+          type: string
     WorkspaceOrderPage:
       type: object
       properties:
@@ -3276,8 +3981,30 @@ components:
           type: string
           enum:
           - INCOMPLETE_LEGACY
+          - RETAINED_INTERNAL_EVIDENCE
+          - MISSING_FILL
         explanation:
           type: string
+        fills:
+          type: array
+          items:
+            type: object
+        decisions:
+          type: array
+          items:
+            type: object
+        events:
+          type: array
+          items:
+            type: object
+        quotes:
+          type: array
+          items:
+            type: object
+        reservation:
+          type:
+          - object
+          - 'null'
     WorkspacePosition:
       type: object
       properties:
@@ -3296,25 +4023,112 @@ components:
         asOfDate:
           type: string
           format: date
+    PortfolioValuation:
+      type: object
+      required: [currency, status, totalValue, holdingsValue, cashBalance, snapshotAt, quoteAsOf, unpricedTickers]
+      properties:
+        currency:
+          const: USD
+        status:
+          type: string
+          enum: [COMPLETE, UNAVAILABLE]
+        totalValue:
+          type: [string, 'null']
+          description: Posted cash plus exact owned-quantity/quote-price products, rounded HALF_UP to cents. Null if cash or any price is unavailable.
+          example: '1050.07'
+        holdingsValue:
+          type: [string, 'null']
+          description: Exact position products summed before rounding to cents. Null if any position is unpriced; zero for no holdings.
+          example: '50.06'
+        cashBalance:
+          type: [string, 'null']
+          description: Posted USD cash, including cash reserved for pending buys. Null if the eligible cash account is missing.
+          example: '1000.01'
+        snapshotAt:
+          type: string
+          format: date-time
+          description: Time of the consistent ledger snapshot, before provider calls.
+        quoteAsOf:
+          type: [string, 'null']
+          format: date-time
+          description: Oldest accepted quote or metadata timestamp; null when no quote was accepted.
+        unpricedTickers:
+          type: array
+          items:
+            type: string
+          description: Held instruments without a verified mapped USD price. Never valued as zero.
     WorkspacePortfolio:
       type: object
       properties:
-        postedCash:
-          type: number
-        currency:
-          type: 'null'
-        availableCash:
-          type: 'null'
-        positions:
+        tradingEnabled:
+          type: boolean
+        balances:
           type: array
           items:
-            $ref: '#/components/schemas/WorkspacePosition'
+            type: object
+            properties:
+              currency:
+                const: USD
+              posted:
+                type: string
+                pattern: ^[0-9]+(\.[0-9]+)?$
+                description: Exact decimal string; never a binary floating-point accounting value.
+              reserved:
+                type: string
+                pattern: ^[0-9]+(\.[0-9]+)?$
+                description: Exact decimal string; never a binary floating-point accounting value.
+              available:
+                type: string
+                pattern: ^[0-9]+(\.[0-9]+)?$
+                description: Exact decimal string; never a binary floating-point accounting value.
+              updatedAt:
+                type: string
+                format: date-time
+        currentPositions:
+          type: array
+          items:
+            type: object
+            properties:
+              instrumentId:
+                type: integer
+              ticker:
+                type: string
+              name:
+                type: string
+              currency:
+                type: string
+              owned:
+                type: string
+                pattern: ^[0-9]+(\.[0-9]+)?$
+                description: Exact decimal string; never a binary floating-point accounting value.
+              reserved:
+                type: string
+                pattern: ^[0-9]+(\.[0-9]+)?$
+                description: Exact decimal string; never a binary floating-point accounting value.
+              available:
+                type: string
+                pattern: ^[0-9]+(\.[0-9]+)?$
+                description: Exact decimal string; never a binary floating-point accounting value.
+              updatedAt:
+                type: string
+                format: date-time
+        migrationExceptions:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              kind:
+                type: string
+              recordedAt:
+                type: string
+                format: date-time
         retrievedAt:
           type: string
           format: date-time
         limitation:
           type: string
-      description: 'Latest recorded snapshot is not certified current ownership: legacy full-sale deletion may expose older snapshots.'
     WorkspaceInstrumentPage:
       type: object
       properties:
@@ -3333,8 +4147,17 @@ components:
       properties:
         enabled:
           type: boolean
-          const: false
+        code:
+          type: string
         reason:
+          type: string
+        mode:
+          type: string
+        policyVersion:
+          type: string
+        quantityUnit:
+          type: string
+        venue:
           type: string
     ClientProfile:
       type: object
@@ -3351,35 +4174,35 @@ components:
           type: string
         onboardingComplete:
           type: boolean
-        clientName: &id001
+        clientName:
           type: string
-        phone: &id002
+        phone:
           type: string
-        dateOfBirth: &id003
+        dateOfBirth:
           type: string
-        addressLine1: &id004
+        addressLine1:
           type: string
-        addressLine2: &id005
+        addressLine2:
           type: string
-        city: &id006
+        city:
           type: string
-        state: &id007
+        state:
           type: string
-        postalCode: &id008
+        postalCode:
           type: string
-        country: &id009
+        country:
           type: string
-        employmentStatus: &id010
+        employmentStatus:
           type: string
-        riskTolerance: &id011
+        riskTolerance:
           type: string
-        investmentObjective: &id012
+        investmentObjective:
           type: string
-        preferredContactMethod: &id013
+        preferredContactMethod:
           type: string
-        paperlessStatements: &id014
+        paperlessStatements:
           type: boolean
-        marketingOptIn: &id015
+        marketingOptIn:
           type: boolean
         netWorth:
           type:
@@ -3388,23 +4211,404 @@ components:
       description: Existing client onboarding profile; retains address and preference fields.
     CompleteClientOnboardingRequest:
       properties:
-        clientName: *id001
-        phone: *id002
-        dateOfBirth: *id003
-        addressLine1: *id004
-        addressLine2: *id005
-        city: *id006
-        state: *id007
-        postalCode: *id008
-        country: *id009
-        employmentStatus: *id010
-        riskTolerance: *id011
-        investmentObjective: *id012
-        preferredContactMethod: *id013
-        paperlessStatements: *id014
-        marketingOptIn: *id015
+        clientName:
+          type: string
+        phone:
+          type: string
+        dateOfBirth:
+          type: string
+        addressLine1:
+          type: string
+        addressLine2:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+        employmentStatus:
+          type: string
+        riskTolerance:
+          type: string
+        investmentObjective:
+          type: string
+        preferredContactMethod:
+          type: string
+        paperlessStatements:
+          type: boolean
+        marketingOptIn:
+          type: boolean
         netWorth:
           type:
           - number
           - 'null'
       type: object
+    InternalOrderCommand:
+      type: object
+      properties:
+        instrumentId:
+          type: integer
+          minimum: 1
+        side:
+          enum:
+          - BUY
+          - SELL
+        quantity:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        orderType:
+          const: MARKET
+      required:
+      - instrumentId
+      - side
+      - quantity
+      - orderType
+      additionalProperties: false
+    InternalOrderReceipt:
+      type: object
+      properties:
+        orderId:
+          type: integer
+        status:
+          enum:
+          - ACCEPTED
+          - EXECUTING
+          - FILLED
+          - REJECTED
+        version:
+          type: integer
+        acceptedAt:
+          type: string
+          format: date-time
+        message:
+          type: string
+        code:
+          type: string
+        rejectionStage:
+          type: string
+        executionMode:
+          type: string
+    InternalOrderPreview:
+      type: object
+      properties:
+        price:
+          type:
+          - string
+          - 'null'
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        gross:
+          type:
+          - string
+          - 'null'
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        fee:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        availableCash:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        availableQuantity:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        projectedCash:
+          type:
+          - string
+          - 'null'
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        projectedQuantity:
+          type:
+          - string
+          - 'null'
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        eligible:
+          type: boolean
+        code:
+          type: string
+        reason:
+          type: string
+        executionMode:
+          const: INTERNAL
+        currency:
+          const: USD
+        quantityUnit:
+          type: string
+        venue:
+          type: string
+        policyVersion:
+          type: string
+        quoteTime:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        source:
+          type: string
+        message:
+          type: string
+    BankReference:
+      type: object
+      properties:
+        bankId:
+          type: string
+          format: uuid
+        nickname:
+          type: string
+        maskedAccount:
+          type: string
+        defaultAccount:
+          type: boolean
+        version:
+          type: integer
+      required:
+      - bankId
+      - nickname
+      - maskedAccount
+      - defaultAccount
+      - version
+    BankReferenceRequest:
+      type: object
+      properties:
+        nickname:
+          type: string
+          minLength: 2
+          maxLength: 50
+        routingNumber:
+          type: string
+          pattern: ^[0-9]{9}$
+        accountNumber:
+          type: string
+          pattern: ^[0-9]{4,17}$
+        defaultAccount:
+          type: boolean
+        version:
+          type: integer
+      required:
+      - nickname
+      additionalProperties: false
+      description: New reference requires both full numbers; edit omits both to retain them. Version is required on edit.
+        Numbers preserve leading zeros. Full values are never returned.
+    CashMovementCommand:
+      type: object
+      properties:
+        bankId:
+          type: string
+          format: uuid
+        direction:
+          enum:
+          - DEPOSIT
+          - WITHDRAW
+        amount:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+      required:
+      - bankId
+      - direction
+      - amount
+      additionalProperties: false
+      description: Positive USD up to 10000, at most two decimals. Deposits also capped at 10000 per UTC day.
+    CashMovement:
+      type: object
+      properties:
+        movementId:
+          type: string
+          format: uuid
+        bankId:
+          type: string
+          format: uuid
+        direction:
+          enum:
+          - DEPOSIT
+          - WITHDRAW
+        amount:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        currency:
+          const: USD
+        status:
+          enum:
+          - SETTLED
+          - REJECTED
+        reason:
+          type:
+          - string
+          - 'null'
+        bankSnapshot:
+          type: string
+        recordedAt:
+          type: string
+          format: date-time
+    DisplayCurrencyEstimate:
+      type: object
+      properties:
+        currency:
+          enum:
+          - USD
+          - GBP
+          - INR
+          - EUR
+        usd:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        estimatedValue:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        targetPerUsd:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        rateDate:
+          type: string
+          format: date
+        checkedAt:
+          type: string
+          format: date-time
+        source:
+          type: string
+        sourceUrl:
+          type: string
+          format: uri
+        note:
+          type: string
+    InstrumentPolicyRequest:
+      type: object
+      properties:
+        ticker:
+          type: string
+        name:
+          type: string
+        providerSymbol:
+          type: string
+        venue:
+          type: string
+        quantityStep:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        maxQuantity:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        maxNotional:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        quoteMaxAgeSeconds:
+          type: integer
+          minimum: 1
+          maximum: 1200
+        active:
+          type: boolean
+        buyAllowed:
+          type: boolean
+        sellAllowed:
+          type: boolean
+        reason:
+          type: string
+          minLength: 8
+          maxLength: 500
+        revision:
+          type: integer
+      required:
+      - ticker
+      - name
+      - providerSymbol
+      - venue
+      - quantityStep
+      - maxQuantity
+      - maxNotional
+      - quoteMaxAgeSeconds
+      - active
+      - buyAllowed
+      - sellAllowed
+      - reason
+      - revision
+    InstrumentPolicy:
+      type: object
+      properties:
+        ticker:
+          type: string
+        name:
+          type: string
+        providerSymbol:
+          type: string
+        venue:
+          type: string
+        quantityStep:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        maxQuantity:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        maxNotional:
+          type: string
+          pattern: ^[0-9]+(\.[0-9]+)?$
+          description: Exact decimal string; never a binary floating-point accounting value.
+        quoteMaxAgeSeconds:
+          type: integer
+          minimum: 1
+          maximum: 1200
+        active:
+          type: boolean
+        buyAllowed:
+          type: boolean
+        sellAllowed:
+          type: boolean
+        reason:
+          type: string
+          minLength: 8
+          maxLength: 500
+        revision:
+          type: integer
+        instrumentId:
+          type: integer
+        currency:
+          const: USD
+        validatedAt:
+          type: string
+          format: date-time
+    Reconciliation:
+      type: object
+      properties:
+        runId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        checkedAt:
+          type: string
+          format: date-time
+        matched:
+          type: boolean
+        exceptions:
+          type: array
+          items:
+            type: object
+            properties:
+              kind:
+                type: string
+              reference:
+                type: string
+        historicalExceptions:
+          type: integer
+        scope:
+          type: string
+        message:
+          type: string
