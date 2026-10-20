@@ -63,3 +63,14 @@ def test_invalid_date_order_is_rejected_before_reporting_query() -> None:
         headers=headers(["ANALYST"]),
     )
     assert response.status_code == 422
+
+
+def test_portfolio_visualization_endpoints_keep_the_reporting_boundary() -> None:
+    for path in ("/api/analytics/portfolio-performance", "/api/analytics/holdings"):
+        response = client.get(
+            path,
+            params={"from": "2026-10-01", "to": "2026-10-02"},
+            headers=headers(["ANALYST"]),
+        )
+        assert response.status_code == 503
+        assert "reporting source" in response.json()["detail"]

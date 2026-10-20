@@ -94,3 +94,37 @@ class FreshnessResponse(BaseModel):
     reconciliation_status: str
     quality_exceptions: int
     message: str | None = None
+
+
+BenchmarkKey = Literal["portfolio", "sp500", "dow_jones", "nasdaq_100", "russell_2000"]
+PerformancePeriod = Literal["1m", "3m", "12m"]
+
+
+class PerformancePoint(BaseModel):
+    date: date
+    values: dict[BenchmarkKey, Decimal | int] = Field(default_factory=dict)
+
+
+class PortfolioPerformanceResponse(BaseModel):
+    filters: AnalyticsFilters
+    metadata: ReportMetadata
+    period: PerformancePeriod
+    points: list[PerformancePoint] = Field(default_factory=list)
+    message: str | None = None
+
+
+class HoldingAllocation(BaseModel):
+    symbol: str
+    display_name: str
+    market_value: Decimal
+    percentage: Decimal
+    currency: str
+
+
+class PortfolioHoldingsResponse(BaseModel):
+    filters: AnalyticsFilters
+    metadata: ReportMetadata
+    holdings: list[HoldingAllocation] = Field(default_factory=list)
+    total_market_value: Decimal
+    currency: str | None
+    message: str | None = None

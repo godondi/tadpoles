@@ -1602,6 +1602,71 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
+  /api/analytics/portfolio-performance:
+    get:
+      tags:
+      - Analytics
+      summary: Compare portfolio performance with approved benchmark indexes
+      description: Returns normalized portfolio and benchmark points when the separate reporting source is connected. The current provisional release returns 503 and never fabricates values.
+      x-required-roles:
+      - ANALYST
+      x-owner: analytics-service
+      parameters:
+      - $ref: '#/components/parameters/AnalyticsFrom'
+      - $ref: '#/components/parameters/AnalyticsTo'
+      - $ref: '#/components/parameters/AnalyticsTimezone'
+      - $ref: '#/components/parameters/AnalyticsGranularity'
+      - name: period
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [1m, 3m, 12m]
+          default: 1m
+      responses:
+        '200':
+          description: Normalized portfolio and benchmark performance points
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortfolioPerformanceResponse'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /api/analytics/holdings:
+    get:
+      tags:
+      - Analytics
+      summary: Read the approved portfolio holdings allocation
+      description: Returns current reporting holdings for the analytics scope. The client displays the five largest holdings and aggregates the remainder as Other.
+      x-required-roles:
+      - ANALYST
+      x-owner: analytics-service
+      parameters:
+      - $ref: '#/components/parameters/AnalyticsFrom'
+      - $ref: '#/components/parameters/AnalyticsTo'
+      - $ref: '#/components/parameters/AnalyticsTimezone'
+      - $ref: '#/components/parameters/AnalyticsGranularity'
+      responses:
+        '200':
+          description: Approved holdings allocation with freshness metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortfolioHoldingsResponse'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
   /api/finance/summary:
     get:
       summary: Unavailable until approved scope and genuine data source are configured
@@ -3104,6 +3169,44 @@ components:
         metadata: {$ref: '#/components/schemas/AnalyticsMetadata'}
         reconciliation_status: {type: string}
         quality_exceptions: {type: integer}
+        message: {type: string, nullable: true}
+    PerformancePoint:
+      type: object
+      required: [date, values]
+      properties:
+        date: {type: string, format: date}
+        values:
+          type: object
+          additionalProperties:
+            type: number
+          description: Indexed values for portfolio, sp500, dow_jones, nasdaq_100, and russell_2000.
+    PortfolioPerformanceResponse:
+      type: object
+      required: [filters, metadata, period, points]
+      properties:
+        filters: {$ref: '#/components/schemas/AnalyticsFilters'}
+        metadata: {$ref: '#/components/schemas/AnalyticsMetadata'}
+        period: {type: string, enum: [1m, 3m, 12m]}
+        points: {type: array, items: {$ref: '#/components/schemas/PerformancePoint'}}
+        message: {type: string, nullable: true}
+    HoldingAllocation:
+      type: object
+      required: [symbol, display_name, market_value, percentage, currency]
+      properties:
+        symbol: {type: string}
+        display_name: {type: string}
+        market_value: {type: number}
+        percentage: {type: number}
+        currency: {type: string}
+    PortfolioHoldingsResponse:
+      type: object
+      required: [filters, metadata, holdings, total_market_value, currency]
+      properties:
+        filters: {$ref: '#/components/schemas/AnalyticsFilters'}
+        metadata: {$ref: '#/components/schemas/AnalyticsMetadata'}
+        holdings: {type: array, items: {$ref: '#/components/schemas/HoldingAllocation'}}
+        total_market_value: {type: number}
+        currency: {type: string, nullable: true}
         message: {type: string, nullable: true}
     DashboardResponse:
       type: object

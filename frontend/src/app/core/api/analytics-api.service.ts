@@ -84,6 +84,38 @@ export interface InstrumentsResponse {
   message?: string | null;
 }
 
+export type BenchmarkKey = 'portfolio' | 'sp500' | 'dow_jones' | 'nasdaq_100' | 'russell_2000';
+
+export interface PerformancePoint {
+  date: string;
+  values: Partial<Record<BenchmarkKey, number | string>>;
+}
+
+export interface PortfolioPerformanceResponse {
+  filters: AnalyticsFilters;
+  metadata: ReportMetadata;
+  period: '1m' | '3m' | '12m';
+  points: PerformancePoint[];
+  message?: string | null;
+}
+
+export interface HoldingAllocation {
+  symbol: string;
+  display_name: string;
+  market_value: number | string;
+  percentage: number | string;
+  currency: string;
+}
+
+export interface PortfolioHoldingsResponse {
+  filters: AnalyticsFilters;
+  metadata: ReportMetadata;
+  holdings: HoldingAllocation[];
+  total_market_value: number | string;
+  currency: string | null;
+  message?: string | null;
+}
+
 export interface FreshnessResponse {
   metadata: ReportMetadata;
   reconciliation_status: string;
@@ -111,6 +143,18 @@ export class AnalyticsApiService {
   instruments(filters: AnalyticsFilters, measure = 'fills_booked', page = 1) {
     return this.http.get<InstrumentsResponse>(this.url('/api/analytics/instruments'), {
       params: this.params(filters).set('measure', measure).set('page', page),
+    });
+  }
+
+  portfolioPerformance(filters: AnalyticsFilters, period: '1m' | '3m' | '12m' = '1m') {
+    return this.http.get<PortfolioPerformanceResponse>(this.url('/api/analytics/portfolio-performance'), {
+      params: this.params(filters).set('period', period),
+    });
+  }
+
+  portfolioHoldings(filters: AnalyticsFilters) {
+    return this.http.get<PortfolioHoldingsResponse>(this.url('/api/analytics/holdings'), {
+      params: this.params(filters),
     });
   }
 

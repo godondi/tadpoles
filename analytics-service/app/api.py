@@ -4,7 +4,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, Query
 
 from app.auth import CurrentAnalyst, get_current_analyst
-from app.schemas import AnalyticsFilters
+from app.schemas import AnalyticsFilters, PerformancePeriod
 from app.services import unavailable, validate_filters
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
@@ -60,4 +60,18 @@ def instruments(
 
 @router.get("/freshness")
 def freshness(_: Analyst) -> None:
+    unavailable()
+
+
+@router.get("/portfolio-performance")
+def portfolio_performance(
+    _: Analyst,
+    report_filters: Annotated[AnalyticsFilters, Depends(filters)],
+    period: PerformancePeriod = "1m",
+) -> None:
+    unavailable()
+
+
+@router.get("/holdings")
+def holdings(_: Analyst, report_filters: Annotated[AnalyticsFilters, Depends(filters)]) -> None:
     unavailable()

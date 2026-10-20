@@ -24,4 +24,19 @@ describe('AnalyticsApiService', () => {
     expect(request.request.headers.get('Authorization')).toBe('Bearer token');
     request.flush({});
   });
+
+  it('requests the portfolio visualization contracts with explicit filters', () => {
+    const service = TestBed.inject(AnalyticsApiService);
+    service.portfolioPerformance(filters, '12m').subscribe();
+    service.portfolioHoldings(filters).subscribe();
+
+    const performance = TestBed.inject(HttpTestingController).expectOne((candidate) => candidate.url.includes('/api/analytics/portfolio-performance'));
+    expect(performance.request.params.get('period')).toBe('12m');
+    expect(performance.request.params.get('timezone')).toBe('UTC');
+    performance.flush({});
+
+    const holdings = TestBed.inject(HttpTestingController).expectOne((candidate) => candidate.url.includes('/api/analytics/holdings'));
+    expect(holdings.request.params.get('from')).toBe('2026-10-01');
+    holdings.flush({});
+  });
 });
