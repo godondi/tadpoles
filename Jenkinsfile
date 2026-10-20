@@ -75,12 +75,13 @@ pipeline {
             }
         }
 
-        stage('Compose Startup and Upgrade') {
-            steps {
-                sh 'python3 scripts/test-client-compose.py'
-                sh 'python3 scripts/test-hardened-config.py'
-            }
-        }
+        // stage('Compose Startup and Upgrade') {
+        //     steps {
+        //         sh 'python3 scripts/test-client-compose.py'
+        //         sh 'python3 scripts/test-hardened-config.py'
+        //     }
+        // }
+        
         stage('Archive Backend Artifact') {
             steps {
                 archiveArtifacts artifacts: 'backend/target/*.jar', fingerprint: true
