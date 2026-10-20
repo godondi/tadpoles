@@ -20,6 +20,9 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     image: tadpole-app:latest
+    container_name: tadpole-backend
+    env_file:
+      - .env
     environment:
       DB_URL: ${DB_URL}
       DB_USERNAME: ${DB_USERNAME}
@@ -39,12 +42,6 @@ services:
       # Fictitious local demo only. Hardened deployments require a separately provisioned key.
       BANKING_ENCRYPTION_KEY: ${BANKING_ENCRYPTION_KEY:-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
-      TRADING_ADMISSION_ENABLED: ${TRADING_ADMISSION_ENABLED:-true}
-      TRADING_WORKER_ENABLED: ${TRADING_WORKER_ENABLED:-true}
-      TRADING_LOCAL_DEMO_SETUP: ${TRADING_LOCAL_DEMO_SETUP:-true}
-      # Fictitious local demo only. Hardened deployments require a separately provisioned key.
-      BANKING_ENCRYPTION_KEY: ${BANKING_ENCRYPTION_KEY:-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
     ports:
       - "${BACKEND_HOST_PORT}:${BACKEND_CONTAINER_PORT}"
     depends_on:
@@ -56,6 +53,9 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     image: tadpole-frontend:latest
+    container_name: tadpole-frontend
+    env_file:
+      - .env
     environment:
       PORT: ${FRONTEND_CONTAINER_PORT}
     ports:
@@ -63,6 +63,9 @@ services:
 
   database:
     image: postgres:15
+    container_name: tadpole-database
+    env_file:
+      - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -96,6 +99,8 @@ services:
 
   database-demo-seed:
     image: postgres:15
+    env_file:
+      - .env
     environment:
       PGHOST: database
       PGUSER: ${POSTGRES_USER}
@@ -105,8 +110,8 @@ services:
       - ./database/demo/role_workspaces.sql:/role_workspaces.sql:ro
     command: ["psql", "-v", "ON_ERROR_STOP=1", "-f", "/role_workspaces.sql"]
     depends_on:
-      database:
-        condition: service_healthy
+      database-migrate:
+        condition: service_completed_successfully
 
 #  testing:
 #    build:

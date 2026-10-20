@@ -87,7 +87,7 @@ pipeline {
                 archiveArtifacts artifacts: 'backend/target/*.jar', fingerprint: true
             }
         }
-        
+
         stage('Compose E2E Smoke Test') {
             steps {
                 sh '''
@@ -126,6 +126,11 @@ pipeline {
                     '''
                                         archiveArtifacts artifacts: 'compose.log', allowEmptyArchive: true, onlyIfSuccessful: false
                 }
+        }
+        stage('Compose Startup and Upgrade') {
+            steps {
+                sh 'python3 scripts/test-client-compose.py'
+                sh 'python3 scripts/test-hardened-config.py'
             }
         }
     }
