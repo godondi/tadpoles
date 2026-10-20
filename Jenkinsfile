@@ -126,6 +126,7 @@ pipeline {
                     '''
                                         archiveArtifacts artifacts: 'compose.log', allowEmptyArchive: true, onlyIfSuccessful: false
                 }
+            }
         }
         stage('Compose Startup and Upgrade') {
             steps {
