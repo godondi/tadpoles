@@ -8,6 +8,12 @@ env = {
     "TRADING_RUNTIME_DB_USER": "test_runtime",
     "TRADING_RUNTIME_DB_PASSWORD": "test-only",
     "BANKING_ENCRYPTION_KEY": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+    # No approved deployment access policy; local template values are demo fixtures.
+    "OPERATIONS_ACCESS_ENABLED": "false",
+    "OPERATIONS_ALLOWED_PURPOSES": "",
+    "OPERATIONS_POLICY_VERSION": "",
+    "OPERATIONS_CONTEXT_SECONDS": "0",
+    "OPERATIONS_EXPORT_SECONDS": "0",
 }
 result = subprocess.check_output(
     [
@@ -41,6 +47,9 @@ assert "auth-stub" not in services or services["auth-stub"].get(
 ), "Development auth stub must require an explicit local profile"
 assert backend["environment"]["TRADING_LOCAL_DEMO_SETUP"] == "false"
 assert backend["environment"]["DB_USERNAME"] == "test_runtime"
+assert backend["environment"]["OPERATIONS_ACCESS_ENABLED"] == "false"
+assert backend["environment"]["OPERATIONS_CONTEXT_SECONDS"] == "0"
+assert backend["environment"]["OPERATIONS_EXPORT_SECONDS"] == "0"
 print(
     "PASS: hardened startup excludes demo seeding/auth stub and uses the separately provisioned runtime identity."
 )

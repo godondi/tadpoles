@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Disposable process restart + pg_dump/restore rehearsal; never connects to Compose volumes."""
-import json, os, pathlib, subprocess, time, urllib.request, urllib.error, uuid
+import hashlib, json, os, pathlib, runpy, subprocess, tempfile, time, urllib.request, urllib.error, uuid
 
 root = pathlib.Path(__file__).resolve().parent.parent
 prefix = "tadpoles-recovery-" + str(os.getpid())
@@ -32,12 +32,14 @@ def sql(statement, database="tadpoles_isolated_test"):
     ).strip()
 
 
-def api(path, payload=None, token=None, key=None):
+def api(path, payload=None, token=None, key=None, context=None):
     headers = {"Content-Type": "application/json"}
     if token:
         headers["Authorization"] = "Bearer " + token
     if key:
         headers["Idempotency-Key"] = key
+    if context:
+        headers["X-Operations-Context"] = context
     req = urllib.request.Request(
         "http://127.0.0.1:" + port + path,
         data=json.dumps(payload).encode() if payload is not None else None,
@@ -45,7 +47,7 @@ def api(path, payload=None, token=None, key=None):
     )
     try:
         with urllib.request.urlopen(req, timeout=10) as res:
-            return res.status, json.load(res)
+            return res.status, res.read() if res.headers.get_content_type() == "application/zip" else json.load(res)
     except urllib.error.HTTPError as err:
         return err.code, json.load(err)
 
@@ -80,6 +82,11 @@ def start(database, admission, worker, restricted=False):
         "TRADING_WORKER_ENABLED=" + str(worker).lower(),
         "-e",
         "TRADING_LOCAL_DEMO_SETUP=true",
+        "-e", "OPERATIONS_ACCESS_ENABLED=true",
+        "-e", "OPERATIONS_ALLOWED_PURPOSES=ORDER_REVIEW",
+        "-e", "OPERATIONS_POLICY_VERSION=recovery-fixture-v1",
+        "-e", "OPERATIONS_CONTEXT_SECONDS=3600",
+        "-e", "OPERATIONS_EXPORT_SECONDS=3600",
         "-e",
         "BANKING_ENCRYPTION_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
         "-e",
@@ -227,6 +234,73 @@ try:
         "/api/workspace/client/cash-movements", movement, token, movement_key
     )
     assert code == 200 and deposit["status"] == "SETTLED"
+    # Explicit isolated grants exercise recovery of scope, purpose and immutable artifacts.
+    sql("""INSERT INTO operations_access_grants(grant_id,staff_user_id,permission,client_id,
+        account_reference,valid_from,valid_until,approved_by,approval_reference)
+        SELECT gen_random_uuid(),staff.user_id,p.permission,c.client_id,'RECOVERY-ACCOUNT',
+          now()-interval '1 minute',now()+interval '1 hour',approver.user_id,'RECOVERY-TEST-APPROVAL'
+        FROM users staff CROSS JOIN users approver CROSS JOIN clients c
+        CROSS JOIN (VALUES ('ORDER_READ'),('EVIDENCE_READ'),('EVIDENCE_EXPORT'),('RECONCILIATION_READ'),('CASE_READ'),('CASE_UPDATE')) p(permission)
+        JOIN users owner ON owner.user_id=c.user_id
+        WHERE staff.username='demo.operations' AND approver.username='demo.finance' AND owner.username='demo.client'""")
+    code, operations = api('/auth/login', {'username':'demo.operations','password':'RoleDemo2026!'})
+    assert code == 200
+    operations_token = operations['token']
+    code, purpose = api('/api/operations/access-contexts', {'purposeCode':'ORDER_REVIEW','referenceType':'EXTERNAL','caseReference':'RECOVERY-CASE-001'}, operations_token)
+    assert code == 200, purpose
+    external_context = purpose['contextId']
+    case_key = str(uuid.uuid4())
+    case_command = {'category':'ORDER_QUESTION','subject':'Retained receipt question',
+                    'description':'Please explain the retained execution price.', 'orderId':filled['orderId']}
+    code, case = api('/api/support/cases',case_command,token,case_key)
+    assert code == 200, case
+    case_reference = case['reference']
+    client_case = '/api/support/cases/' + case_reference
+    staff_case = '/api/operations/cases/' + case_reference
+    code, updates = api('/api/support/updates',token=token)
+    assert code == 200 and updates['unread'] == 1
+    code, read = api('/api/support/updates/read',{'cursor':updates['cursor']},token)
+    assert code == 200 and read['unread'] == 0
+    reply_key = str(uuid.uuid4())
+    reply_command = {'expectedVersion':1,'body':'The retained execution quote was used for internal booking.'}
+    code, reply = api(staff_case+'/replies',reply_command,operations_token,reply_key)
+    assert code == 200 and reply['version'] == 2, reply
+    code, public_before = api(client_case,token=token)
+    code, note = api(staff_case+'/notes',{'expectedVersion':2,'body':'Private investigation retained for staff review.'},operations_token,str(uuid.uuid4()))
+    assert code == 200, note
+    code, public_after = api(client_case,token=token)
+    assert code == 200 and public_before == public_after
+    code, resolved = api(staff_case+'/transitions',{'expectedVersion':2,'status':'RESOLVED','body':'The retained receipt explains the internal booking outcome.'},operations_token,str(uuid.uuid4()))
+    assert code == 200 and resolved['version'] == 3, resolved
+    code, reopened = api(client_case+'/reopen',{'expectedVersion':3,'body':'Please explain the reservation consumption as well.'},token,str(uuid.uuid4()))
+    assert code == 200 and reopened['version'] == 4, reopened
+    code, purpose = api('/api/operations/access-contexts',{'purposeCode':'ORDER_REVIEW','referenceType':'MANAGED','caseReference':case_reference},operations_token)
+    assert code == 200, purpose
+    context = purpose['contextId']
+    code, exported = api('/api/operations/evidence-exports', {'orderId':filled['orderId']}, operations_token, str(uuid.uuid4()), context)
+    assert code == 200, exported
+    code, association = api(staff_case+'/exports',{'exportId':exported['exportId']},operations_token,context=context)
+    assert code == 200 and association['digest'] == exported['digest'], association
+    download_path = '/api/operations/evidence-exports/' + exported['exportId'] + '/download'
+    code, archive_before = api(download_path, token=operations_token, context=context)
+    assert code == 200 and hashlib.sha256(archive_before).hexdigest() == exported['digest']
+    verifier = runpy.run_path(str(root / 'scripts/verify-operations-export.py'))['verify']
+    with tempfile.TemporaryDirectory(prefix='operations-verifier-') as directory:
+        archive_path = pathlib.Path(directory) / 'evidence.zip'
+        archive_path.write_bytes(archive_before)
+        assert verifier(archive_path, exported['digest'])['verifiedFiles'] == 4
+        try:
+            verifier(archive_path, '0' * 64)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError('Verifier accepted an incorrect archive digest')
+
+    restored_tables = ['operations_access_grants','operations_grant_events','operations_access_contexts',
+        'operations_access_events','operations_evidence_exports','order_decision_contexts',
+        'support_cases','support_case_events','support_case_notes','support_case_requests','support_read_state','support_case_exports']
+    before_restore = {table:sql('SELECT count(*) FROM '+table) for table in restored_tables}
+    restore_started = time.monotonic()
     dump = docker(
         "exec",
         prefix + "-db",
@@ -239,6 +313,9 @@ try:
     )
     sql("CREATE DATABASE tadpoles_restored_test")
     sql(dump, "tadpoles_restored_test")
+    restore_seconds = time.monotonic() - restore_started
+    for table, count in before_restore.items():
+        assert sql('SELECT count(*) FROM '+table, 'tadpoles_restored_test') == count
     assert sql("SELECT count(*) FROM order_fills", "tadpoles_restored_test") == "1"
     assert (
         sql(
@@ -250,7 +327,17 @@ try:
     stop_api()
     # Rollback mode: no new admissions; acknowledged work drains after restart/restore.
     token = start("tadpoles_restored_test", False, True)
+    code, recovered_case = api('/api/support/cases/by-request/'+case_key,token=token)
+    assert code == 200 and recovered_case['reference'] == case_reference and recovered_case['status'] == 'IN_REVIEW', recovered_case
+    code, recovered_reply = api(staff_case+'/requests/'+reply_key,token=operations_token)
+    assert code == 200 and recovered_reply == reply, recovered_reply
+    code, restored_updates = api('/api/support/updates',token=token)
+    assert code == 200 and restored_updates['unread'] == 3, restored_updates
+    code, external_detail = api('/api/operations/orders/'+str(filled['orderId']),token=operations_token,context=external_context)
+    assert code == 200, external_detail
     wait_fill(accepted["orderId"], token)
+    code, archive_after = api(download_path, token=operations_token, context=context)
+    assert code == 200 and archive_after == archive_before
     code, restored_deposit = api(
         "/api/workspace/client/cash-movements", movement, token, movement_key
     )
@@ -326,8 +413,33 @@ try:
             pass
         else:
             raise AssertionError("Runtime role could rewrite evidence")
+    for table in ['operations_grant_events','operations_access_contexts','operations_access_events',
+                  'operations_evidence_exports','order_decision_contexts','reconciliation_findings',
+                  'support_case_events','support_case_notes','support_case_requests','support_case_exports']:
+        assert sql(
+            "SELECT NOT has_table_privilege('recovery_runtime','" + table + "','UPDATE')",
+            'tadpoles_restored_test',
+        ) == 't'
+        for action in ['DELETE FROM ' + table, 'TRUNCATE ' + table + ' CASCADE']:
+            try:
+                sql('SET ROLE recovery_runtime;'+action, 'tadpoles_restored_test')
+            except subprocess.CalledProcessError:
+                pass
+            else:
+                raise AssertionError('Runtime could mutate '+table)
+    assert sql("SELECT NOT has_table_privilege('recovery_runtime','operations_access_grants','INSERT')", 'tadpoles_restored_test') == 't'
     stop_api()
     token = start("tadpoles_restored_test", True, True, restricted=True)
+    code, detail = api('/api/operations/orders/'+str(filled['orderId']), token=operations_token, context=context)
+    assert code == 200 and detail['evidenceStatus'] == 'COMPLETE_FOR_INTERNAL_BOOKING', detail
+    code, runtime_export = api('/api/operations/evidence-exports', {'orderId':filled['orderId']}, operations_token, str(uuid.uuid4()), context)
+    assert code == 200, runtime_export
+    code, ready = api('/api/operations/readiness', token=operations_token)
+    assert code == 200 and ready['runtimePermissions']['evidenceProtected'] and ready['supportSchemaReady'], ready
+    code, runtime_case = api('/api/support/cases',{'category':'ACCOUNT_REVIEW','subject':'Restricted runtime case','description':'Confirm support persists under the restricted runtime.'},token,str(uuid.uuid4()))
+    assert code == 200, runtime_case
+    code, runtime_reply = api('/api/support/cases/'+runtime_case['reference']+'/replies',{'expectedVersion':1,'body':'Additional public information after restore.'},token,str(uuid.uuid4()))
+    assert code == 200 and runtime_reply['version'] == 2, runtime_reply
     code, runtime_order = api("/api/orders", command, token, str(uuid.uuid4()))
     assert code == 202
     wait_fill(runtime_order["orderId"], token)
@@ -368,8 +480,9 @@ try:
         )
         == "0"
     )
+    print(f"Operations dump/restore: {restore_seconds:.3f}s; zero loss relative to the captured snapshot; export bytes identical after restore.")
     print(
-        "PASS: HTTP-provider buy, backup/restore, deposit replay after restore, admission halt/drain, restart, non-owner booking, sell-all, withdrawal/replay, immutable evidence grants, repeated migrations, and persisted zero-difference reconciliation."
+        "PASS: durable cases/public-private history, recovered write receipts/unread watermarks, managed export associations; Operations scoped reads/exports, audit/grant restoration, restricted evidence permissions; HTTP-provider buy, backup/restore, deposit replay after restore, admission halt/drain, restart, non-owner booking, sell-all, withdrawal/replay, immutable evidence grants, repeated migrations, and persisted zero-difference reconciliation."
     )
 finally:
     subprocess.run(
