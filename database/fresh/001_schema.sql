@@ -2075,3 +2075,242 @@ ALTER TABLE ONLY public.user_roles
 --
 -- PostgreSQL database dump complete
 --
+
+-- Operations investigation schema.
+SET search_path = public;
+-- Explicit client scopes only. Provision through an authorized database deployment, never staff UI.
+CREATE TABLE operations_access_grants (
+    grant_id uuid PRIMARY KEY,
+    staff_user_id integer NOT NULL REFERENCES users(user_id),
+    permission text NOT NULL CHECK (permission IN ('ORDER_READ', 'EVIDENCE_READ', 'RECONCILIATION_READ', 'EVIDENCE_EXPORT')),
+    scope_type text NOT NULL DEFAULT 'CLIENT' CHECK (scope_type = 'CLIENT'),
+    client_id integer NOT NULL REFERENCES clients(client_id),
+    account_reference varchar(80) NOT NULL CHECK (account_reference ~ '^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$'),
+    valid_from timestamptz NOT NULL,
+    valid_until timestamptz NOT NULL CHECK (valid_until > valid_from),
+    approved_by integer NOT NULL REFERENCES users(user_id),
+    approval_reference varchar(200) NOT NULL CHECK (length(trim(approval_reference)) >= 8),
+    revoked_at timestamptz,
+    CHECK (approved_by <> staff_user_id)
+);
+CREATE INDEX operations_grants_lookup ON operations_access_grants (staff_user_id, permission, client_id, valid_until) WHERE revoked_at IS NULL;
+CREATE TABLE operations_grant_events (
+    event_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    grant_id uuid NOT NULL REFERENCES operations_access_grants(grant_id),
+    database_actor text NOT NULL,
+    action text NOT NULL,
+    before_values jsonb,
+    after_values jsonb NOT NULL,
+    recorded_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE FUNCTION record_operations_grant_change() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF TG_OP = 'UPDATE' AND (to_jsonb(NEW) - 'revoked_at') IS DISTINCT FROM (to_jsonb(OLD) - 'revoked_at') THEN
+        RAISE EXCEPTION 'Revoke and issue a new grant to change scope';
+    END IF;
+    IF TG_OP = 'UPDATE' AND (OLD.revoked_at IS NOT NULL OR NEW.revoked_at IS NULL) THEN
+        RAISE EXCEPTION 'Grant revocation cannot be reversed';
+    END IF;
+    INSERT INTO operations_grant_events(grant_id, database_actor, action, before_values, after_values)
+    VALUES (NEW.grant_id, current_user, TG_OP, CASE WHEN TG_OP = 'UPDATE' THEN to_jsonb(OLD) END, to_jsonb(NEW));
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER operations_grant_changes AFTER INSERT OR UPDATE ON operations_access_grants FOR EACH ROW EXECUTE FUNCTION record_operations_grant_change();
+CREATE TRIGGER operations_grant_no_delete BEFORE DELETE ON operations_access_grants FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+CREATE TABLE operations_access_contexts (
+    context_id uuid PRIMARY KEY,
+    actor integer NOT NULL REFERENCES users(user_id),
+    purpose_code varchar(40) NOT NULL,
+    case_reference varchar(200) NOT NULL CHECK (length(trim(case_reference)) BETWEEN 8 AND 200),
+    created_at timestamptz NOT NULL,
+    expires_at timestamptz NOT NULL CHECK (expires_at > created_at),
+    policy_version varchar(80) NOT NULL
+);
+CREATE TABLE operations_access_events (
+    event_id uuid PRIMARY KEY,
+    actor integer NOT NULL REFERENCES users(user_id),
+    context_id uuid,
+    action varchar(80) NOT NULL,
+    target_type varchar(40) NOT NULL,
+    target_id varchar(80),
+    filter_digest varchar(64) NOT NULL,
+    scope_version varchar(64) NOT NULL,
+    outcome varchar(40) NOT NULL,
+    returned_count integer NOT NULL CHECK (returned_count >= 0),
+    recorded_at timestamptz NOT NULL,
+    correlation_id uuid NOT NULL,
+    export_id uuid
+);
+CREATE INDEX operations_access_events_actor_time ON operations_access_events(actor, recorded_at);
+CREATE TABLE operations_evidence_exports (
+    export_id uuid PRIMARY KEY,
+    requester integer NOT NULL REFERENCES users(user_id),
+    context_id uuid NOT NULL REFERENCES operations_access_contexts(context_id),
+    order_id integer NOT NULL REFERENCES client_trades(trade_id),
+    idempotency_key varchar(80) NOT NULL,
+    request_hash varchar(64) NOT NULL,
+    scope_version varchar(64) NOT NULL,
+    snapshot_at timestamptz NOT NULL,
+    expires_at timestamptz NOT NULL,
+    order_version bigint NOT NULL,
+    digest varchar(64) NOT NULL,
+    archive bytea NOT NULL,
+    UNIQUE(requester, idempotency_key)
+);
+CREATE TABLE order_decision_contexts (
+    decision_id uuid PRIMARY KEY REFERENCES order_rule_decisions(decision_id),
+    schema_version integer NOT NULL CHECK (schema_version = 1),
+    facts jsonb NOT NULL,
+    recorded_at timestamptz NOT NULL
+);
+CREATE INDEX operations_order_scope_time ON client_trades(client_id, submitted_at DESC, trade_id DESC) WHERE record_kind = 'SELF_DIRECTED';
+CREATE INDEX operations_order_time ON client_trades(submitted_at DESC, trade_id DESC) WHERE record_kind = 'SELF_DIRECTED';
+CREATE INDEX operations_order_status_time ON client_trades(status, submitted_at DESC, trade_id DESC) WHERE record_kind = 'SELF_DIRECTED';
+CREATE TABLE reconciliation_findings (
+    finding_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    run_id uuid NOT NULL REFERENCES reconciliation_runs(run_id),
+    kind text NOT NULL,
+    client_id integer REFERENCES clients(client_id),
+    order_id integer REFERENCES client_trades(trade_id),
+    reference text NOT NULL,
+    detected_at timestamptz NOT NULL
+);
+CREATE INDEX operations_reconciliation_scope ON reconciliation_findings(run_id, client_id, finding_id);
+CREATE TRIGGER immutable_evidence BEFORE UPDATE OR DELETE ON operations_grant_events FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+CREATE TRIGGER immutable_evidence BEFORE UPDATE OR DELETE ON operations_access_contexts FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+CREATE TRIGGER immutable_evidence BEFORE UPDATE OR DELETE ON operations_access_events FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+CREATE TRIGGER immutable_evidence BEFORE UPDATE OR DELETE ON operations_evidence_exports FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+CREATE TRIGGER immutable_evidence BEFORE UPDATE OR DELETE ON order_decision_contexts FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+CREATE TRIGGER immutable_evidence BEFORE UPDATE OR DELETE ON reconciliation_findings FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+
+-- Managed support persistence (migration 012).
+
+ALTER TABLE client_trades ADD CONSTRAINT support_order_owner UNIQUE (trade_id, client_id);
+CREATE TABLE support_cases (
+    case_id uuid PRIMARY KEY,
+    reference varchar(41) NOT NULL UNIQUE CHECK (reference ~ '^CASE-[0-9a-f-]{36}$'),
+    client_id integer NOT NULL REFERENCES clients(client_id),
+    order_id integer,
+    category varchar(40) NOT NULL CHECK (category IN ('ORDER_QUESTION','ACCOUNT_REVIEW','HISTORICAL_RECORD','TRADING_AVAILABILITY','OTHER')),
+    subject varchar(120) NOT NULL CHECK (length(trim(subject)) BETWEEN 5 AND 120),
+    request_key varchar(128) NOT NULL,
+    request_hash varchar(64) NOT NULL,
+    status varchar(24) NOT NULL CHECK (status IN ('OPEN','IN_REVIEW','AWAITING_CLIENT','RESOLVED')),
+    version bigint NOT NULL CHECK (version >= 1),
+    created_at timestamptz NOT NULL,
+    updated_at timestamptz NOT NULL,
+    UNIQUE (client_id,request_key),
+    UNIQUE (case_id,client_id),
+    FOREIGN KEY (order_id,client_id) REFERENCES client_trades(trade_id,client_id)
+);
+CREATE INDEX support_owner_time ON support_cases(client_id,created_at DESC,case_id DESC);
+CREATE INDEX support_owner_status ON support_cases(client_id,status,created_at DESC,case_id DESC);
+CREATE TABLE support_case_events (
+    event_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    case_id uuid NOT NULL,
+    client_id integer NOT NULL,
+    version bigint NOT NULL,
+    kind varchar(24) NOT NULL,
+    actor integer NOT NULL REFERENCES users(user_id),
+    author_role varchar(16) NOT NULL CHECK (author_role IN ('CLIENT','OPERATIONS')),
+    body varchar(4000) NOT NULL CHECK (length(trim(body)) BETWEEN 10 AND 4000),
+    previous_status varchar(24),
+    status varchar(24) NOT NULL,
+    recorded_at timestamptz NOT NULL,
+    UNIQUE(case_id,version),
+    FOREIGN KEY(case_id,client_id) REFERENCES support_cases(case_id,client_id)
+);
+CREATE INDEX support_public_updates ON support_case_events(client_id,event_id);
+CREATE TRIGGER immutable_evidence BEFORE UPDATE OR DELETE ON support_case_events FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+CREATE FUNCTION guard_support_case() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN RAISE EXCEPTION 'Support history cannot be deleted'; END IF;
+    IF (to_jsonb(NEW) - ARRAY['status','version','updated_at']) IS DISTINCT FROM
+       (to_jsonb(OLD) - ARRAY['status','version','updated_at']) THEN
+        RAISE EXCEPTION 'Case identity and request are immutable';
+    END IF;
+    IF NEW.version <> OLD.version + 1 THEN RAISE EXCEPTION 'Case version must advance once'; END IF;
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER support_case_guard BEFORE UPDATE OR DELETE ON support_cases FOR EACH ROW EXECUTE FUNCTION guard_support_case();
+ALTER TABLE operations_access_grants DROP CONSTRAINT operations_access_grants_permission_check;
+ALTER TABLE operations_access_grants ADD CONSTRAINT operations_access_grants_permission_check
+    CHECK (permission IN ('ORDER_READ','EVIDENCE_READ','RECONCILIATION_READ','EVIDENCE_EXPORT','CASE_READ','CASE_UPDATE'));
+
+CREATE TABLE support_case_notes (
+    note_id uuid PRIMARY KEY,
+    case_id uuid NOT NULL REFERENCES support_cases(case_id),
+    actor integer NOT NULL REFERENCES users(user_id),
+    body varchar(4000) NOT NULL CHECK (length(trim(body)) BETWEEN 10 AND 4000),
+    recorded_at timestamptz NOT NULL
+);
+CREATE INDEX support_notes_page ON support_case_notes(case_id,recorded_at,note_id);
+CREATE TABLE support_case_requests (
+    case_id uuid NOT NULL REFERENCES support_cases(case_id),
+    actor integer NOT NULL REFERENCES users(user_id),
+    request_key varchar(128) NOT NULL,
+    request_hash varchar(64) NOT NULL,
+    receipt jsonb NOT NULL,
+    recorded_at timestamptz NOT NULL,
+    PRIMARY KEY(case_id,actor,request_key)
+);
+CREATE TRIGGER immutable_evidence BEFORE UPDATE OR DELETE ON support_case_notes FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+CREATE TRIGGER immutable_evidence BEFORE UPDATE OR DELETE ON support_case_requests FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+
+ALTER TABLE support_cases ADD CONSTRAINT support_case_reference_identity UNIQUE(case_id,reference);
+ALTER TABLE operations_access_contexts ADD COLUMN reference_type varchar(16) NOT NULL DEFAULT 'EXTERNAL'
+    CHECK (reference_type IN ('EXTERNAL','MANAGED'));
+ALTER TABLE operations_access_contexts ADD COLUMN managed_case_id uuid;
+ALTER TABLE operations_access_contexts ADD CONSTRAINT managed_context_reference
+    FOREIGN KEY(managed_case_id,case_reference) REFERENCES support_cases(case_id,reference);
+ALTER TABLE operations_access_contexts ADD CONSTRAINT managed_context_kind
+    CHECK ((reference_type='MANAGED') = (managed_case_id IS NOT NULL));
+CREATE TABLE support_read_state (
+    client_id integer NOT NULL REFERENCES clients(client_id),
+    recipient integer NOT NULL REFERENCES users(user_id),
+    last_event bigint NOT NULL CHECK(last_event >= 0),
+    PRIMARY KEY(client_id,recipient)
+);
+
+CREATE TABLE support_case_exports (
+    case_id uuid NOT NULL REFERENCES support_cases(case_id),
+    export_id uuid NOT NULL REFERENCES operations_evidence_exports(export_id),
+    digest varchar(64) NOT NULL,
+    actor integer NOT NULL REFERENCES users(user_id),
+    recorded_at timestamptz NOT NULL,
+    PRIMARY KEY(case_id,export_id)
+);
+CREATE TRIGGER immutable_evidence BEFORE UPDATE OR DELETE ON support_case_exports FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+
+CREATE FUNCTION check_support_projection() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE aggregate support_cases%ROWTYPE;
+BEGIN
+    SELECT * INTO aggregate FROM support_cases WHERE case_id=NEW.case_id;
+    IF NOT FOUND OR (SELECT count(*) FROM support_case_events WHERE case_id=NEW.case_id) <> aggregate.version
+       OR NOT EXISTS(SELECT 1 FROM support_case_events WHERE case_id=NEW.case_id
+            AND version=aggregate.version AND status=aggregate.status AND recorded_at=aggregate.updated_at) THEN
+        RAISE EXCEPTION 'Case projection requires matching retained history';
+    END IF;
+    RETURN NULL;
+END;
+$$;
+CREATE CONSTRAINT TRIGGER support_projection_consistent AFTER INSERT OR UPDATE ON support_cases
+    DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_support_projection();
+CREATE CONSTRAINT TRIGGER support_history_consistent AFTER INSERT ON support_case_events
+    DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_support_projection();
+CREATE FUNCTION guard_support_read_state() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM clients WHERE client_id=NEW.client_id AND user_id=NEW.recipient)
+       OR (NEW.last_event<>0 AND NOT EXISTS(SELECT 1 FROM support_case_events WHERE event_id=NEW.last_event AND client_id=NEW.client_id)) THEN
+        RAISE EXCEPTION 'Read watermark must belong to the recipient';
+    END IF;
+    IF TG_OP='UPDATE' AND (NEW.client_id<>OLD.client_id OR NEW.recipient<>OLD.recipient OR NEW.last_event<OLD.last_event) THEN
+        RAISE EXCEPTION 'Read watermark cannot change recipient or move backwards';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER support_read_state_guard BEFORE INSERT OR UPDATE ON support_read_state
+    FOR EACH ROW EXECUTE FUNCTION guard_support_read_state();
