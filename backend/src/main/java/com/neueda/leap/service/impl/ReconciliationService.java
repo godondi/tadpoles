@@ -4,21 +4,29 @@ import static com.neueda.leap.trading.TradingData.map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.neueda.leap.mapper.ReconciliationMapper;
-import java.time.Clock;
-import java.util.*;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.*;
+
+import java.time.Clock;
+import java.util.*;
 
 @Service
 public class ReconciliationService {
     private final ReconciliationMapper db;
     private final ObjectMapper json;
     private final Clock clock;
+    private final com.neueda.leap.mapper.OperationsReconciliationMapper findings;
 
-    public ReconciliationService(ReconciliationMapper db, ObjectMapper json, Clock clock) {
+    public ReconciliationService(
+            ReconciliationMapper db,
+            ObjectMapper json,
+            Clock clock,
+            com.neueda.leap.mapper.OperationsReconciliationMapper findings) {
         this.db = db;
         this.json = json;
         this.clock = clock;
+        this.findings = findings;
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ)
@@ -28,6 +36,8 @@ public class ReconciliationService {
         var now = clock.instant();
         var report =
                 map(
+                        "evidenceVersion",
+                        2,
                         "runId",
                         id,
                         "checkedAt",
@@ -57,6 +67,7 @@ public class ReconciliationService {
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             throw new IllegalStateException(e);
         }
+        findings.findings(id);
         return report;
     }
 

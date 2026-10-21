@@ -6,14 +6,16 @@ import static com.neueda.leap.trading.TradingRules.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.neueda.leap.mapper.TradingMapper;
 import com.neueda.leap.trading.TradingModels.*;
-import java.math.BigDecimal;
-import java.time.*;
-import java.util.*;
+
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.math.BigDecimal;
+import java.time.*;
+import java.util.*;
 
 @Service
 public class TradingTransactions {
@@ -46,29 +48,76 @@ public class TradingTransactions {
         }
     }
 
+    /** Records only checks that actually ran; skipped checks keep NOT_EVALUATED. */
+    private static final class DecisionChecks {
+        private final Map<String, String> results = new LinkedHashMap<>();
+
+        DecisionChecks(String... codes) {
+            for (String code : codes) results.put(code, "NOT_EVALUATED");
+        }
+
+        boolean fails(String code, boolean failed) {
+            results.put(code, failed ? "FAIL" : "PASS");
+            return failed;
+        }
+
+        List<RuleCheck> appendTo(List<RuleCheck> preceding) {
+            var all = new ArrayList<>(preceding);
+            results.forEach((code, result) -> all.add(new RuleCheck(code, result)));
+            return List.copyOf(all);
+        }
+    }
+
+    private DecisionChecks admissionChecks() {
+        return new DecisionChecks(
+                "POLICY_CHANGED",
+                "ACCOUNT_UNAVAILABLE",
+                "BANK_REQUIRED",
+                "CURRENCY_UNAVAILABLE",
+                "INSUFFICIENT_CASH",
+                "POSITION_REVIEW",
+                "INSUFFICIENT_UNITS");
+    }
+
     public Evaluation resources(int client, Command command, Policy policy, Evaluation e) {
+        return resources(client, command, policy, e, admissionChecks());
+    }
+
+    private Evaluation resources(
+            int client, Command command, Policy policy, Evaluation e, DecisionChecks checks) {
         if (!e.eligible()) return e;
-        if (!db.onboarded(client) || !db.accountEnabled(client))
+        if (checks.fails(
+                "ACCOUNT_UNAVAILABLE", !db.onboarded(client) || !db.accountEnabled(client)))
             return reject("ACCOUNT_UNAVAILABLE", "Complete onboarding before trading");
-        if (!db.hasBank(client))
+        if (checks.fails("BANK_REQUIRED", !db.hasBank(client)))
             return reject("BANK_REQUIRED", "Add a saved bank account before buying or selling");
         Map<String, Object> cash = db.cash(client, policy.currency());
-        if (cash == null || !Boolean.TRUE.equals(cash.get("available_for_trading")))
+        if (checks.fails(
+                "CURRENCY_UNAVAILABLE",
+                cash == null || !Boolean.TRUE.equals(cash.get("available_for_trading"))))
             return reject("CURRENCY_UNAVAILABLE", "No account exists for " + policy.currency());
         if ("BUY".equals(command.side())
-                && amount(cash, "posted").subtract(amount(cash, "reserved")).compareTo(e.gross())
-                        < 0)
+                && checks.fails(
+                        "INSUFFICIENT_CASH",
+                        amount(cash, "posted")
+                                        .subtract(amount(cash, "reserved"))
+                                        .compareTo(e.gross())
+                                < 0))
             return reject(
                     "INSUFFICIENT_CASH", "Not enough available " + policy.currency() + " cash");
         var position = db.position(client, command.instrumentId());
-        if (position != null && !Boolean.TRUE.equals(position.get("available_for_trading")))
+        if (checks.fails(
+                "POSITION_REVIEW",
+                position != null && !Boolean.TRUE.equals(position.get("available_for_trading"))))
             return reject(
                     "POSITION_REVIEW", "This historical position requires review before trading");
         if ("SELL".equals(command.side())
-                && amount(position, "posted")
-                                .subtract(amount(position, "reserved"))
-                                .compareTo(validate(command))
-                        < 0)
+                && checks.fails(
+                        "INSUFFICIENT_UNITS",
+                        amount(position, "posted")
+                                        .subtract(amount(position, "reserved"))
+                                        .compareTo(validate(command))
+                                < 0))
             return reject("INSUFFICIENT_UNITS", "Not enough available units to sell");
         return e;
     }
@@ -90,12 +139,15 @@ public class TradingTransactions {
         }
         Instant now = clock.instant();
         Policy current = db.policy(command.instrumentId());
-        Evaluation e = evaluate(command, current, quote, now);
+        var trace = evaluateWithTrace(command, current, quote, now);
+        Evaluation e = trace.evaluation();
         // A policy change during the unlocked quote fetch requires a fresh submission attempt with
         // this same key.
-        if (current != null && !Objects.equals(current, fetchedPolicy))
+        var controls = admissionChecks();
+        if (controls.fails(
+                "POLICY_CHANGED", current != null && !Objects.equals(current, fetchedPolicy)))
             e = reject("POLICY_CHANGED", "Trading policy changed; review a new estimate");
-        e = resources(client, command, current, e);
+        e = resources(client, command, current, e, controls);
         String status = e.eligible() ? "ACCEPTED" : "REJECTED";
         Map<String, Object> args =
                 map(
@@ -130,7 +182,16 @@ public class TradingTransactions {
                         "reason",
                         e.reason());
         int id = db.insertOrder(args);
-        evidence(id, "ADMISSION", current, quote, e, now);
+        evidence(
+                id,
+                "ADMISSION",
+                current,
+                quote,
+                e,
+                now,
+                client,
+                current,
+                controls.appendTo(trace.checks()));
         if (e.eligible()) {
             BigDecimal amount = "BUY".equals(command.side()) ? e.gross() : validate(command);
             if ("BUY".equals(command.side()))
@@ -221,24 +282,43 @@ public class TradingTransactions {
             db.retry(claim.orderId(), now.plusSeconds(Math.min(20, claim.attempt() * 2L)));
             return;
         }
-        Evaluation e = evaluate(claim.command(), p, quote, now);
+        var trace = evaluateWithTrace(claim.command(), p, quote, now);
+        Evaluation e = trace.evaluation();
         Policy current = db.policy(p.instrumentId());
-        if (!now.isBefore(instant(job, "deadline")))
+        var controls =
+                new DecisionChecks(
+                        "DEADLINE_EXPIRED",
+                        "QUOTE_UNAVAILABLE",
+                        "TRADING_HALTED",
+                        "ACCOUNT_UNAVAILABLE",
+                        "BANK_REQUIRED",
+                        "SIDE_HALTED",
+                        "ACCOUNT_REVIEW",
+                        "INSUFFICIENT_EXECUTION_CASH",
+                        "INSUFFICIENT_EXECUTION_UNITS");
+        if (controls.fails("DEADLINE_EXPIRED", !now.isBefore(instant(job, "deadline"))))
             e = reject("DEADLINE_EXPIRED", "Execution deadline expired");
-        else if (transportFailure != null)
+        else if (controls.fails("QUOTE_UNAVAILABLE", transportFailure != null))
             e = reject("QUOTE_UNAVAILABLE", "Execution quote unavailable after bounded retries");
-        else if (current == null
-                || !current.enabled()
-                || !current.active()
-                || !"PROVIDER_OPEN".equals(current.session()))
+        else if (controls.fails(
+                "TRADING_HALTED",
+                current == null
+                        || !current.enabled()
+                        || !current.active()
+                        || !"PROVIDER_OPEN".equals(current.session())))
             e = reject("TRADING_HALTED", "Instrument trading is currently halted");
-        else if (!db.onboarded(claim.clientId()) || !db.accountEnabled(claim.clientId()))
+        else if (controls.fails(
+                "ACCOUNT_UNAVAILABLE",
+                !db.onboarded(claim.clientId()) || !db.accountEnabled(claim.clientId())))
             e = reject("ACCOUNT_UNAVAILABLE", "Account is no longer eligible");
-        if (e.eligible() && !db.hasBank(claim.clientId()))
+        if (e.eligible() && controls.fails("BANK_REQUIRED", !db.hasBank(claim.clientId())))
             e = reject("BANK_REQUIRED", "A saved bank account is required");
         if (e.eligible()
-                && ((!current.buyAllowed() && "BUY".equals(claim.command().side()))
-                        || (!current.sellAllowed() && "SELL".equals(claim.command().side()))))
+                && controls.fails(
+                        "SIDE_HALTED",
+                        ((!current.buyAllowed() && "BUY".equals(claim.command().side()))
+                                || (!current.sellAllowed()
+                                        && "SELL".equals(claim.command().side())))))
             e = reject("SIDE_HALTED", "This trading direction is halted");
         var reservation = db.reservationFor(claim.orderId());
         if (reservation == null || !"ACTIVE".equals(string(reservation, "state")))
@@ -249,18 +329,23 @@ public class TradingTransactions {
         var cash = db.cash(claim.clientId(), p.currency());
         var position = db.position(claim.clientId(), p.instrumentId());
         if (e.eligible()
-                && (cash == null
-                        || !Boolean.TRUE.equals(cash.get("available_for_trading"))
-                        || position != null
-                                && !Boolean.TRUE.equals(position.get("available_for_trading"))))
+                && controls.fails(
+                        "ACCOUNT_REVIEW",
+                        (cash == null
+                                || !Boolean.TRUE.equals(cash.get("available_for_trading"))
+                                || position != null
+                                        && !Boolean.TRUE.equals(
+                                                position.get("available_for_trading")))))
             e = reject("ACCOUNT_REVIEW", "Historical financial records require review");
         if (e.eligible()
                 && buy
-                && amount(cash, "posted")
-                                .subtract(amount(cash, "reserved"))
-                                .add(reserved)
-                                .compareTo(e.gross())
-                        < 0)
+                && controls.fails(
+                        "INSUFFICIENT_EXECUTION_CASH",
+                        amount(cash, "posted")
+                                        .subtract(amount(cash, "reserved"))
+                                        .add(reserved)
+                                        .compareTo(e.gross())
+                                < 0))
             e =
                     reject(
                             "INSUFFICIENT_EXECUTION_CASH",
@@ -268,10 +353,21 @@ public class TradingTransactions {
                                     + " released");
         if (e.eligible()
                 && !buy
-                && (reserved.compareTo(quantity) != 0
-                        || amount(position, "posted").compareTo(quantity) < 0))
+                && controls.fails(
+                        "INSUFFICIENT_EXECUTION_UNITS",
+                        (reserved.compareTo(quantity) != 0
+                                || amount(position, "posted").compareTo(quantity) < 0)))
             e = reject("INSUFFICIENT_EXECUTION_UNITS", "Reserved units are unavailable");
-        evidence(claim.orderId(), "EXECUTION", p, quote, e, now);
+        evidence(
+                claim.orderId(),
+                "EXECUTION",
+                p,
+                quote,
+                e,
+                now,
+                claim.clientId(),
+                current,
+                controls.appendTo(trace.checks()));
         probe.after("evidence");
         if (!e.eligible()) {
             if (buy)
@@ -378,10 +474,19 @@ public class TradingTransactions {
     }
 
     private void evidence(
-            int id, String stage, Policy policy, Quote quote, Evaluation e, Instant now) {
+            int id,
+            String stage,
+            Policy policy,
+            Quote quote,
+            Evaluation e,
+            Instant now,
+            int client,
+            Policy current,
+            java.util.List<TradingRules.RuleCheck> checks) {
         if (quote != null) db.quote(quote.quoteId(), id, stage, encode(quote), now);
+        UUID decisionId = UUID.randomUUID();
         db.decision(
-                UUID.randomUUID(),
+                decisionId,
                 id,
                 stage,
                 policy == null ? "UNCONFIGURED" : policy.version(),
@@ -390,6 +495,78 @@ public class TradingTransactions {
                 e.reason(),
                 quote == null ? null : quote.quoteId(),
                 now);
+        var cash = policy == null ? null : db.cash(client, policy.currency());
+        var position = policy == null ? null : db.position(client, policy.instrumentId());
+        var order = db.order(client, id);
+        var reservation = db.reservationFor(id);
+        var captured =
+                map(
+                        "schemaVersion",
+                        1,
+                        "checks",
+                        checks,
+                        "acceptedPolicy",
+                        policy,
+                        "currentControl",
+                        current,
+                        "observedAt",
+                        now,
+                        "resources",
+                        map(
+                                "cashAccountPresent",
+                                cash != null,
+                                "cashTradingAvailable",
+                                cash != null
+                                        && Boolean.TRUE.equals(cash.get("available_for_trading")),
+                                "positionPresent",
+                                position != null,
+                                "positionTradingAvailable",
+                                position == null
+                                        || Boolean.TRUE.equals(
+                                                position.get("available_for_trading")),
+                                "reservationAmount",
+                                reservation == null ? null : decimal(amount(reservation, "amount")),
+                                "cashPosted",
+                                decimal(amount(cash, "posted")),
+                                "cashReserved",
+                                decimal(amount(cash, "reserved")),
+                                "cashAvailable",
+                                decimal(amount(cash, "posted").subtract(amount(cash, "reserved"))),
+                                "unitsPosted",
+                                decimal(amount(position, "posted")),
+                                "unitsReserved",
+                                decimal(amount(position, "reserved")),
+                                "unitsAvailable",
+                                decimal(
+                                        amount(position, "posted")
+                                                .subtract(amount(position, "reserved"))),
+                                "accountEnabled",
+                                db.accountEnabled(client),
+                                "onboarded",
+                                db.onboarded(client),
+                                "bankReferencePresent",
+                                db.hasBank(client),
+                                "finalCode",
+                                e.code(),
+                                "finalPassed",
+                                e.eligible(),
+                                "resourceCheckCoverage",
+                                "Checks record actual execution order; NOT_EVALUATED means skipped"
+                                    + " or not applicable. Inputs retained under client lock; final"
+                                    + " outcome preserves override precedence"),
+                        "quoteSide",
+                        "BUY".equals(string(order, "trade_type")) ? "ASK" : "BID",
+                        "rounding",
+                        "HALF_UP",
+                        "reservationReference",
+                        stage.equals("EXECUTION") ? id : null,
+                        "serviceActor",
+                        stage.equals("EXECUTION") ? "execution-worker" : "admission-service",
+                        "softwareVersion",
+                        "0.1.0-operations-v1",
+                        "correlationId",
+                        decisionId);
+        db.decisionContext(decisionId, encode(captured), now);
     }
 
     private void event(

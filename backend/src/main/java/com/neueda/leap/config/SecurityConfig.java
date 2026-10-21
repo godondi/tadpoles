@@ -2,15 +2,9 @@ package com.neueda.leap.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.neueda.leap.exception.ApiErrorResponse;
+
 import jakarta.servlet.http.HttpServletResponse;
-import java.nio.charset.StandardCharsets;
-import java.time.OffsetDateTime;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,6 +27,16 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 @Configuration
 @EnableMethodSecurity(prePostEnabled = true)
@@ -80,7 +84,12 @@ public class SecurityConfig {
         configuration.setAllowedMethods(
                 List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(
-                List.of("Authorization", "Content-Type", "Idempotency-Key", "Last-Event-ID"));
+                List.of(
+                        "Authorization",
+                        "Content-Type",
+                        "Idempotency-Key",
+                        "Last-Event-ID",
+                        "X-Operations-Context"));
         configuration.setExposedHeaders(List.of("Authorization", "Location"));
         configuration.setAllowCredentials(true);
 

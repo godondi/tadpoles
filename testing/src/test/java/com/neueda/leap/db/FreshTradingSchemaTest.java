@@ -2,9 +2,10 @@ package com.neueda.leap.db;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import org.junit.jupiter.api.Test;
+
 import java.nio.file.Path;
 import java.util.*;
-import org.junit.jupiter.api.Test;
 
 class FreshTradingSchemaTest extends AbstractPostgresIntegrationTest {
     List<String> shape() throws Exception {
@@ -55,7 +56,9 @@ class FreshTradingSchemaTest extends AbstractPostgresIntegrationTest {
                     "007_trading_openings.sql",
                     "008_trading_controls.sql",
                     "009_quote_cache_age.sql",
-                    "010_quote_cache_twenty_minutes.sql"
+                    "010_quote_cache_twenty_minutes.sql",
+                    "011_operations_workspace.sql",
+                    "012_managed_support.sql"
                 }) executeSqlScript(Path.of("../database/migrations/" + file));
         var upgraded = shape();
         try (var c = newConnection();
@@ -70,7 +73,7 @@ class FreshTradingSchemaTest extends AbstractPostgresIntegrationTest {
                 var s = c.createStatement();
                 var r = s.executeQuery("SELECT count(*) FROM schema_migrations")) {
             r.next();
-            assertEquals(8, r.getInt(1));
+            assertEquals(10, r.getInt(1));
         }
     }
 }

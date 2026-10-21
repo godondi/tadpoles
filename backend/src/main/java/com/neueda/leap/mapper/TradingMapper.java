@@ -1,10 +1,12 @@
 package com.neueda.leap.mapper;
 
 import com.neueda.leap.trading.TradingModels.Policy;
+
+import org.apache.ibatis.annotations.*;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.*;
-import org.apache.ibatis.annotations.*;
 
 /**
  * All account-changing paths take the persisted client lock first. No external calls occur under
@@ -46,15 +48,15 @@ public interface TradingMapper {
 
     @Select(
             """
-            SELECT p.instrument_id,i.ticker,i.is_active AS active,p.policy_version AS version,p.venue,p.quantity_unit,
-                   p.price_unit,p.currency, p.quantity_step,p.currency_scale,p.max_quantity,p.max_notional,
-                   p.quote_max_age_seconds,p.future_skew_seconds, p.retry_seconds,p.max_attempts,p.session,p.enabled,
-                   p.raw_price_unit,p.price_multiplier,p.provider_symbol,p.buy_allowed,p.sell_allowed
-            FROM instrument_trading_policies p
-            JOIN instruments i USING(instrument_id)
-            WHERE p.instrument_id = #{id}
-                AND p.currency = i.currency
-            """)
+SELECT p.instrument_id,i.ticker,i.is_active AS active,p.policy_version AS version,p.venue,p.quantity_unit,
+       p.price_unit,p.currency, p.quantity_step,p.currency_scale,p.max_quantity,p.max_notional,
+       p.quote_max_age_seconds,p.future_skew_seconds, p.retry_seconds,p.max_attempts,p.session,p.enabled,
+       p.raw_price_unit,p.price_multiplier,p.provider_symbol,p.buy_allowed,p.sell_allowed
+FROM instrument_trading_policies p
+JOIN instruments i USING(instrument_id)
+WHERE p.instrument_id = #{id}
+    AND p.currency = i.currency
+""")
     Policy policy(int id);
 
     @Select(
@@ -91,11 +93,11 @@ public interface TradingMapper {
     @Select(
             value =
                     """
-            INSERT INTO client_trades(client_id,instrument_id,submitted_by_user_id,trade_type,quantity,price,trade_date,status,record_kind,
-            idempotency_key,request_hash,submitted_at,accepted_at,updated_at,version,order_type,currency_snapshot,policy_snapshot,rejection_stage,rejection_code,reason)
-            VALUES(#{client},#{instrument},#{actor},#{side},#{quantity},NULL,CAST(#{now} AS timestamptz) AT TIME ZONE 'UTC',#{status},'SELF_DIRECTED',
-            #{key},#{hash},#{now},#{accepted},#{now},1,'MARKET',#{currency},CAST(#{policy} AS jsonb),#{stage},#{code},#{reason}) RETURNING trade_id
-            """,
+INSERT INTO client_trades(client_id,instrument_id,submitted_by_user_id,trade_type,quantity,price,trade_date,status,record_kind,
+idempotency_key,request_hash,submitted_at,accepted_at,updated_at,version,order_type,currency_snapshot,policy_snapshot,rejection_stage,rejection_code,reason)
+VALUES(#{client},#{instrument},#{actor},#{side},#{quantity},NULL,CAST(#{now} AS timestamptz) AT TIME ZONE 'UTC',#{status},'SELF_DIRECTED',
+#{key},#{hash},#{now},#{accepted},#{now},1,'MARKET',#{currency},CAST(#{policy} AS jsonb),#{stage},#{code},#{reason}) RETURNING trade_id
+""",
             affectData = true)
     int insertOrder(Map<String, Object> args);
 
@@ -204,9 +206,9 @@ public interface TradingMapper {
 
     @Insert(
             """
-            INSERT INTO order_rule_decisions
-            VALUES(#{decision},#{id},#{stage},#{policy},#{passed},#{code},#{reason},#{quote},#{now})
-            """)
+INSERT INTO order_rule_decisions
+VALUES(#{decision},#{id},#{stage},#{policy},#{passed},#{code},#{reason},#{quote},#{now})
+""")
     void decision(
             @Param("decision") UUID decision,
             @Param("id") int id,
@@ -218,14 +220,18 @@ public interface TradingMapper {
             @Param("quote") UUID quote,
             @Param("now") Instant now);
 
+    @Insert("INSERT INTO order_decision_contexts VALUES(#{id},1,CAST(#{facts} AS jsonb),#{now})")
+    void decisionContext(
+            @Param("id") UUID id, @Param("facts") String facts, @Param("now") Instant now);
+
     @Update(
             """
-            UPDATE client_trades
-            SET status = #{status},version = version + 1,updated_at = #{now},
-                                                                  rejection_stage = #{stage},rejection_code = #{code},
-                                                                  reason = #{reason}
-            WHERE trade_id = #{id}
-            """)
+UPDATE client_trades
+SET status = #{status},version = version + 1,updated_at = #{now},
+                                                      rejection_stage = #{stage},rejection_code = #{code},
+                                                      reason = #{reason}
+WHERE trade_id = #{id}
+""")
     void state(
             @Param("id") int id,
             @Param("status") String status,
@@ -286,44 +292,44 @@ public interface TradingMapper {
 
     @Insert(
             """
-            INSERT INTO cash_journal(posting_id,
-                            client_id, currency, delta, fill_id, posting_group, actor, recorded_at)
-            VALUES(#{posting},#{client},#{currency},#{cashDelta},#{fill},#{group},'execution-worker',#{now})
-            """)
+INSERT INTO cash_journal(posting_id,
+                client_id, currency, delta, fill_id, posting_group, actor, recorded_at)
+VALUES(#{posting},#{client},#{currency},#{cashDelta},#{fill},#{group},'execution-worker',#{now})
+""")
     void cashJournal(Map<String, Object> fill);
 
     @Insert(
             """
-            INSERT INTO position_journal(posting_id,
-                            client_id, instrument_id, delta, fill_id, posting_group, actor, recorded_at)
-            VALUES(#{posting},#{client},#{instrument},#{unitDelta},#{fill},#{group},'execution-worker',#{now})
-            """)
+INSERT INTO position_journal(posting_id,
+                client_id, instrument_id, delta, fill_id, posting_group, actor, recorded_at)
+VALUES(#{posting},#{client},#{instrument},#{unitDelta},#{fill},#{group},'execution-worker',#{now})
+""")
     void positionJournal(Map<String, Object> fill);
 
     @Select(
             """
-            SELECT currency,posted::text,reserved::text,(posted - reserved)::text AS available,version,
-                   updated_at AS "updatedAt"
-            FROM client_cash_accounts
-            WHERE client_id = #{client}
-                AND available_for_trading
-                AND currency = 'USD'
-            ORDER BY currency
-            """)
+SELECT currency,posted::text,reserved::text,(posted - reserved)::text AS available,version,
+       updated_at AS "updatedAt"
+FROM client_cash_accounts
+WHERE client_id = #{client}
+    AND available_for_trading
+    AND currency = 'USD'
+ORDER BY currency
+""")
     List<Map<String, Object>> balances(int client);
 
     // Keep closed rows in the ledger, but only expose currently owned positions.
     @Select(
             """
-            SELECT p.instrument_id AS "instrumentId", i.ticker, i.instrument_name AS name, i.currency, p.posted::text AS owned, p.reserved::text,
-                   (p.posted - p.reserved)::text AS available, p.version, p.updated_at AS "updatedAt"
-            FROM client_positions p
-            JOIN instruments i USING (instrument_id)
-            WHERE p.client_id = #{client}
-                AND p.available_for_trading
-                AND p.posted > 0
-            ORDER BY i.ticker
-            """)
+SELECT p.instrument_id AS "instrumentId", i.ticker, i.instrument_name AS name, i.currency, p.posted::text AS owned, p.reserved::text,
+       (p.posted - p.reserved)::text AS available, p.version, p.updated_at AS "updatedAt"
+FROM client_positions p
+JOIN instruments i USING (instrument_id)
+WHERE p.client_id = #{client}
+    AND p.available_for_trading
+    AND p.posted > 0
+ORDER BY i.ticker
+""")
     List<Map<String, Object>> positions(int client);
 
     @Select(
@@ -386,6 +392,63 @@ public interface TradingMapper {
             """)
     List<Map<String, Object>> migrationExceptions(int client);
 
-    @Select("SELECT count(*)=1 FROM schema_migrations WHERE version=8")
+    @Select(
+            "SELECT count(*)=9 AND to_regclass('operations_access_grants') IS NOT NULL AND"
+                + " to_regclass('operations_access_contexts') IS NOT NULL AND"
+                + " to_regclass('operations_access_events') IS NOT NULL AND"
+                + " to_regclass('operations_evidence_exports') IS NOT NULL AND"
+                + " to_regclass('order_decision_contexts') IS NOT NULL AND"
+                + " to_regclass('reconciliation_findings') IS NOT NULL FROM schema_migrations WHERE"
+                + " version BETWEEN 3 AND 11")
     boolean schemaReady();
+
+    @Select(
+            """
+SELECT q.quote_id AS id,q.stage,q.facts::text,
+       EXISTS(SELECT 1 FROM order_fills f WHERE f.order_id=t.trade_id AND f.quote_id=q.quote_id) AS "usedForFill"
+FROM client_trades t JOIN order_quote_observations q ON q.order_id=t.trade_id
+WHERE t.trade_id=#{id} AND t.client_id=#{client}
+ORDER BY q.recorded_at,q.quote_id LIMIT 201
+""")
+    List<Map<String, Object>> clientQuotes(@Param("client") int client, @Param("id") int id);
+
+    @Select(
+            """
+SELECT d.stage,d.passed,d.code,d.explanation,d.recorded_at AS "recordedAt",c.facts::text AS context
+FROM client_trades t JOIN order_rule_decisions d ON d.order_id=t.trade_id
+LEFT JOIN order_decision_contexts c USING(decision_id)
+WHERE t.trade_id=#{id} AND t.client_id=#{client} ORDER BY d.recorded_at,d.decision_id LIMIT 201
+""")
+    List<Map<String, Object>> clientDecisions(@Param("client") int client, @Param("id") int id);
+
+    @Select(
+            """
+SELECT
+  EXISTS(SELECT 1 FROM order_rule_decisions d WHERE d.order_id=t.trade_id AND d.stage='ADMISSION') AS admission,
+  (SELECT count(*)=t.version AND min(sequence)=1 AND max(sequence)=t.version FROM order_events e WHERE e.order_id=t.trade_id AND e.client_id=t.client_id)
+  AND EXISTS(SELECT 1 FROM order_events e WHERE e.order_id=t.trade_id AND e.sequence=t.version AND e.to_state=t.status) AS timeline,
+  NOT EXISTS(SELECT 1 FROM order_events e WHERE e.order_id=t.trade_id AND NOT EXISTS(SELECT 1 FROM outbox_events o WHERE o.event_id=e.event_id)) AS notification,
+  NOT EXISTS(SELECT 1 FROM order_rule_decisions d WHERE d.order_id=t.trade_id AND d.quote_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM order_quote_observations q WHERE q.order_id=t.trade_id AND q.quote_id=d.quote_id)) AS quotes,
+  CASE WHEN t.rejection_stage='ADMISSION' THEN NOT EXISTS(SELECT 1 FROM order_reservations r WHERE r.order_id=t.trade_id)
+       ELSE EXISTS(SELECT 1 FROM order_reservations r WHERE r.order_id=t.trade_id AND r.state=CASE t.status WHEN 'FILLED' THEN 'CONSUMED' WHEN 'REJECTED' THEN 'RELEASED' ELSE 'ACTIVE' END) END AS reservation,
+  CASE WHEN t.status='FILLED' THEN
+    (SELECT count(*)=1 FROM order_fills f WHERE f.order_id=t.trade_id)
+    AND EXISTS(SELECT 1 FROM order_fills f JOIN order_quote_observations q ON q.quote_id=f.quote_id AND q.order_id=f.order_id AND q.stage='EXECUTION'
+        JOIN order_events e ON e.fill_id=f.fill_id AND e.order_id=f.order_id AND e.to_state='FILLED'
+        WHERE f.order_id=t.trade_id
+        AND (SELECT count(*)=1 FROM cash_journal j WHERE j.fill_id=f.fill_id AND j.client_id=t.client_id AND j.posting_group=f.posting_group AND j.currency=f.currency AND j.delta=CASE t.trade_type WHEN 'BUY' THEN -f.gross ELSE f.gross END)
+        AND (SELECT count(*)=1 FROM position_journal j WHERE j.fill_id=f.fill_id AND j.client_id=t.client_id AND j.posting_group=f.posting_group AND j.instrument_id=t.instrument_id AND j.delta=CASE t.trade_type WHEN 'BUY' THEN f.quantity ELSE -f.quantity END))
+  ELSE NOT EXISTS(SELECT 1 FROM order_fills f WHERE f.order_id=t.trade_id) END AS booking
+FROM client_trades t WHERE t.trade_id=#{id} AND t.client_id=#{client}
+""")
+    Map<String, Object> clientEvidence(@Param("client") int client, @Param("id") int id);
+
+    @Select(
+            "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version=12) AND"
+                + " to_regclass('support_cases') IS NOT NULL AND to_regclass('support_case_events')"
+                + " IS NOT NULL AND to_regclass('support_case_notes') IS NOT NULL AND"
+                + " to_regclass('support_case_requests') IS NOT NULL AND"
+                + " to_regclass('support_case_exports') IS NOT NULL AND"
+                + " to_regclass('support_read_state') IS NOT NULL")
+    boolean supportSchemaReady();
 }

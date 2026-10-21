@@ -2,10 +2,12 @@ package com.neueda.leap.trading;
 
 import com.neueda.leap.mapper.TradingMapper;
 import com.neueda.leap.trading.TradingModels.Quote;
-import java.time.Clock;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+
+import java.time.Clock;
 
 @Component
 public class ExecutionWorker {
@@ -30,11 +32,29 @@ public class ExecutionWorker {
         this.enabled = enabled;
     }
 
+    private volatile java.time.Instant lastFailure;
+    private volatile long failedJobs;
     private volatile java.time.Instant lastPoll;
     private volatile java.time.Instant lastCompletedPoll;
 
     public Object health() {
         return TradingData.map(
+                "lastFailureAt",
+                lastFailure,
+                "failedJobs",
+                failedJobs,
+                "status",
+                !enabled
+                        ? "DISABLED"
+                        : lastCompletedPoll == null
+                                        || lastCompletedPoll.isBefore(
+                                                clock.instant().minusSeconds(30))
+                                ? "UNKNOWN"
+                                : lastFailure != null
+                                                && lastFailure.isAfter(
+                                                        clock.instant().minusSeconds(30))
+                                        ? "DEGRADED"
+                                        : "READY",
                 "scope",
                 "This application instance",
                 "enabled",
@@ -62,6 +82,8 @@ public class ExecutionWorker {
                 }
                 tx.book(claim, q, failure);
             } catch (RuntimeException error) {
+                lastFailure = clock.instant();
+                failedJobs++;
                 LOG.error(
                         "Execution job {} will recover after its lease expires ({})",
                         id,

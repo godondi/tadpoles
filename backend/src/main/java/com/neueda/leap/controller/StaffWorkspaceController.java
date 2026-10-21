@@ -9,14 +9,6 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 @RequestMapping("/api")
 public class StaffWorkspaceController {
-    @GetMapping({"/operations/orders", "/operations/orders/{id}"})
-    @PreAuthorize("hasRole('TRADING_OPS')")
-    public void operations() {
-        unavailable(
-                "Order monitoring is not available yet. Your approved investigation scope and"
-                        + " access purpose must be configured.");
-    }
-
     @GetMapping({
         "/compliance/investigations",
         "/compliance/orders/{id}/evidence",
