@@ -1,3 +1,4 @@
+import { PolicyHistoryComponent } from './policy-history.component';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { DatePipe } from '@angular/common';
@@ -13,7 +14,7 @@ import {
 
 @Component({
   selector: 'app-instrument-policy-editor',
-  imports: [FormsModule, DatePipe, RouterLink],
+  imports: [FormsModule, DatePipe, RouterLink, PolicyHistoryComponent],
   template: `
     <header class="workspace-heading">
       <p class="eyebrow">TRADING OPERATIONS</p>
@@ -59,6 +60,12 @@ import {
                   {{ testing() ? 'Testing…' : 'Test with Fauxnance' }}
                 </button>
               </div>
+              @if (testing()) {
+                <p role="status">Checking the symbol quote and daily chart…</p>
+              }
+              @if (testError()) {
+                <p class="notice" role="alert" data-symbol-error>{{ testError() }}</p>
+              }
             </div>
             @if (check(); as c) {
               <section class="notice">
@@ -260,6 +267,9 @@ import {
         </form>
       </section>
     }
+    @if (id && ready()) {
+      <app-policy-history [instrumentId]="id" />
+    }
   `,
 })
 export class InstrumentPolicyEditorComponent {
@@ -275,6 +285,7 @@ export class InstrumentPolicyEditorComponent {
   readonly failed = signal(false);
   readonly savedTicker = signal('');
   readonly testing = signal(false);
+  readonly testError = signal('');
   readonly saving = signal(false);
   readonly loading = signal(false);
   readonly loadError = signal('');
@@ -355,6 +366,7 @@ export class InstrumentPolicyEditorComponent {
     this.validation?.unsubscribe();
     this.check.set(null);
     this.testing.set(false);
+    this.testError.set('');
   }
 
   test() {
@@ -368,7 +380,10 @@ export class InstrumentPolicyEditorComponent {
       },
       error: (error) => {
         this.testing.set(false);
-        this.error(error);
+        this.testError.set(
+          error.error?.message ??
+            'Unable to test this symbol. Check the provider connection and try again.',
+        );
       },
     });
   }
