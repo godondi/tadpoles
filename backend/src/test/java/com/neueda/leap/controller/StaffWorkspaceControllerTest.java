@@ -44,11 +44,8 @@ class StaffWorkspaceControllerTest {
         "ANALYST,/api/analytics/instruments",
         "FINANCE,/api/finance/summary"
     })
-    void authorizedRoleSeesUnavailableInsteadOfInventedData(String role, String path)
-            throws Exception {
-        mvc.perform(get(path).with(jwtWithRoles(role)))
-                .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.message").isString());
+    void authorizedRoleSeesUnavailableInsteadOfInventedData(String role,String path) throws Exception {
+        mvc.perform(get(path).with(jwtWithRoles(role))).andExpect(status().isServiceUnavailable()).andExpect(jsonPath("$.message").isString());
         mvc.perform(get(path).with(jwtWithRoles("CLIENT"))).andExpect(status().isForbidden());
         mvc.perform(get(path).with(jwtWithRoles("OPERATIONS"))).andExpect(status().isForbidden());
         mvc.perform(get(path)).andExpect(status().isUnauthorized());

@@ -1,0 +1,14 @@
+Metadata-Version: 2.4
+Name: tadpoles-analytics-service
+Version: 0.1.0
+Summary: Read-only analytics API for the Tadpoles reporting database
+Requires-Python: >=3.11
+Requires-Dist: fastapi<1,>=0.115
+Requires-Dist: PyJWT<3,>=2.9
+Requires-Dist: pydantic<3,>=2.8
+Requires-Dist: psycopg[binary]<4,>=3.2
+Requires-Dist: SQLAlchemy<3,>=2.0
+Requires-Dist: uvicorn[standard]<1,>=0.30
+Provides-Extra: test
+Requires-Dist: httpx<1,>=0.27; extra == "test"
+Requires-Dist: pytest<9,>=8; extra == "test"

@@ -1,5 +1,6 @@
 volumes:
   tadpole-db-data:
+  tadpole-analytics-db-data:
 
 services:
   nginx:
@@ -110,6 +111,45 @@ services:
     depends_on:
       database-migrate:
         condition: service_completed_successfully
+
+  analytics-database:
+    image: postgres:15
+    container_name: tadpole-analytics-database
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${ANALYTICS_POSTGRES_OWNER}
+      POSTGRES_PASSWORD: ${ANALYTICS_POSTGRES_OWNER_PASSWORD}
+      POSTGRES_DB: ${ANALYTICS_POSTGRES_DB}
+      ANALYTICS_READER_PASSWORD: ${ANALYTICS_POSTGRES_PASSWORD}
+    ports:
+      - "${ANALYTICS_POSTGRES_HOST_PORT}:5432"
+    volumes:
+      - tadpole-analytics-db-data:/var/lib/postgresql/data
+      - ./analytics-service/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  analytics-api:
+    build:
+      context: ./analytics-service
+      dockerfile: Dockerfile
+    image: tadpole-analytics-api:latest
+    container_name: tadpole-analytics-api
+    env_file:
+      - .env
+    environment:
+      ANALYTICS_DATABASE_URL: ${ANALYTICS_DATABASE_URL}
+      ANALYTICS_JWT_SECRET: ${JWT_SECRET}
+      ANALYTICS_MAX_RANGE_DAYS: ${ANALYTICS_MAX_RANGE_DAYS}
+    ports:
+      - "${ANALYTICS_HOST_PORT}:${ANALYTICS_CONTAINER_PORT}"
+    depends_on:
+      analytics-database:
+        condition: service_healthy
 
 #  testing:
 #    build:
