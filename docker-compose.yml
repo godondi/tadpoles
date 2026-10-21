@@ -16,10 +16,16 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       AUTH_STUB_URL: ${AUTH_STUB_URL}
       JWT_SECRET: ${JWT_SECRET}
-      PORT: ${SERVER_PORT}
+      SERVER_PORT: ${SERVER_PORT:-8080}
       TRADING_ADMISSION_ENABLED: ${TRADING_ADMISSION_ENABLED:-true}
       TRADING_WORKER_ENABLED: ${TRADING_WORKER_ENABLED:-true}
       TRADING_LOCAL_DEMO_SETUP: ${TRADING_LOCAL_DEMO_SETUP:-true}
+      # Local demo defaults. The hardened overlay requires explicit deployment policy.
+      OPERATIONS_ACCESS_ENABLED: ${OPERATIONS_ACCESS_ENABLED:-true}
+      OPERATIONS_ALLOWED_PURPOSES: ${OPERATIONS_ALLOWED_PURPOSES:-ORDER_REVIEW}
+      OPERATIONS_POLICY_VERSION: ${OPERATIONS_POLICY_VERSION:-local-demo-v1}
+      OPERATIONS_CONTEXT_SECONDS: ${OPERATIONS_CONTEXT_SECONDS:-3600}
+      OPERATIONS_EXPORT_SECONDS: ${OPERATIONS_EXPORT_SECONDS:-3600}
       # Fictitious local demo only. Hardened deployments require a separately provisioned key.
       BANKING_ENCRYPTION_KEY: ${BANKING_ENCRYPTION_KEY:-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
     ports:
@@ -58,7 +64,7 @@ services:
       - tadpole-db-data:/var/lib/postgresql/data
       - ./database/fresh:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
       interval: 5s
       timeout: 5s
       retries: 12
@@ -88,9 +94,13 @@ services:
       PGUSER: ${POSTGRES_USER}
       PGPASSWORD: ${POSTGRES_PASSWORD}
       PGDATABASE: ${POSTGRES_DB}
+      TRADING_LOCAL_DEMO_SETUP: ${TRADING_LOCAL_DEMO_SETUP:-true}
+      OPERATIONS_ACCESS_ENABLED: ${OPERATIONS_ACCESS_ENABLED:-true}
     volumes:
       - ./database/demo/role_workspaces.sql:/role_workspaces.sql:ro
-    command: ["psql", "-v", "ON_ERROR_STOP=1", "-f", "/role_workspaces.sql"]
+      - ./database/demo/operations_workspace.sql:/operations_workspace.sql:ro
+      - ./database/demo/seed-role-workspaces.sh:/seed-role-workspaces.sh:ro
+    command: ["sh", "/seed-role-workspaces.sh"]
     depends_on:
       database-migrate:
         condition: service_completed_successfully
