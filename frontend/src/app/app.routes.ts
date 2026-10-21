@@ -66,11 +66,52 @@ export const routes: Routes = [
         path: '',
         canActivateChild: [workspaceGuard],
         children: [
+          { path: 'app/support/new', data: { new: true }, canActivate: client, loadComponent: () => import('./features/client/support-page.component').then(m => m.SupportPageComponent) },
+          { path: 'app/support/:reference', data: {}, canActivate: client, loadComponent: () => import('./features/client/support-page.component').then(m => m.SupportPageComponent) },
+          { path: 'app/support', data: {}, canActivate: client, loadComponent: () => import('./features/client/support-page.component').then(m => m.SupportPageComponent) },
+          { path: 'operations/cases/:reference', data: { staff: true }, loadComponent: () => import('./features/client/support-page.component').then(m => m.SupportPageComponent) },
+          { path: 'operations/cases', data: { staff: true }, loadComponent: () => import('./features/client/support-page.component').then(m => m.SupportPageComponent) },
           {
             path: 'finance/reconciliation',
             loadComponent: () =>
               import('./shared/workspace/reconciliation-page.component').then(
                 (m) => m.ReconciliationPageComponent,
+              ),
+          },
+          {
+            path: 'operations/overview',
+            loadComponent: () =>
+              import('./features/operations/overview-page.component').then(
+                (m) => m.OperationsOverviewComponent,
+              ),
+          },
+          {
+            path: 'operations/orders',
+            loadComponent: () =>
+              import('./features/operations/orders-page.component').then(
+                (m) => m.OperationsOrdersComponent,
+              ),
+          },
+          {
+            path: 'operations/orders/:id',
+            loadComponent: () =>
+              import('./features/operations/order-detail.component').then(
+                (m) => m.OperationsOrderDetailComponent,
+              ),
+          },
+          {
+            path: 'operations/exceptions',
+            data: { exceptions: true },
+            loadComponent: () =>
+              import('./features/operations/orders-page.component').then(
+                (m) => m.OperationsOrdersComponent,
+              ),
+          },
+          {
+            path: 'operations/reconciliation',
+            loadComponent: () =>
+              import('./features/operations/reconciliation-page.component').then(
+                (m) => m.OperationsReconciliationComponent,
               ),
           },
           {
@@ -163,24 +204,6 @@ export const routes: Routes = [
               ),
           },
           ...[
-            [
-              'operations/orders',
-              'Orders & monitoring',
-              'Trading operations',
-              'Search and investigate order outcomes.',
-              'Approved, scoped order monitoring with recorded lifecycle and exception details.',
-              '/api/operations/orders',
-              '',
-            ],
-            [
-              'operations/orders/:id',
-              'Order investigation',
-              'Trading operations',
-              'Review recorded decisions and execution evidence.',
-              'Read-only order events, quotes and linked booking effects.',
-              '/api/operations/orders/:id',
-              '/operations/orders',
-            ],
             [
               'compliance/investigations',
               'Investigations',

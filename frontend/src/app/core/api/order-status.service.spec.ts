@@ -43,3 +43,42 @@ describe('resumable order status polling', () => {
     expect(changes).toHaveBeenCalledTimes(1);
   });
 });
+
+it('shows failed and exhausted polling, resumes explicitly, and clears health on identity changes', () => {
+  vi.useFakeTimers();
+  try {
+    const changed = new Subject<void>();
+    const changes = vi.fn().mockReturnValue(throwError(() => new Error('offline')));
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: WorkspaceApi, useValue: { changes } },
+        { provide: AuthService, useValue: { sessionChanged: changed } },
+      ],
+    });
+    const service = TestBed.inject(OrderStatusService);
+    // Read the prospective public health contract without making an absent property a compile failure.
+    const health = () => (service as unknown as { health?: () => string }).health?.();
+    const success = () =>
+      (service as unknown as { lastSuccess?: () => string | null }).lastSuccess?.();
+    service.watch().subscribe();
+    vi.advanceTimersByTime(3000);
+    expect(health()).toBe('STALE');
+    changes.mockReturnValue(of({ items: [], cursor: 0, reset: false }));
+    vi.advanceTimersByTime(3000);
+    expect(health()).toBe('LIVE');
+    expect(success()).toBeTruthy();
+    vi.advanceTimersByTime(600000);
+    expect(health()).toBe('EXHAUSTED');
+    const count = changes.mock.calls.length;
+    (service as unknown as { resume?: () => void }).resume?.();
+    vi.advanceTimersByTime(3000);
+    expect(changes.mock.calls.length).toBe(count + 1);
+    expect(health()).toBe('LIVE');
+    changed.next();
+    expect(success()).toBeNull();
+    vi.advanceTimersByTime(3000);
+    expect(changes.mock.calls.length).toBe(count + 1);
+  } finally {
+    vi.useRealTimers();
+  }
+});

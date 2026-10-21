@@ -63,8 +63,9 @@ import { PendingOrder, PendingOrderService } from './pending-order.service';
                 type="radio"
                 name="side"
                 value="BUY"
-                [(ngModel)]="side"
-                (ngModelChange)="invalidate()"
+                [disabled]="!buyAllowed()"
+                [checked]="side === 'BUY'"
+                (change)="side = 'BUY'; invalidate()"
               />
               Buy</label
             >
@@ -73,8 +74,9 @@ import { PendingOrder, PendingOrderService } from './pending-order.service';
                 type="radio"
                 name="side"
                 value="SELL"
-                [(ngModel)]="side"
-                (ngModelChange)="invalidate()"
+                [disabled]="!sellAllowed()"
+                [checked]="side === 'SELL'"
+                (change)="side = 'SELL'; invalidate()"
               />
               Sell</label
             >
@@ -170,6 +172,8 @@ export class OrderTicketComponent implements OnChanges {
   readonly ticker = input.required<string>();
   readonly bankRequired = input(false);
   readonly initialSide = input<string>('BUY');
+  readonly buyAllowed = input(true);
+  readonly sellAllowed = input(true);
   private readonly api = inject(WorkspaceApi);
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly auth = inject(AuthService);
@@ -217,6 +221,7 @@ export class OrderTicketComponent implements OnChanges {
       this.storage.clearDraft();
     }
     this.pending.set(this.storage.read());
+    if (!this.pending() && !this.sideAllowed()) this.side = this.buyAllowed() ? 'BUY' : 'SELL';
     if (this.pending()) this.recover();
   }
 
@@ -257,7 +262,17 @@ export class OrderTicketComponent implements OnChanges {
     };
   }
 
+  sideAllowed() {
+    return this.side === 'BUY' ? this.buyAllowed() : this.sellAllowed();
+  }
+
   review() {
+    if (!this.sideAllowed()) {
+      this.message.set(
+        'This trading direction is currently unavailable. You can still recover a saved request or contact support.',
+      );
+      return;
+    }
     if (this.busy() || this.pending() || !this.validQuantity()) return;
     this.busy.set(true);
     this.message.set('');
@@ -289,6 +304,7 @@ export class OrderTicketComponent implements OnChanges {
   confirm() {
     if (
       this.busy() ||
+      !this.sideAllowed() ||
       this.pending() ||
       !this.preview()?.eligible ||
       this.expired() ||

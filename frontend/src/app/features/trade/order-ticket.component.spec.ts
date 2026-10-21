@@ -217,4 +217,11 @@ describe('Internal order ticket', () => {
     next.componentInstance.confirm();
     http.expectNone((r) => r.method === 'POST');
   });
+  it('blocks a newly halted side while retaining pending receipt recovery',()=>{
+    const f=create();review(f.componentInstance);
+    f.componentRef.setInput('buyAllowed',false);f.detectChanges();
+    const buy=f.nativeElement.querySelector('input[value="BUY"]');expect(buy.disabled).toBe(true);
+    f.componentInstance.confirm();http.expectNone(r=>r.url.endsWith('/orders'));
+  });
+
 });

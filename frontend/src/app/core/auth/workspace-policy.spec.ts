@@ -1,4 +1,4 @@
-import { landingPage, normalizeRoles, safeReturnUrl } from './workspace-policy';
+import { landingPage, normalizeRoles, safeReturnUrl, routeRole } from './workspace-policy';
 describe('workspace routing policy', () => {
   it('recognizes exact role collections only', () => {
     expect(normalizeRoles('CLIENT')).toEqual([]);
@@ -30,7 +30,7 @@ describe('workspace routing policy', () => {
 
 describe('implemented staff landing pages', () => {
   it('opens real Operations and Finance workflows after login', () => {
-    expect(landingPage(['TRADING_OPS'])).toBe('/operations/instruments');
+    expect(landingPage(['TRADING_OPS'])).toBe('/operations/overview');
     expect(landingPage(['FINANCE'])).toBe('/finance/reconciliation');
   });
 });
@@ -44,4 +44,27 @@ describe('Operations instrument editor routes', () => {
       expect(safeReturnUrl(path, ['CLIENT'])).toBe('/app/overview');
     },
   );
+});
+
+it.each([
+  '/operations/overview',
+  '/operations/orders',
+  '/operations/orders/12',
+  '/operations/exceptions',
+  '/operations/reconciliation',
+])('denies mixed client/staff return URLs for %s', (path) => {
+  expect(routeRole(path)).toBe('TRADING_OPS');
+  expect(safeReturnUrl(path, ['CLIENT', 'TRADING_OPS'])).toBe('/app/overview');
+  expect(safeReturnUrl(path, ['TRADING_OPS'])).toBe(path);
+});
+
+it('preserves owned case direct links and excludes mixed identities from staff cases', () => {
+  const reference = 'CASE-11111111-1111-4111-8111-111111111111';
+  for (const url of ['/app/support', '/app/support/new?orderId=12', '/app/support/' + reference]) {
+    expect(safeReturnUrl(url, ['CLIENT'])).toBe(url);
+  }
+  for (const url of ['/operations/cases', '/operations/cases/' + reference]) {
+    expect(safeReturnUrl(url, ['TRADING_OPS'])).toBe(url);
+    expect(safeReturnUrl(url, ['TRADING_OPS', 'CLIENT'])).toBe('/app/overview');
+  }
 });
