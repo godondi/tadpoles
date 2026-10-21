@@ -11,6 +11,7 @@ import {
   OrderReceipt,
 } from '../../core/api/workspace-api.service';
 import { PendingOrder, PendingOrderService } from './pending-order.service';
+import { createIdempotencyKey } from '../../core/idempotency-key';
 
 @Component({
   selector: 'app-order-ticket',
@@ -316,7 +317,12 @@ export class OrderTicketComponent implements OnChanges {
       this.expired.set(true);
       return;
     }
-    const pending = { key: crypto.randomUUID(), command: { ...this.previewCommand } };
+    const key = createIdempotencyKey();
+    if (!key) {
+      this.message.set('Unable to create a secure order reference. Please reload and try again.');
+      return;
+    }
+    const pending = { key, command: { ...this.previewCommand } };
     if (!this.storage.save(pending)) {
       this.message.set(
         'Enable session storage to preserve your order reference before submitting.',

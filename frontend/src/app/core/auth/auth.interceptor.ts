@@ -1,3 +1,4 @@
+import { isPlatformBrowser } from '@angular/common';
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import {
   HttpRequest,
@@ -9,7 +10,7 @@ import {
 import { Observable, catchError, takeUntil, throwError } from 'rxjs';
 import { Router } from '@angular/router';
 import { AuthService } from './auth.service';
-import { buildApiUrl } from '../api/api-url';
+import { buildAnalyticsApiUrl, buildApiUrl } from '../api/api-url';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
@@ -18,12 +19,17 @@ export class AuthInterceptor implements HttpInterceptor {
   private readonly router = inject(Router);
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    const backend = new URL(buildApiUrl('/', this.platform));
+    const backend = isPlatformBrowser(this.platform)
+      ? new URL(window.location.origin)
+      : new URL(buildApiUrl('/', this.platform));
+    const analytics = new URL(buildAnalyticsApiUrl('/', this.platform));
     const url = new URL(request.url, backend);
     const publicPath = ['/auth/login', '/auth/signup', '/auth/register/client'].includes(
       url.pathname,
     );
-    if (url.origin !== backend.origin || publicPath) return next.handle(request);
+    if (![backend.origin, analytics.origin].includes(url.origin) || publicPath) {
+      return next.handle(request);
+    }
     const token = this.auth.getAccessToken();
     if (token) request = request.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
     return next.handle(request).pipe(

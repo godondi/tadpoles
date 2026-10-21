@@ -1,21 +1,40 @@
 volumes:
   tadpole-db-data:
+  tadpole-analytics-db-data:
 
 services:
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    image: tadpole-nginx:latest
+    ports:
+      - "${NGINX_HOST_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_started
+      frontend:
+        condition: service_started
+
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     image: tadpole-app:latest
-    container_name: tadpole-backend
     env_file:
-      - .env
+      - ${COMPOSE_ENV_FILE:-.env}
     environment:
       DB_URL: ${DB_URL}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       AUTH_STUB_URL: ${AUTH_STUB_URL}
       JWT_SECRET: ${JWT_SECRET}
+      FAUX_SERVER_URL: ${FAUX_SERVER_URL}
+      FAUX_API_KEY: ${FAUX_API_KEY}
+      FAUX_DEFAULT_INTERVAL: ${FAUX_DEFAULT_INTERVAL}
+      FAUX_CONNECT_TIMEOUT_SECONDS: ${FAUX_CONNECT_TIMEOUT_SECONDS}
+      FAUX_READ_TIMEOUT_SECONDS: ${FAUX_READ_TIMEOUT_SECONDS}
+      PORT: ${SERVER_PORT}
       SERVER_PORT: ${SERVER_PORT:-8080}
       TRADING_ADMISSION_ENABLED: ${TRADING_ADMISSION_ENABLED:-true}
       TRADING_WORKER_ENABLED: ${TRADING_WORKER_ENABLED:-true}
@@ -28,22 +47,20 @@ services:
       OPERATIONS_EXPORT_SECONDS: ${OPERATIONS_EXPORT_SECONDS:-3600}
       # Fictitious local demo only. Hardened deployments require a separately provisioned key.
       BANKING_ENCRYPTION_KEY: ${BANKING_ENCRYPTION_KEY:-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
     ports:
       - "${BACKEND_HOST_PORT}:${BACKEND_CONTAINER_PORT}"
     depends_on:
       database-demo-seed:
         condition: service_completed_successfully
-      auth-stub:
-        condition: service_started
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     image: tadpole-frontend:latest
-    container_name: tadpole-frontend
     env_file:
-      - .env
+      - ${COMPOSE_ENV_FILE:-.env}
     environment:
       PORT: ${FRONTEND_CONTAINER_PORT}
     ports:
@@ -51,9 +68,8 @@ services:
 
   database:
     image: postgres:15
-    container_name: tadpole-database
     env_file:
-      - .env
+      - ${COMPOSE_ENV_FILE:-.env}
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -71,7 +87,8 @@ services:
 
   database-migrate:
     image: postgres:15
-    env_file: [.env]
+    env_file:
+      - "${COMPOSE_ENV_FILE:-.env}"
     environment:
       PGHOST: database
       PGUSER: ${POSTGRES_USER}
@@ -88,14 +105,12 @@ services:
   database-demo-seed:
     image: postgres:15
     env_file:
-      - .env
+      - ${COMPOSE_ENV_FILE:-.env}
     environment:
       PGHOST: database
       PGUSER: ${POSTGRES_USER}
       PGPASSWORD: ${POSTGRES_PASSWORD}
       PGDATABASE: ${POSTGRES_DB}
-      TRADING_LOCAL_DEMO_SETUP: ${TRADING_LOCAL_DEMO_SETUP:-true}
-      OPERATIONS_ACCESS_ENABLED: ${OPERATIONS_ACCESS_ENABLED:-true}
     volumes:
       - ./database/demo/role_workspaces.sql:/role_workspaces.sql:ro
       - ./database/demo/operations_workspace.sql:/operations_workspace.sql:ro
@@ -105,19 +120,44 @@ services:
       database-migrate:
         condition: service_completed_successfully
 
-  auth-stub:
-    build:
-      context: ./auth-stub
-      dockerfile: Dockerfile
-    image: tadpole-auth-stub:latest
-    container_name: tadpole-auth-stub
+  analytics-database:
+    image: postgres:15
+    container_name: tadpole-analytics-database
     env_file:
       - .env
     environment:
-      PORT: ${AUTH_STUB_PORT}
-      JWT_SECRET: ${JWT_SECRET}
+      POSTGRES_USER: ${ANALYTICS_POSTGRES_OWNER}
+      POSTGRES_PASSWORD: ${ANALYTICS_POSTGRES_OWNER_PASSWORD}
+      POSTGRES_DB: ${ANALYTICS_POSTGRES_DB}
+      ANALYTICS_READER_PASSWORD: ${ANALYTICS_POSTGRES_PASSWORD}
     ports:
-      - "${AUTH_STUB_HOST_PORT}:${AUTH_STUB_CONTAINER_PORT}"
+      - "${ANALYTICS_POSTGRES_HOST_PORT}:5432"
+    volumes:
+      - tadpole-analytics-db-data:/var/lib/postgresql/data
+      - ./analytics-service/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  analytics-api:
+    build:
+      context: ./analytics-service
+      dockerfile: Dockerfile
+    image: tadpole-analytics-api:latest
+    container_name: tadpole-analytics-api
+    env_file:
+      - .env
+    environment:
+      ANALYTICS_DATABASE_URL: ${ANALYTICS_DATABASE_URL}
+      ANALYTICS_JWT_SECRET: ${JWT_SECRET}
+      ANALYTICS_MAX_RANGE_DAYS: ${ANALYTICS_MAX_RANGE_DAYS}
+    ports:
+      - "${ANALYTICS_HOST_PORT}:${ANALYTICS_CONTAINER_PORT}"
+    depends_on:
+      analytics-database:
+        condition: service_healthy
 
 #  testing:
 #    build:
