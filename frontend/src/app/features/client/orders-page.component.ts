@@ -1,3 +1,4 @@
+import { OrderUpdateHealthComponent } from '../../shared/workspace/order-update-health.component';
 import { Component, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -10,7 +11,7 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
 
 @Component({
   selector: 'app-orders-page',
-  imports: [FormsModule, RequestStateComponent, OrdersTableComponent],
+  imports: [OrderUpdateHealthComponent,FormsModule, RequestStateComponent, OrdersTableComponent],
   template: ` <header class="workspace-heading">
       <p class="eyebrow">MY ACCOUNT</p>
       <h1 tabindex="-1">Orders</h1>
@@ -50,6 +51,7 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
       Accepted orders are awaiting execution; filled orders have a booked result. Older pending or
       approved records have incomplete evidence. Open a reference for details.
     </p>
+    <app-order-update-health />
     <app-request-state
       [loading]="resource.loading() && !resource.data()"
       [error]="resource.error()"

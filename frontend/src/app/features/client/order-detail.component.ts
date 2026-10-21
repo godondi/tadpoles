@@ -1,21 +1,23 @@
+import { OrderUpdateHealthComponent } from '../../shared/workspace/order-update-health.component';
 import { takeWhile } from 'rxjs';
 import { Component, inject } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { WorkspaceApi, OrderDetail } from '../../core/api/workspace-api.service';
+import { WorkspaceApi, OrderDetail, OrderEvent, Page } from '../../core/api/workspace-api.service';
 import { OrderStatusService } from '../../core/api/order-status.service';
 import { PageResource } from '../../shared/workspace/page-resource';
 import { RequestStateComponent } from '../../shared/workspace/request-state.component';
 
 @Component({
   selector: 'app-order-detail',
-  imports: [DatePipe, DecimalPipe, RouterLink, RequestStateComponent],
+  imports: [OrderUpdateHealthComponent, DatePipe, DecimalPipe, RouterLink, RequestStateComponent],
   template: `<a routerLink="/app/orders">← All orders</a>
     <header class="workspace-heading">
       <p class="eyebrow">ORDER RECEIPT</p>
       <h1 tabindex="-1">Order #{{ id }}</h1>
     </header>
+    <app-order-update-health />
     <app-request-state
       [loading]="resource.loading() && !resource.data()"
       [error]="resource.error()"
@@ -37,6 +39,9 @@ import { RequestStateComponent } from '../../shared/workspace/request-state.comp
         </h2>
         <p class="status-label">{{ data.order.status }}</p>
         <p>{{ data.order.reason }}</p>
+        <a routerLink="/app/support/new" [queryParams]="{ orderId: data.order.orderId }"
+          >Ask about this order</a
+        >
         @if (pending()) {
           <p>
             Your order is saved and processing. It has not filled yet. Status updates automatically
@@ -129,11 +134,14 @@ import { RequestStateComponent } from '../../shared/workspace/request-state.comp
           </p>
         </section>
       }
-      @if (data.events?.length) {
+      @if (data.events?.length || data.eventTotal) {
         <section class="panel">
           <h2>What happened</h2>
           <ol class="order-timeline">
-            @for (event of data.events; track event.eventId) {
+            @for (
+              event of eventPage === 0 ? data.events : timeline.data()?.items;
+              track event.eventId
+            ) {
               <li>
                 <strong>{{ event.status }}</strong>
                 <p>{{ event.reason }}</p>
@@ -141,6 +149,64 @@ import { RequestStateComponent } from '../../shared/workspace/request-state.comp
               </li>
             }
           </ol>
+          @if (timeline.error()) {
+            <p role="alert">{{ timeline.error() }}</p>
+            <button (click)="events(eventPage)">Retry event page</button>
+          }
+          @if ((data.eventTotal ?? 0) > 100) {
+            <p>
+              Page {{ eventPage + 1 }} · {{ data.eventTotal }} retained events. Only this page is
+              displayed.
+            </p>
+            <button
+              (click)="events(eventPage - 1)"
+              [disabled]="eventPage === 0 || timeline.loading()"
+            >
+              Previous events</button
+            ><button
+              (click)="events(eventPage + 1)"
+              [disabled]="(eventPage + 1) * 100 >= (data.eventTotal ?? 0) || timeline.loading()"
+            >
+              Next events
+            </button>
+          }
+        </section>
+      }
+      @if (data.quotes?.length) {
+        <section class="panel">
+          <h2>Retained prices</h2>
+          <p>
+            Admission quotes supported acceptance checks. Execution quotes record later booking or
+            rejection checks. A current chart does not reconstruct either price.
+          </p>
+          @for (quote of data.quotes; track quote.quoteId) {
+            <article>
+              <h3>{{ quote.stage }} · {{ quote.applicableSide }}</h3>
+              <p>
+                {{ quote.price ?? 'Price unavailable' }} {{ quote.currency }} ·
+                {{ quote.source ?? 'Source not retained' }}
+              </p>
+              <p>
+                Provider time {{ quote.providerTime | date: 'medium' : 'UTC' }} UTC · observed
+                {{ quote.receivedAt | date: 'medium' : 'UTC' }} UTC ·
+                {{
+                  quote.stale === null
+                    ? 'Freshness not retained'
+                    : quote.stale
+                      ? 'Reported stale'
+                      : 'Reported fresh'
+                }}
+              </p>
+              <p>
+                {{
+                  quote.usedForFill
+                    ? 'Linked to the committed internal fill'
+                    : 'Retained decision observation; not a committed fill'
+                }}
+              </p>
+            </article>
+          }
+          <p>Coverage: {{ data.quoteCoverage }}</p>
         </section>
       }
       @if (data.decisions?.length) {
@@ -149,14 +215,41 @@ import { RequestStateComponent } from '../../shared/workspace/request-state.comp
           @for (decision of data.decisions; track $index) {
             <p>
               {{ decision.stage }} · {{ decision.passed ? 'Passed' : 'Rejected' }} ·
-              {{ decision.explanation }}
+              {{ decision.explanation }} · {{ decision.code }}
             </p>
+            @if (decision.checks?.length) {
+              <ul>
+                @for (check of decision.checks; track check.code) {
+                  <li>{{ check.code }} · {{ check.result }}</li>
+                }
+              </ul>
+            } @else {
+              <p>Granular check outcomes were not retained.</p>
+            }
+          }
+        </details>
+      }
+      @if (data.evidenceChecks?.length) {
+        <details class="panel">
+          <summary>Retained evidence checks</summary>
+          @for (check of data.evidenceChecks; track check.code) {
+            <p>{{ check.explanation }} · {{ check.state }}</p>
           }
         </details>
       }
       @if (data.evidenceCompleteness !== 'RETAINED_INTERNAL_EVIDENCE') {
         <section class="notice">
-          <h2>Incomplete historical evidence</h2>
+          <h2>
+            {{
+              data.evidenceCompleteness === 'PENDING'
+                ? 'Still processing'
+                : data.evidenceCompleteness === 'INTEGRITY_FINDING'
+                  ? 'Retained evidence needs review'
+                  : data.evidenceCompleteness === 'PARTIAL'
+                    ? 'Partial evidence coverage'
+                    : 'Incomplete historical evidence'
+            }}
+          </h2>
           <p>{{ data.explanation }}</p>
         </section>
       }
@@ -165,6 +258,8 @@ import { RequestStateComponent } from '../../shared/workspace/request-state.comp
 export class OrderDetailComponent {
   private readonly api = inject(WorkspaceApi);
   readonly resource = new PageResource<OrderDetail>();
+  readonly timeline = new PageResource<Page<OrderEvent>>();
+  eventPage = 0;
   id = '';
 
   constructor() {
@@ -172,6 +267,8 @@ export class OrderDetailComponent {
       .paramMap.pipe(takeUntilDestroyed())
       .subscribe((params) => {
         this.id = params.get('id') ?? '';
+        this.eventPage = 0;
+        this.timeline.data.set(null);
         this.load();
       });
     inject(OrderStatusService)
@@ -189,7 +286,13 @@ export class OrderDetailComponent {
     return ['ACCEPTED', 'EXECUTING'].includes(this.resource.data()?.order.status ?? '');
   }
 
+  events(page: number) {
+    this.eventPage = page;
+    if (page > 0) this.timeline.load(this.api.orderEvents(this.id, page));
+  }
+
   load(background = false) {
     this.resource.load(this.api.order(this.id), background);
+    if (this.eventPage > 0) this.events(this.eventPage);
   }
 }

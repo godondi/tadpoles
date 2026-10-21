@@ -1,3 +1,4 @@
+import { CatalogRefreshService } from '../../core/api/catalog-refresh.service';
 import { Component, inject } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -38,9 +39,13 @@ import { TradeComponent } from '../trade/trade.component';
           >Your orders for {{ data.instrument.ticker }}</a
         >
       </header>
-      @if (data.availability.enabled || data.availability.code === 'BANK_REQUIRED') {
+      @if (ticket || data.availability.enabled || data.availability.code === 'BANK_REQUIRED') {
         @if (ticket) {
+          <p>{{data.availability.reason}}</p>
+          <a routerLink="/app/support/new" [queryParams]="{category:'TRADING_AVAILABILITY'}">Ask about trading availability</a>
           <app-order-ticket
+            [buyAllowed]="data.availability.buyAllowed ?? data.availability.enabled"
+            [sellAllowed]="data.availability.sellAllowed ?? data.availability.enabled"
             [instrumentId]="data.instrument.instrumentId"
             [ticker]="data.instrument.ticker"
             [initialSide]="sideHint"
@@ -55,17 +60,17 @@ import { TradeComponent } from '../trade/trade.component';
               checks
             </p>
             <div class="actions">
-              <a
+              @if(data.availability.buyAllowed!==false) {<a
                 class="button-link"
                 [routerLink]="['/app/trade', data.instrument.instrumentId]"
                 [queryParams]="{ side: 'BUY' }"
                 >Buy {{ data.instrument.ticker }}</a
-              >
-              <a
+              >}
+              @if(data.availability.sellAllowed!==false) {<a
                 [routerLink]="['/app/trade', data.instrument.instrumentId]"
                 [queryParams]="{ side: 'SELL' }"
                 >Sell</a
-              >
+              >}
             </div>
           </section>
         }
@@ -74,6 +79,7 @@ import { TradeComponent } from '../trade/trade.component';
           <h2>Trading unavailable for this instrument</h2>
           <p>{{ data.availability.reason }}</p>
           <p>You can still browse its market information.</p>
+          <a routerLink="/app/support/new" [queryParams]="{category:'TRADING_AVAILABILITY'}">Ask about trading availability</a>
         </section>
       }
       @if (!ticket) {
@@ -100,18 +106,19 @@ export class InstrumentPageComponent {
   id = '';
 
   constructor() {
+    inject(CatalogRefreshService).watch().pipe(takeUntilDestroyed()).subscribe(()=>this.load(true));
     this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       this.id = params.get('id') ?? params.get('instrumentId') ?? '';
       this.load();
     });
   }
 
-  load() {
+  load(background=false) {
     this.resource.load(
       forkJoin({
         instrument: this.api.instrument(this.id),
         availability: this.api.availability(this.id),
-      }),
+      }),background,
     );
   }
 }

@@ -15,7 +15,7 @@ describe('independent account resources', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         { provide: AuthService, useValue: { sessionChanged: new Subject<void>() } },
-        { provide: OrderStatusService, useValue: { watch: () => EMPTY } },
+        { provide: OrderStatusService, useValue: { health: () => 'IDLE', lastSuccess: () => null, watch: () => EMPTY } },
       ],
     });
     const http = TestBed.inject(HttpTestingController);
@@ -43,6 +43,7 @@ describe('independent account resources', () => {
       .flush({}, { status: 503, statusText: 'Unavailable' });
     f.detectChanges();
     expect(f.nativeElement.textContent).toContain('Display currency');
+    expect(f.nativeElement.querySelector('a[href="/app/support/new?category=ACCOUNT_REVIEW"]')).not.toBeNull();
     expect(f.nativeElement.textContent).toContain('Settled balance');
     expect(f.nativeElement.textContent).toContain('500');
     expect(f.nativeElement.textContent).toContain('Unable to connect');
@@ -61,7 +62,7 @@ describe('account background updates', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         { provide: AuthService, useValue: { sessionChanged } },
-        { provide: OrderStatusService, useValue: { watch: () => changes } },
+        { provide: OrderStatusService, useValue: { health: () => 'IDLE', lastSuccess: () => null, watch: () => changes } },
       ],
     });
     const http = TestBed.inject(HttpTestingController);
@@ -171,7 +172,7 @@ describe('account summary metrics', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         { provide: AuthService, useValue: { sessionChanged: new Subject<void>() } },
-        { provide: OrderStatusService, useValue: { watch: () => EMPTY } },
+        { provide: OrderStatusService, useValue: { health: () => 'IDLE', lastSuccess: () => null, watch: () => EMPTY } },
       ],
     });
     const http = TestBed.inject(HttpTestingController);
@@ -210,7 +211,7 @@ describe('Investing estimates', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         { provide: AuthService, useValue: { sessionChanged: new Subject<void>() } },
-        { provide: OrderStatusService, useValue: { watch: () => EMPTY } },
+        { provide: OrderStatusService, useValue: { health: () => 'IDLE', lastSuccess: () => null, watch: () => EMPTY } },
       ],
     });
     const http = TestBed.inject(HttpTestingController);
