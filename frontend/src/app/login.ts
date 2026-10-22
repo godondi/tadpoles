@@ -339,6 +339,15 @@ export class LoginComponent {
       }
     }
 
+    if (
+      error instanceof Error &&
+      /ChunkLoadError|Loading chunk|Failed to fetch dynamically imported module|Importing a module script failed/i.test(
+        error.message,
+      )
+    ) {
+      return 'The application was updated. Refresh the page and try signing in again.';
+    }
+
     return 'Unable to sign in. Please try again.';
   }
 }
