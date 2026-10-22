@@ -11,7 +11,7 @@ The repository already contains a provisional analytics boundary:
 - The Angular routes require the `ANALYST` role.
 - FastAPI owns the read-only analytics API namespace and independently validates the analyst JWT.
 - Spring owns client portfolio, holdings, order, and live transaction workflows.
-- The analytics service currently returns `503 SERVICE_UNAVAILABLE` because no authoritative reporting source is connected.
+- The default local Compose mode serves deterministic, explicitly labelled demonstration data. Authoritative mode still returns `503 SERVICE_UNAVAILABLE` because no approved reporting source is connected.
 
 The new visualization slice adds the UI and API contracts without weakening that boundary. The page now has:
 
@@ -19,7 +19,7 @@ The new visualization slice adds the UI and API contracts without weakening that
 2. Explicit `1m`, `3m`, and `12m` period controls.
 3. A holdings doughnut-chart contract that displays the five largest holdings and rolls the remainder into `Other`.
 4. Exact-value tables beside each chart for accessibility and auditability.
-5. Explicit unavailable behavior until approved reporting data exists.
+5. Explicit demonstration labeling for local fixtures and unavailable behavior until approved reporting data exists.
 
 No notebook values, hard-coded portfolio values, Spring transactional reads, or client-owned holdings were reused as analytics truth.
 
@@ -30,7 +30,7 @@ No notebook values, hard-coded portfolio values, Spring transactional reads, or 
 - `frontend/src/app/features/analytics/analytics-page.component.ts` provided the analytics shell, URL-backed filters, route tabs, freshness messaging, and explicit unavailable/no-activity states.
 - `frontend/src/app/core/api/analytics-api.service.ts` provided typed clients for summary, trends, instruments, and freshness.
 - `analytics-service/app/auth.py` independently checked bearer tokens and required `ANALYST`.
-- `analytics-service/app/api.py` exposed the original analytics routes, but each route deliberately failed closed.
+- `analytics-service/app/api.py` exposes bounded read-only reporting routes; local demo mode serves reporting fixtures while authoritative mode fails closed.
 - `analytics-service/app/schemas.py` described the original aggregate-report response shapes.
 - `backend/src/main/java/com/neueda/leap/controller/WorkspaceClientController.java` exposed `/api/workspace/client/portfolio` and `/api/orders` for client workflows. These remain Spring-owned and are not valid sources for internal aggregate analytics.
 - The existing dashboard charts in `frontend/src/app/dashboard.ts` use placeholder values. They are client-facing prototype content and were not copied into the analytics page.
@@ -53,7 +53,7 @@ The new API paths are:
 - `GET /api/analytics/portfolio-performance`
 - `GET /api/analytics/holdings`
 
-They are protected by the same FastAPI `ANALYST` dependency as the existing analytics routes. They currently return the same explicit unavailable response as the rest of the provisional service. This is deliberate: returning zeros, notebook data, or live client data would falsely imply that the report is authoritative.
+They are protected by the same FastAPI `ANALYST` dependency as the existing analytics routes. Local demo mode returns fixed pseudonymous fixtures with `data_mode=DEMONSTRATION`; authoritative mode returns the explicit unavailable response until the reporting source exists. Returning zeros, notebook data, or live client data would falsely imply that the report is authoritative.
 
 ### 2. Normalize performance for comparison
 

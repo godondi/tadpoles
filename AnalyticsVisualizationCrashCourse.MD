@@ -29,11 +29,11 @@ GET /api/analytics/portfolio-performance?from=...&to=...&timezone=UTC&granularit
 GET /api/analytics/holdings?from=...&to=...&timezone=UTC&granularity=day
 ```
 
-## 2. Why the API currently returns 503
+## 2. Why authoritative mode currently returns 503
 
 The repository does not yet contain an authoritative reporting feed for portfolio valuations, benchmark snapshots, fills, segment history, or reporting watermarks. Existing Spring endpoints expose client-owned transactional data, but the design documents explicitly prohibit using those endpoints as an internal reporting source.
 
-The analytics service therefore remains fail-closed. Until a reporting database and loader are connected, a valid analyst receives an explicit `503` unavailable response. The page keeps filters visible and explains why no chart is shown. It does not display fake values, notebook values, or zeros.
+The analytics service remains fail-closed in authoritative mode. The default local Compose configuration now seeds fixed pseudonymous rows into the separate reporting database and labels every response `DEMONSTRATION`. A production-like configuration without an approved reporting loader still returns `503`. The page does not display notebook values, random values, or unlabeled zeros.
 
 This behavior is required by the analytics design and supports:
 
@@ -142,13 +142,13 @@ The chart slice size uses market value. The exact table shows both market value 
 
 ## 5. How to use the page today
 
-1. Sign in with an account whose verified JWT contains `ANALYST`.
+1. In the default local Compose deployment, sign in with `demo.analyst` and password `RoleDemo2026!`; the verified JWT contains `ANALYST`.
 2. Open `/analytics/overview`.
 3. Set the date range and optional market, asset class, or instrument filters.
 4. Select `1M`, `3M`, or `12M` in the performance panel.
 5. Use the exact-value tables when comparing individual dates or holdings.
 6. Read the status chip and metadata strip before interpreting any figure.
-7. If the reporting source is unavailable, use **Try again** after the service is restored. Do not treat the unavailable panel as a zero result.
+7. Read the demonstration warning before interpreting the fixed local fixtures. In authoritative mode, if the reporting source is unavailable, use **Try again** after the service is restored. Do not treat an unavailable panel as a zero result.
 
 The `trends` and `instruments` tabs continue to use their existing aggregate-report contracts. The new portfolio visualizations are shown on the overview only because they are portfolio-level context rather than instrument-activity rankings.
 

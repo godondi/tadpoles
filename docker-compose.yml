@@ -15,6 +15,8 @@ services:
         condition: service_started
       frontend:
         condition: service_started
+      analytics-api:
+        condition: service_healthy
 
   backend:
     build:
@@ -147,14 +149,37 @@ services:
       dockerfile: Dockerfile
     image: tadpole-analytics-api:latest
     container_name: tadpole-analytics-api
-    env_file:
-      - .env
     environment:
       ANALYTICS_DATABASE_URL: ${ANALYTICS_DATABASE_URL}
       ANALYTICS_JWT_SECRET: ${JWT_SECRET}
       ANALYTICS_MAX_RANGE_DAYS: ${ANALYTICS_MAX_RANGE_DAYS}
+      ANALYTICS_MAX_PAGE_SIZE: ${ANALYTICS_MAX_PAGE_SIZE:-100}
+      ANALYTICS_DATA_MODE: ${ANALYTICS_DATA_MODE:-demo}
     ports:
       - "${ANALYTICS_HOST_PORT}:${ANALYTICS_CONTAINER_PORT}"
+    depends_on:
+      analytics-demo-seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  analytics-demo-seed:
+    image: postgres:15
+    container_name: tadpole-analytics-demo-seed
+    env_file:
+      - .env
+    environment:
+      PGHOST: analytics-database
+      PGUSER: ${ANALYTICS_POSTGRES_OWNER}
+      PGPASSWORD: ${ANALYTICS_POSTGRES_OWNER_PASSWORD}
+      PGDATABASE: ${ANALYTICS_POSTGRES_DB}
+    volumes:
+      - ./analytics-service/migrations/003_demo_reporting_data.sql:/demo-reporting-data.sql:ro
+    command:
+      ["sh", "-c", "psql -v ON_ERROR_STOP=1 --username \"$$PGUSER\" --dbname \"$$PGDATABASE\" --file /demo-reporting-data.sql"]
     depends_on:
       analytics-database:
         condition: service_healthy
