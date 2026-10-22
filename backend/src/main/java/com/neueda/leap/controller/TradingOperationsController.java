@@ -5,12 +5,14 @@ import static com.neueda.leap.trading.TradingData.map;
 import com.neueda.leap.mapper.*;
 import com.neueda.leap.service.*;
 import com.neueda.leap.service.impl.ReconciliationService;
-import java.util.*;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.*;
 
 @RestController
 public class TradingOperationsController {
@@ -23,6 +25,8 @@ public class TradingOperationsController {
     private final TradingService service;
     private final boolean worker;
     private final boolean provider;
+    private final ProviderHealthService health;
+    private final java.time.Clock clock;
 
     public TradingOperationsController(
             ReconciliationService reconciliation,
@@ -33,7 +37,11 @@ public class TradingOperationsController {
             TradingSetupMapper setup,
             com.neueda.leap.trading.ExecutionWorker executionWorker,
             @Value("${trading.worker-enabled:false}") boolean worker,
-            @Value("${fauxnance.api-key:}") String key) {
+            @Value("${fauxnance.api-key:}") String key,
+            ProviderHealthService health,
+            java.time.Clock clock) {
+        this.health = health;
+        this.clock = clock;
         this.executionWorker = executionWorker;
         this.setup = setup;
         this.reconciliation = reconciliation;
@@ -63,6 +71,8 @@ public class TradingOperationsController {
         return map(
                 "schemaReady",
                 trading.schemaReady(),
+                "supportSchemaReady",
+                trading.supportSchemaReady(),
                 "referenceDataReady",
                 db.referenceDataReady(),
                 "runtimePermissions",
@@ -73,16 +83,16 @@ public class TradingOperationsController {
                         db.evidenceProtected()),
                 "workerHealth",
                 executionWorker.health(),
-                "pendingJobs",
-                db.pendingJobs(),
-                "oldestPendingOrderAt",
-                db.oldestPendingOrder(),
+                "checkedAt",
+                clock.instant(),
+                "providerHealth",
+                health.health(),
+                "outboxDelivery",
+                "NOT_CONFIGURED",
                 "cashMovementProcessing",
                 "SYNCHRONOUS",
-                "pendingCashMovements",
-                0,
                 "reconciliation",
-                reconciliation.latest(),
+                map("status", "SCOPED_VIEW_REQUIRED"),
                 "admissionEnabled",
                 service.enabled(),
                 "workerEnabled",
@@ -91,12 +101,6 @@ public class TradingOperationsController {
                 provider,
                 "enabledPolicies",
                 db.enabledPolicies(),
-                "overdueJobs",
-                db.overdueJobs(),
-                "historicalExceptions",
-                db.historicalExceptions(),
-                "setupChecks",
-                setup.checks(),
                 "note",
                 "Configuration readiness does not prove an executable live quote. Every order"
                         + " independently validates provider freshness and session.");

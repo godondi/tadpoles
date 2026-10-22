@@ -8,16 +8,18 @@ import com.neueda.leap.mapper.TradingMapper;
 import com.neueda.leap.service.TradingService;
 import com.neueda.leap.trading.*;
 import com.neueda.leap.trading.TradingModels.*;
-import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.time.*;
-import java.util.*;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.time.*;
+import java.util.*;
 
 @Service
 public class TradingServiceImpl implements TradingService {
@@ -60,7 +62,9 @@ public class TradingServiceImpl implements TradingService {
                                                         + " selling"
                                                 : null;
         String code =
-                reason == null ? "ELIGIBLE" : !db.hasBank(client) ? "BANK_REQUIRED" : "UNAVAILABLE";
+                reason == null
+                        ? "ELIGIBLE"
+                        : reason.startsWith("Add a saved bank") ? "BANK_REQUIRED" : "UNAVAILABLE";
         Policy p = instrument == null ? null : db.policy(instrument);
         if (reason == null
                 && instrument != null
@@ -78,7 +82,29 @@ public class TradingServiceImpl implements TradingService {
             reason = "USD account requires review; contact support";
             code = "ACCOUNT_REVIEW";
         }
+        boolean instrumentReady =
+                instrument == null
+                        || (p != null
+                                && p.enabled()
+                                && p.active()
+                                && "PROVIDER_OPEN".equals(p.session())
+                                && "USD".equals(p.currency()));
+        boolean accountReady =
+                cash != null && Boolean.TRUE.equals(cash.get("available_for_trading"));
+        boolean buyAllowed = instrumentReady && accountReady && (p == null || p.buyAllowed());
+        boolean sellAllowed = instrumentReady && accountReady && (p == null || p.sellAllowed());
+        if (reason == null && p != null) {
+            if (!buyAllowed && !sellAllowed) {
+                reason = "Buying and selling are currently paused for this instrument";
+                code = "TRADING_HALTED";
+            } else if (!buyAllowed) code = "SELL_ONLY";
+            else if (!sellAllowed) code = "BUY_ONLY";
+        }
         return map(
+                "buyAllowed",
+                buyAllowed && (reason == null || code.equals("BANK_REQUIRED")),
+                "sellAllowed",
+                sellAllowed && (reason == null || code.equals("BANK_REQUIRED")),
                 "enabled",
                 reason == null,
                 "reason",
@@ -223,20 +249,85 @@ public class TradingServiceImpl implements TradingService {
         enrich(order, row);
         if ("SELF_DIRECTED".equals(row.get("record_kind"))) {
             var fill = db.fillFor(id);
+            var evidence = db.clientEvidence(client, id);
+            var checks = new ArrayList<Map<String, Object>>();
+            var explanations =
+                    Map.of(
+                            "admission",
+                            "Retained admission decision",
+                            "timeline",
+                            "Current state and contiguous retained event versions",
+                            "notification",
+                            "Retained notification facts (external delivery is not configured)",
+                            "quotes",
+                            "Decision-to-quote relationships",
+                            "reservation",
+                            "Reservation state for this order outcome",
+                            "booking",
+                            "Fill, execution quote, terminal event and owned signed posting"
+                                + " relationships");
+            boolean integrity =
+                    evidence == null
+                            || evidence.values().stream().anyMatch(v -> !Boolean.TRUE.equals(v));
+            boolean pending = Set.of("ACCEPTED", "EXECUTING").contains(row.get("status"));
+            for (String name :
+                    List.of(
+                            "admission",
+                            "timeline",
+                            "notification",
+                            "quotes",
+                            "reservation",
+                            "booking"))
+                checks.add(
+                        map(
+                                "code",
+                                name.toUpperCase(Locale.ROOT),
+                                "state",
+                                Boolean.TRUE.equals(evidence == null ? null : evidence.get(name))
+                                        ? (name.equals("booking") && pending
+                                                ? "PENDING"
+                                                : name.equals("booking")
+                                                                && !"FILLED"
+                                                                        .equals(row.get("status"))
+                                                        ? "NOT_APPLICABLE"
+                                                        : "RETAINED")
+                                        : "INTEGRITY_FINDING",
+                                "explanation",
+                                explanations.get(name)));
+            var quoteRows = db.clientQuotes(client, id);
+            var decisions = db.clientDecisions(client, id);
+            boolean bounded = quoteRows.size() > 200 || decisions.size() > 200;
             data.put(
                     "evidenceCompleteness",
-                    "FILLED".equals(row.get("status")) && fill == null
-                            ? "MISSING_FILL"
-                            : "RETAINED_INTERNAL_EVIDENCE");
+                    integrity
+                            ? "INTEGRITY_FINDING"
+                            : bounded
+                                    ? "PARTIAL"
+                                    : pending ? "PENDING" : "RETAINED_INTERNAL_EVIDENCE");
+            data.put("evidenceChecks", checks);
             data.put(
                     "explanation",
-                    "Retained instruction, decisions, and committed events. A fill is shown only"
-                            + " after booking commits.");
+                    integrity
+                            ? "Some expected retained relationships are missing or inconsistent."
+                                  + " Report the issue for review."
+                            : pending
+                                    ? "The accepted order is still processing. A reservation is not"
+                                          + " a fill. Terminal evidence is not yet applicable."
+                                    : "Checks cover retained admission, event, quote, reservation"
+                                          + " and internal booking relationships. They do not"
+                                          + " certify external execution or settlement.");
             data.put("reservation", safeReservation(db.reservationFor(id)));
             data.put("fills", fill == null ? List.of() : List.of(safeFill(fill)));
-            data.put("decisions", db.decisions(id));
+            data.put("decisions", decisions.stream().limit(200).map(this::clientDecision).toList());
             data.put("events", db.events(client, id, 100, 0));
-            data.put("quotes", db.quotes(id).stream().map(this::safeQuote).toList());
+            data.put("eventTotal", db.eventCount(client, id));
+            data.put(
+                    "quotes",
+                    quoteRows.stream()
+                            .limit(200)
+                            .map(q -> clientQuote(q, "BUY".equals(row.get("trade_type"))))
+                            .toList());
+            data.put("quoteCoverage", bounded ? "PARTIAL" : "RETAINED_OBSERVATIONS");
         }
         return data;
     }
@@ -368,12 +459,109 @@ public class TradingServiceImpl implements TradingService {
         return json.convertValue(v, new TypeReference<Map<String, Object>>() {});
     }
 
-    private Object safeQuote(String value) {
-        var facts = (com.fasterxml.jackson.databind.node.ObjectNode) parse(value);
-        for (String field : List.of("rawBid", "rawAsk", "bid", "ask"))
-            if (facts.hasNonNull(field))
-                facts.put(field, decimal(new BigDecimal(facts.get(field).asText())));
-        return facts;
+    private Object clientQuote(Map<String, Object> row, boolean buy) {
+        var value =
+                (com.fasterxml.jackson.databind.JsonNode)
+                        parse(Objects.toString(row.get("facts"), "{}"));
+        String price = null;
+        try {
+            if (value.path(buy ? "ask" : "bid").isValueNode()
+                    && !value.path(buy ? "ask" : "bid").isNull())
+                price = decimal(new BigDecimal(value.path(buy ? "ask" : "bid").asText()));
+        } catch (NumberFormatException ignored) {
+        }
+        var result =
+                map(
+                        "quoteId",
+                        row.get("id"),
+                        "stage",
+                        row.get("stage"),
+                        "applicableSide",
+                        buy ? "ASK" : "BID",
+                        "price",
+                        price,
+                        "usedForFill",
+                        row.get("usedForFill"));
+        for (String field :
+                List.of(
+                        "currency",
+                        "providerTime",
+                        "receivedAt",
+                        "metadataTime",
+                        "source",
+                        "marketState")) {
+            var node = value.get(field);
+            result.put(
+                    field,
+                    node != null && node.isTextual() && node.asText().length() <= 200
+                            ? node.asText()
+                            : null);
+        }
+        result.put(
+                "stale", value.path("stale").isBoolean() ? value.path("stale").asBoolean() : null);
+        return result;
+    }
+
+    private Object clientDecision(Map<String, Object> row) {
+        var result =
+                map(
+                        "stage",
+                        row.get("stage"),
+                        "passed",
+                        row.get("passed"),
+                        "code",
+                        row.get("code"),
+                        "explanation",
+                        row.get("explanation"),
+                        "recordedAt",
+                        row.get("recordedAt"));
+        var checks = new ArrayList<Map<String, Object>>();
+        var allowed =
+                Set.of(
+                        "01_INSTRUMENT_UNAVAILABLE",
+                        "02_SESSION_CLOSED",
+                        "03_CURRENCY_UNSUPPORTED",
+                        "04_SIDE_HALTED",
+                        "05_QUANTITY_STEP",
+                        "06_QUANTITY_LIMIT",
+                        "07_QUOTE_MISSING",
+                        "08_QUOTE_STALE",
+                        "09_QUOTE_METADATA",
+                        "10_QUOTE_METADATA",
+                        "11_QUOTE_METADATA",
+                        "12_QUOTE_METADATA",
+                        "13_SESSION_CLOSED",
+                        "14_QUOTE_METADATA_TIME",
+                        "15_QUOTE_MAPPING",
+                        "16_QUOTE_INVALID",
+                        "17_QUOTE_FUTURE",
+                        "18_QUOTE_STALE",
+                        "19_QUOTE_PRECISION",
+                        "20_NOTIONAL_LIMIT",
+                        "POLICY_CHANGED",
+                        "ACCOUNT_UNAVAILABLE",
+                        "BANK_REQUIRED",
+                        "CURRENCY_UNAVAILABLE",
+                        "INSUFFICIENT_CASH",
+                        "POSITION_REVIEW",
+                        "INSUFFICIENT_UNITS");
+        if (row.get("context") != null) {
+            var context =
+                    (com.fasterxml.jackson.databind.JsonNode) parse(row.get("context").toString());
+            if (context.path("checks").isArray())
+                for (var check : context.path("checks")) {
+                    String code = check.path("code").asText(),
+                            outcome = check.path("result").asText();
+                    if (checks.size() < 30
+                            && allowed.contains(code)
+                            && Set.of("PASS", "FAIL", "NOT_EVALUATED").contains(outcome))
+                        checks.add(map("code", code, "result", outcome));
+                }
+        }
+        result.put("checks", checks);
+        result.put(
+                "checkCoverage", checks.isEmpty() ? "NOT_RETAINED" : "RETAINED_ALLOWLISTED_CHECKS");
+        return result;
     }
 
     private Object parse(String value) {

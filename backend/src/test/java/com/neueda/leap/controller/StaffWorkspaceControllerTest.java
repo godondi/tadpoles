@@ -1,11 +1,13 @@
 package com.neueda.leap.controller;
 
 import static com.neueda.leap.support.TestSecurityUtils.jwtWithRoles;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.neueda.leap.config.SecurityConfig;
 import com.neueda.leap.exception.GlobalExceptionHandler;
+
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,8 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @Import({SecurityConfig.class, GlobalExceptionHandler.class})
 @TestPropertySource(properties = "jwt.secret=test-jwt-secret-test-jwt-secret-123456")
 class StaffWorkspaceControllerTest {
-    @Autowired
-    MockMvc mvc;
+    @Autowired MockMvc mvc;
 
     @org.junit.jupiter.api.Test
     void financeSummaryDoesNotMisrepresentAvailableReconciliation() throws Exception {
@@ -34,8 +35,6 @@ class StaffWorkspaceControllerTest {
 
     @ParameterizedTest
     @CsvSource({
-        "TRADING_OPS,/api/operations/orders",
-        "TRADING_OPS,/api/operations/orders/7",
         "COMPLIANCE,/api/compliance/investigations",
         "COMPLIANCE,/api/compliance/orders/7/evidence",
         "COMPLIANCE,/api/compliance/evidence",

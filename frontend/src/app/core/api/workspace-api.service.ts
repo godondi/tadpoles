@@ -86,16 +86,23 @@ export interface Order {
   executedAt: string | null;
   reason: string | null;
 }
+export interface RetainedClientQuote {quoteId:string;stage:string;applicableSide:string;price:string|null;currency:string|null;source:string|null;providerTime:string|null;receivedAt:string|null;stale:boolean|null;usedForFill:boolean;}
 export interface OrderDetail {
+  quotes?:RetainedClientQuote[];
+  quoteCoverage?:string;
+  eventTotal?:number;
+  evidenceChecks?:{code:string;state:string;explanation:string}[];
   fills?: Fill[];
   events?: OrderEvent[];
-  decisions?: { stage: string; code: string; explanation: string; passed: boolean }[];
+  decisions?: { stage: string; code: string; explanation: string; passed: boolean; checks?:{code:string;result:string}[];checkCoverage?:string }[];
   reservation?: { resource: string; amount: string; state: string };
   order: Order;
   evidenceCompleteness: string;
   explanation: string;
 }
 export interface TradingAvailability {
+  buyAllowed?:boolean;
+  sellAllowed?:boolean;
   code?: string;
   mode?: string;
   policyVersion?: string;
@@ -128,6 +135,7 @@ export class WorkspaceApi {
     return this.http.get<Page<Order>>(this.url('/api/orders'), { params });
   }
 
+  orderEvents(id:string,page=0) {return this.http.get<Page<OrderEvent>>(this.url('/api/orders/'+encodeURIComponent(id)+'/events'),{params:{page,pageSize:100}});}
   order(id: string) {
     return this.http.get<OrderDetail>(this.url(`/api/orders/${encodeURIComponent(id)}`));
   }
@@ -229,6 +237,7 @@ export interface Fill {
   postingGroup: string;
 }
 export interface OrderEvent {
+  sequence?:number;
   eventId: string;
   orderId: number;
   version: number;

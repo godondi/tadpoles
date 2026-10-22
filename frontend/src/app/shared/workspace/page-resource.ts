@@ -37,6 +37,8 @@ export class PageResource<T> {
       },
       error: (error: HttpErrorResponse) => {
         this.loading.set(false);
+        if (error.status > 0 && error.status < 500 && ![408, 429].includes(error.status))
+          this.data.set(null);
         this.status.set(error.status);
         this.error.set(
           error.status === 403

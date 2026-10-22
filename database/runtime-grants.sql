@@ -95,6 +95,25 @@ REVOKE UPDATE, DELETE, TRUNCATE
     order_execution_attempts,
     outbox_events FROM :"runtime_role";
 
+-- Staff cannot provision grants through the application runtime identity.
+GRANT SELECT ON operations_access_grants, operations_grant_events TO :"runtime_role";
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON operations_access_grants, operations_grant_events FROM :"runtime_role";
+GRANT SELECT, INSERT ON operations_access_contexts, operations_access_events,
+    operations_evidence_exports, order_decision_contexts, reconciliation_findings TO :"runtime_role";
+REVOKE UPDATE, DELETE, TRUNCATE ON operations_access_contexts, operations_access_events,
+    operations_evidence_exports, order_decision_contexts, reconciliation_findings FROM :"runtime_role";
+
+GRANT SELECT, INSERT ON support_cases, support_case_events, support_case_notes, support_case_requests, support_case_exports TO :"runtime_role";
+REVOKE UPDATE ON support_cases FROM :"runtime_role";
+GRANT UPDATE(status,version,updated_at) ON support_cases TO :"runtime_role";
+REVOKE DELETE, TRUNCATE ON support_cases FROM :"runtime_role";
+REVOKE UPDATE, DELETE, TRUNCATE ON support_case_events, support_case_notes, support_case_requests, support_case_exports FROM :"runtime_role";
+
+REVOKE UPDATE ON support_read_state FROM :"runtime_role";
+GRANT UPDATE(last_event) ON support_read_state TO :"runtime_role";
+GRANT SELECT, INSERT ON support_read_state TO :"runtime_role";
+REVOKE DELETE, TRUNCATE ON support_read_state FROM :"runtime_role";
+
 REVOKE TRUNCATE, TRIGGER ON ALL TABLES IN SCHEMA public FROM :"runtime_role";
 
 REVOKE CREATE ON SCHEMA public FROM :"runtime_role";

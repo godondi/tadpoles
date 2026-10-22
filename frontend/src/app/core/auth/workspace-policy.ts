@@ -7,14 +7,19 @@ export const WORKSPACES = [
       ['Overview', '/app/overview'],
       ['Markets', '/app/markets'],
       ['Orders', '/app/orders'],
+      ['Support', '/app/support'],
       ['Banking & cash', '/app/banking'],
     ],
   },
   {
     role: 'TRADING_OPS',
     label: 'Trading operations',
-    home: '/operations/instruments',
+    home: '/operations/overview',
     links: [
+      ['Overview', '/operations/overview'],
+      ['Support cases', '/operations/cases'],
+      ['Exception queue', '/operations/exceptions'],
+      ['Reconciliation', '/operations/reconciliation'],
       ['Orders & monitoring', '/operations/orders'],
       ['Instruments', '/operations/instruments'],
       ['Add instrument', '/operations/instruments/new'],
@@ -66,8 +71,11 @@ export function routeRole(url: string): WorkspaceRole | null {
     )
   )
     return 'CLIENT';
+  if (/^\/app\/support(?:\/(?:new|CASE-[0-9a-f-]{36}))?$/.test(path)) return 'CLIENT';
+  if (/^\/operations\/cases(?:\/CASE-[0-9a-f-]{36})?$/.test(path)) return 'TRADING_OPS';
   if (isInstrumentManagementRoute(path)) return 'TRADING_OPS';
-  if (/^\/operations\/orders(?:\/\d+)?$/.test(path)) return 'TRADING_OPS';
+  if (/^\/operations\/(orders(?:\/\d+)?|overview|exceptions|reconciliation)$/.test(path))
+    return 'TRADING_OPS';
   if (/^\/compliance\/(investigations(?:\/\d+)?|evidence)$/.test(path)) return 'COMPLIANCE';
   if (/^\/analytics\/(overview|trends|instruments)$/.test(path)) return 'ANALYST';
   if (/^\/finance\/(overview|reconciliation)$/.test(path)) return 'FINANCE';
@@ -81,7 +89,7 @@ export function safeReturnUrl(value: string | null, roles: readonly string[]): s
     /[\\\s%;]/.test(value.split('?')[0])
   )
     return landingPage(roles);
-  if (isInstrumentManagementRoute(value) && roles.includes('CLIENT')) return landingPage(roles);
+  if (routeRole(value) === 'TRADING_OPS' && roles.includes('CLIENT')) return landingPage(roles);
   const role = routeRole(value);
   return role && roles.includes(role) ? value : landingPage(roles);
 }

@@ -1,3 +1,4 @@
+import { OrderUpdateHealthComponent } from '../../shared/workspace/order-update-health.component';
 import { Component, inject } from '@angular/core';
 import { DisplayCurrencyComponent } from './display-currency.component';
 import { DatePipe } from '@angular/common';
@@ -17,7 +18,7 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
 
 @Component({
   selector: 'app-account-page',
-  imports: [
+  imports: [OrderUpdateHealthComponent,
     DisplayCurrencyComponent,
     DatePipe,
     RouterLink,
@@ -30,6 +31,7 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
       <h1 tabindex="-1">Your account at a glance</h1>
       <p>See what is available, explore instruments and follow your orders.</p>
     </header>
+    <app-order-update-health />
     <app-request-state
       [loading]="resource.loading() && !resource.data()"
       [error]="resource.error()"
@@ -41,6 +43,7 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
         <p class="eyebrow">USD ACCOUNT · INTERNAL BOOKING</p>
         <div class="actions">
           <a routerLink="/app/banking">Deposit / withdraw</a>
+          <a routerLink="/app/support/new" [queryParams]="{category: 'ACCOUNT_REVIEW'}">Ask about your account</a>
           <a routerLink="/app/markets">Find an instrument →</a>
         </div>
       </div>
@@ -140,6 +143,7 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
       @if (!data.tradingEnabled) {
         <p class="notice">
           New order admission is currently unavailable. Your orders and balances remain saved.
+          <a routerLink="/app/support/new" [queryParams]="{category: 'TRADING_AVAILABILITY'}">Ask about trading availability</a>
         </p>
       }
       <section class="panel">
@@ -210,6 +214,7 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
         <section class="notice">
           <h2>Historical records need review</h2>
           <p>These records are preserved separately and cannot be spent or sold.</p>
+          <a routerLink="/app/support/new" [queryParams]="{category: 'HISTORICAL_RECORD'}">Ask about historical records</a>
           @for (e of data.migrationExceptions; track e.id) {
             <p>Reference {{ e.id }} · {{ e.kind }}</p>
           }
@@ -217,7 +222,7 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
       }
       <p class="as-of">
         Retrieved {{ data.retrievedAt | date: 'medium' : 'UTC' }} UTC · automatic updates for up to
-        10 minutes; refresh to resume.
+        10 minutes; use Resume automatic updates to continue.
       </p>
       <p class="muted">{{ data.limitation }}</p>
     }

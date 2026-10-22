@@ -1350,63 +1350,194 @@ paths:
           $ref: '#/components/responses/NotFound'
   /api/operations/orders:
     get:
-      summary: Unavailable until approved scope and genuine data source are configured
+      summary: "Search permitted orders with a scoped signed keyset cursor"
       x-required-roles:
-      - TRADING_OPS
-      x-implementation-status: availability-boundary-only
-      parameters: []
-      responses:
-        '503':
-          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-  /api/operations/orders/{id}:
-    get:
-      summary: Unavailable until approved scope and genuine data source are configured
-      x-required-roles:
-      - TRADING_OPS
-      x-implementation-status: availability-boundary-only
+        - "TRADING_OPS"
+      x-denied-roles:
+        - "CLIENT"
+      description: "Sensitive responses use Cache-Control: no-store. No administrative role bypass. SQL scope and live grants are checked on every request. Successful evidence reads require a committed access event. Default SELF_DIRECTED. Submission interval is UTC [from,to), maximum 31 days; absent range defaults to seven preceding UTC days plus today. Exact order lookup can omit the range. LEGACY requires exact orderId and rejects precise time/queue/cursor filters. Status must match record kind. Sort submittedAt DESC, orderId DESC. Cursor binds actor, context, active grants and filters. No global total is returned. Exceptions use documented queue presets."
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: integer
+        - name: "X-Operations-Context"
+          in: "header"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "orderId"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+            minimum: 1
+        - name: "accountReference"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$"
+        - name: "instrumentId"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+            minimum: 1
+        - name: "status"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            enum:
+              - "ACCEPTED"
+              - "EXECUTING"
+              - "FILLED"
+              - "REJECTED"
+              - "PENDING"
+              - "APPROVED"
+              - "EXECUTED"
+        - name: "side"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            enum:
+              - "BUY"
+              - "SELL"
+        - name: "recordKind"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            enum:
+              - "SELF_DIRECTED"
+              - "LEGACY"
+        - name: "rejectionStage"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            enum:
+              - "ADMISSION"
+              - "EXECUTION"
+        - name: "queue"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            enum:
+              - "REJECTED"
+              - "DELAYED"
+              - "RETRYING"
+        - name: "from"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            format: "date-time"
+        - name: "to"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            format: "date-time"
+        - name: "pageSize"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: "cursor"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            maxLength: 800
       responses:
-        '503':
-          description: Dependency/policy unavailable; no source queried or empty metrics fabricated
+        "200":
+          description: "Authorized result; empty collections mean no permitted matching records."
+          headers:
+            Cache-Control:
+              schema:
+                const: "no-store"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
+                $ref: "#/components/schemas/OperationsOrderPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          description: "Access policy is unconfigured or a required dependency/access audit is unavailable."
+  "/api/operations/orders/{id}":
+    get:
+      summary: "Repeatable-read order investigation with completeness findings"
+      x-required-roles:
+        - "TRADING_OPS"
+      x-denied-roles:
+        - "CLIENT"
+      description: "Sensitive responses use Cache-Control: no-store. No administrative role bypass. SQL scope and live grants are checked on every request. Successful evidence reads require a committed access event."
+      parameters:
+        - name: "X-Operations-Context"
+          in: "header"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+            minimum: 1
+      responses:
+        "200":
+          description: "Authorized result; empty collections mean no permitted matching records."
+          headers:
+            Cache-Control:
+              schema:
+                const: "no-store"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsInvestigation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          description: "Access policy is unconfigured or a required dependency/access audit is unavailable."
   /api/compliance/investigations:
     get:
       summary: Unavailable until approved scope and genuine data source are configured
       x-required-roles:
-      - COMPLIANCE
+        - COMPLIANCE
       x-implementation-status: availability-boundary-only
       parameters: []
       responses:
-        '503':
+        "503":
           description: Dependency/policy unavailable; no source queried or empty metrics fabricated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /api/compliance/orders/{id}/evidence:
     get:
       summary: Unavailable until approved scope and genuine data source are configured
@@ -1660,25 +1791,25 @@ paths:
     get:
       summary: Unavailable until approved scope and genuine data source are configured
       x-required-roles:
-      - FINANCE
+        - FINANCE
       x-implementation-status: availability-boundary-only
       parameters: []
       responses:
-        '503':
+        "503":
           description: Dependency/policy unavailable; no source queried or empty metrics fabricated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /api/finance/reconciliations:
     get:
       summary: Latest persisted operational reconciliation; null runId means none has run
       x-required-roles:
-      - FINANCE
+        - FINANCE
       parameters: []
       responses:
         '200':
@@ -2374,73 +2505,1823 @@ paths:
       - CLIENT
   /api/operations/readiness:
     get:
-      summary: Schema, reference roles, effective permissions, worker poll times/lag, setup checks and last reconciliation
+      summary: "Safe technical readiness and process-local passive provider/worker observations"
       x-required-roles:
-      - TRADING_OPS
+        - "TRADING_OPS"
+      x-denied-roles:
+        - "CLIENT"
+      description: "Sensitive responses use Cache-Control: no-store. No administrative role bypass. SQL scope and live grants are checked on every request. Successful evidence reads require a committed access event."
       parameters: []
       responses:
-        '200':
-          description: Successful response
+        "200":
+          description: "Authorized result; empty collections mean no permitted matching records."
+          headers:
+            Cache-Control:
+              schema:
+                const: "no-store"
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  schemaReady:
-                    type: boolean
-                  referenceDataReady:
-                    type: boolean
-                  runtimePermissions:
-                    type: object
-                    properties:
-                      operationalAccess:
-                        type: boolean
-                      evidenceProtected:
-                        type: boolean
-                  admissionEnabled:
-                    type: boolean
-                  workerEnabled:
-                    type: boolean
-                  workerHealth:
-                    type: object
-                  providerConfigured:
-                    type: boolean
-                  enabledPolicies:
-                    type: integer
-                  pendingJobs:
-                    type: integer
-                  oldestPendingOrderAt:
-                    type:
-                    - string
-                    - 'null'
-                  overdueJobs:
-                    type: integer
-                  cashMovementProcessing:
-                    const: SYNCHRONOUS
-                  pendingCashMovements:
-                    const: 0
-                  historicalExceptions:
-                    type: integer
-                  setupChecks:
-                    type: array
-                    items:
-                      type: object
-                  reconciliation:
-                    $ref: '#/components/schemas/Reconciliation'
-                  note:
-                    type: string
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
+                $ref: "#/components/schemas/OperationsReadiness"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          description: "Access policy is unconfigured or a required dependency/access audit is unavailable."
+  /api/operations/access-policy:
+    get:
+      summary: "Configured purpose options; does not grant account access"
+      x-required-roles:
+        - "TRADING_OPS"
       x-denied-roles:
-      - CLIENT
+        - "CLIENT"
+      description: "Sensitive responses use Cache-Control: no-store. No administrative role bypass. SQL scope and live grants are checked on every request. Successful evidence reads require a committed access event."
+      parameters: []
+      responses:
+        "200":
+          description: "Authorized result; empty collections mean no permitted matching records."
+          headers:
+            Cache-Control:
+              schema:
+                const: "no-store"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsAccessPolicy"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          description: "Access policy is unconfigured or a required dependency/access audit is unavailable."
+  /api/operations/access-contexts:
+    post:
+      summary: "Record an expiring business purpose for the authenticated actor"
+      x-required-roles:
+        - "TRADING_OPS"
+      x-denied-roles:
+        - "CLIENT"
+      description: "Sensitive responses use Cache-Control: no-store. No administrative role bypass. SQL scope and live grants are checked on every request. Successful evidence reads require a committed access event."
+      parameters: []
+      responses:
+        "200":
+          description: "Authorized result; empty collections mean no permitted matching records."
+          headers:
+            Cache-Control:
+              schema:
+                const: "no-store"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsContext"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          description: "Access policy is unconfigured or a required dependency/access audit is unavailable."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: "object"
+              properties:
+                purposeCode:
+                  type: "string"
+                referenceType:
+                  type: string
+                  enum: [MANAGED, EXTERNAL]
+                caseReference:
+                  type: "string"
+                  minLength: 8
+                  maxLength: 200
+              required:
+                - "purposeCode"
+                - "caseReference"
+                - "referenceType"
+  /api/operations/exceptions:
+    get:
+      summary: "Search permitted orders with a scoped signed keyset cursor"
+      x-required-roles:
+        - "TRADING_OPS"
+      x-denied-roles:
+        - "CLIENT"
+      description: "Sensitive responses use Cache-Control: no-store. No administrative role bypass. SQL scope and live grants are checked on every request. Successful evidence reads require a committed access event. Default SELF_DIRECTED. Submission interval is UTC [from,to), maximum 31 days; absent range defaults to seven preceding UTC days plus today. Exact order lookup can omit the range. LEGACY requires exact orderId and rejects precise time/queue/cursor filters. Status must match record kind. Sort submittedAt DESC, orderId DESC. Cursor binds actor, context, active grants and filters. No global total is returned. Exceptions use documented queue presets."
+      parameters:
+        - name: "X-Operations-Context"
+          in: "header"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "orderId"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+            minimum: 1
+        - name: "accountReference"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$"
+        - name: "instrumentId"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+            minimum: 1
+        - name: "status"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            enum:
+              - "ACCEPTED"
+              - "EXECUTING"
+              - "FILLED"
+              - "REJECTED"
+              - "PENDING"
+              - "APPROVED"
+              - "EXECUTED"
+        - name: "side"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            enum:
+              - "BUY"
+              - "SELL"
+        - name: "recordKind"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            enum:
+              - "SELF_DIRECTED"
+              - "LEGACY"
+        - name: "rejectionStage"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            enum:
+              - "ADMISSION"
+              - "EXECUTION"
+        - name: "queue"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            enum:
+              - "REJECTED"
+              - "DELAYED"
+              - "RETRYING"
+        - name: "from"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            format: "date-time"
+        - name: "to"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            format: "date-time"
+        - name: "pageSize"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: "cursor"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            maxLength: 800
+      responses:
+        "200":
+          description: "Authorized result; empty collections mean no permitted matching records."
+          headers:
+            Cache-Control:
+              schema:
+                const: "no-store"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsOrderPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          description: "Access policy is unconfigured or a required dependency/access audit is unavailable."
+  "/api/operations/orders/{id}/{section}":
+    get:
+      summary: "Independently authorized evidence page"
+      x-required-roles:
+        - "TRADING_OPS"
+      x-denied-roles:
+        - "CLIENT"
+      description: "Sensitive responses use Cache-Control: no-store. No administrative role bypass. SQL scope and live grants are checked on every request. Successful evidence reads require a committed access event."
+      parameters:
+        - name: "X-Operations-Context"
+          in: "header"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+            minimum: 1
+        - name: "section"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            enum:
+              - "events"
+              - "decisions"
+              - "quotes"
+              - "attempts"
+              - "reservations"
+              - "fills"
+              - "postings"
+              - "notifications"
+        - name: "page"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+            minimum: 0
+            maximum: 1000
+            default: 0
+      responses:
+        "200":
+          description: "Authorized result; empty collections mean no permitted matching records."
+          headers:
+            Cache-Control:
+              schema:
+                const: "no-store"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsEvidencePage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          description: "Access policy is unconfigured or a required dependency/access audit is unavailable."
+  /api/operations/reconciliations/latest:
+    get:
+      summary: "Latest stored run projected into permitted account findings"
+      x-required-roles:
+        - "TRADING_OPS"
+      x-denied-roles:
+        - "CLIENT"
+      description: "Sensitive responses use Cache-Control: no-store. No administrative role bypass. SQL scope and live grants are checked on every request. Successful evidence reads require a committed access event."
+      parameters:
+        - name: "X-Operations-Context"
+          in: "header"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "page"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+            minimum: 0
+            maximum: 1000
+            default: 0
+      responses:
+        "200":
+          description: "Authorized result; empty collections mean no permitted matching records."
+          headers:
+            Cache-Control:
+              schema:
+                const: "no-store"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsReconciliation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          description: "Access policy is unconfigured or a required dependency/access audit is unavailable."
+  "/api/operations/reconciliations/{id}":
+    get:
+      summary: "Read a fixed stored run; unknown owners and other scopes remain redacted"
+      x-required-roles:
+        - "TRADING_OPS"
+      x-denied-roles:
+        - "CLIENT"
+      description: "Sensitive responses use Cache-Control: no-store. No administrative role bypass. SQL scope and live grants are checked on every request. Successful evidence reads require a committed access event."
+      parameters:
+        - name: "X-Operations-Context"
+          in: "header"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "page"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+            minimum: 0
+            maximum: 1000
+            default: 0
+      responses:
+        "200":
+          description: "Authorized result; empty collections mean no permitted matching records."
+          headers:
+            Cache-Control:
+              schema:
+                const: "no-store"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsReconciliation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          description: "Access policy is unconfigured or a required dependency/access audit is unavailable."
+  "/api/operations/reconciliations/{id}/exceptions":
+    get:
+      summary: "Read a fixed stored run; unknown owners and other scopes remain redacted"
+      x-required-roles:
+        - "TRADING_OPS"
+      x-denied-roles:
+        - "CLIENT"
+      description: "Sensitive responses use Cache-Control: no-store. No administrative role bypass. SQL scope and live grants are checked on every request. Successful evidence reads require a committed access event."
+      parameters:
+        - name: "X-Operations-Context"
+          in: "header"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "page"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+            minimum: 0
+            maximum: 1000
+            default: 0
+      responses:
+        "200":
+          description: "Authorized result; empty collections mean no permitted matching records."
+          headers:
+            Cache-Control:
+              schema:
+                const: "no-store"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsReconciliation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          description: "Access policy is unconfigured or a required dependency/access audit is unavailable."
+  /api/operations/migration-exceptions:
+    get:
+      summary: "Permitted historical migration exception references; no financial repair"
+      x-required-roles:
+        - "TRADING_OPS"
+      x-denied-roles:
+        - "CLIENT"
+      description: "Sensitive responses use Cache-Control: no-store. No administrative role bypass. SQL scope and live grants are checked on every request. Successful evidence reads require a committed access event."
+      parameters:
+        - name: "X-Operations-Context"
+          in: "header"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "page"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+            minimum: 0
+            maximum: 1000
+            default: 0
+      responses:
+        "200":
+          description: "Authorized result; empty collections mean no permitted matching records."
+          headers:
+            Cache-Control:
+              schema:
+                const: "no-store"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsEvidencePage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          description: "Access policy is unconfigured or a required dependency/access audit is unavailable."
+  "/api/workspace/operations/instruments/{id}/history":
+    get:
+      summary: "Paged user/system policy history with allowlisted before/after fields; existing role authority"
+      x-required-roles:
+        - "TRADING_OPS"
+      x-denied-roles:
+        - "CLIENT"
+      description: "Sensitive responses use Cache-Control: no-store. No administrative role bypass. SQL scope and live grants are checked on every request. Successful evidence reads require a committed access event."
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+            minimum: 1
+        - name: "page"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+            minimum: 0
+            maximum: 1000
+            default: 0
+      responses:
+        "200":
+          description: "Authorized result; empty collections mean no permitted matching records."
+          headers:
+            Cache-Control:
+              schema:
+                const: "no-store"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsEvidencePage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          description: "Access policy is unconfigured or a required dependency/access audit is unavailable."
+  /api/operations/evidence-exports:
+    post:
+      summary: "Create a bounded single-order ZIP after EVIDENCE_READ and EVIDENCE_EXPORT authorization"
+      x-required-roles:
+        - "TRADING_OPS"
+      x-denied-roles:
+        - "CLIENT"
+      description: "Sensitive responses use Cache-Control: no-store. No administrative role bypass. SQL scope and live grants are checked on every request. Successful evidence reads require a committed access event."
+      parameters:
+        - name: "X-Operations-Context"
+          in: "header"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "Idempotency-Key"
+          in: "header"
+          required: true
+          schema:
+            type: "string"
+            pattern: "^[A-Za-z0-9._-]{8,80}$"
+      responses:
+        "200":
+          description: "Authorized result; empty collections mean no permitted matching records."
+          headers:
+            Cache-Control:
+              schema:
+                const: "no-store"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsExport"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          description: "Access policy is unconfigured or a required dependency/access audit is unavailable."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: "object"
+              properties:
+                orderId:
+                  type: "integer"
+                  minimum: 1
+              required:
+                - "orderId"
+  "/api/operations/evidence-exports/{id}":
+    get:
+      summary: "Reauthorize exporter, context, current scope and expiry"
+      x-required-roles:
+        - "TRADING_OPS"
+      x-denied-roles:
+        - "CLIENT"
+      description: "Sensitive responses use Cache-Control: no-store. No administrative role bypass. SQL scope and live grants are checked on every request. Successful evidence reads require a committed access event."
+      parameters:
+        - name: "X-Operations-Context"
+          in: "header"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        "200":
+          description: "Authorized result; empty collections mean no permitted matching records."
+          headers:
+            Cache-Control:
+              schema:
+                const: "no-store"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsExport"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          description: "Access policy is unconfigured or a required dependency/access audit is unavailable."
+  "/api/operations/evidence-exports/{id}/download":
+    get:
+      summary: "Authenticated ZIP download; records transfer authorization, not browser completion"
+      x-required-roles:
+        - "TRADING_OPS"
+      x-denied-roles:
+        - "CLIENT"
+      description: "Sensitive responses use Cache-Control: no-store. No administrative role bypass. SQL scope and live grants are checked on every request. Successful evidence reads require a committed access event."
+      parameters:
+        - name: "X-Operations-Context"
+          in: "header"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        "200":
+          description: "Authorized result; empty collections mean no permitted matching records."
+          headers:
+            Cache-Control:
+              schema:
+                const: "no-store"
+            Content-Disposition:
+              schema:
+                type: "string"
+              description: 'attachment; filename="order-evidence-{uuid}.zip"'
+          content:
+            application/zip:
+              schema:
+                type: "string"
+                format: "binary"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          description: "Access policy is unconfigured or a required dependency/access audit is unavailable."
+        "410":
+          description: "Artifact expired. Request a new package; no automatic source evidence deletion."
+  "/api/support/cases":
+    {
+      "get":
+        {
+          "summary": "List owned cases",
+          "x-required-roles": ["CLIENT"],
+          "description": "Live session and owned account or explicit case grants required. All responses use no-store. Successful reads and writes require a committed audit. Private notes never enter public projections.",
+          "parameters":
+            [
+              {
+                "name": "page",
+                "in": "query",
+                "schema":
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100000,
+                    "default": 0,
+                  },
+              },
+              {
+                "name": "pageSize",
+                "in": "query",
+                "schema":
+                  {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "default": 20,
+                  },
+              },
+              {
+                "name": "status",
+                "in": "query",
+                "schema":
+                  {
+                    "type": "string",
+                    "enum":
+                      ["OPEN", "IN_REVIEW", "AWAITING_CLIENT", "RESOLVED"],
+                  },
+              },
+              {
+                "name": "search",
+                "in": "query",
+                "schema": { "type": "string", "maxLength": 120 },
+              },
+            ],
+          "responses":
+            {
+              "200":
+                {
+                  "description": "Committed owned or authorized result",
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            { "$ref": "#/components/schemas/SupportCasePage" },
+                        },
+                    },
+                },
+              "400": { "$ref": "#/components/responses/BadRequest" },
+              "401": { "$ref": "#/components/responses/Unauthorized" },
+              "403": { "$ref": "#/components/responses/Forbidden" },
+              "404": { "$ref": "#/components/responses/NotFound" },
+              "409": { "$ref": "#/components/responses/Conflict" },
+              "503":
+                {
+                  "description": "Required storage, access policy or audit unavailable",
+                },
+            },
+        },
+      "post":
+        {
+          "summary": "Create an owned account or order case; same normalized key/payload recovers one case",
+          "x-required-roles": ["CLIENT"],
+          "description": "Live session and owned account or explicit case grants required. All responses use no-store. Successful reads and writes require a committed audit. Private notes never enter public projections.",
+          "parameters":
+            [
+              {
+                "name": "Idempotency-Key",
+                "in": "header",
+                "required": true,
+                "schema":
+                  { "type": "string", "pattern": "^[A-Za-z0-9_-]{16,128}$" },
+              },
+            ],
+          "responses":
+            {
+              "200":
+                {
+                  "description": "Committed owned or authorized result",
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            { "$ref": "#/components/schemas/SupportCase" },
+                        },
+                    },
+                },
+              "400": { "$ref": "#/components/responses/BadRequest" },
+              "401": { "$ref": "#/components/responses/Unauthorized" },
+              "403": { "$ref": "#/components/responses/Forbidden" },
+              "404": { "$ref": "#/components/responses/NotFound" },
+              "409": { "$ref": "#/components/responses/Conflict" },
+              "503":
+                {
+                  "description": "Required storage, access policy or audit unavailable",
+                },
+            },
+          "requestBody":
+            {
+              "required": true,
+              "content":
+                {
+                  "application/json":
+                    {
+                      "schema":
+                        { "$ref": "#/components/schemas/NewSupportCase" },
+                    },
+                },
+            },
+        },
+    }
+  "/api/support/cases/{reference}":
+    {
+      "get":
+        {
+          "summary": "Read public case detail and a page of public history",
+          "x-required-roles": ["CLIENT"],
+          "description": "Live session and owned account or explicit case grants required. All responses use no-store. Successful reads and writes require a committed audit. Private notes never enter public projections.",
+          "parameters":
+            [
+              {
+                "name": "reference",
+                "in": "path",
+                "required": true,
+                "schema":
+                  { "type": "string", "pattern": "^CASE-[0-9a-f-]{36}$" },
+              },
+              {
+                "name": "page",
+                "in": "query",
+                "schema":
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100000,
+                    "default": 0,
+                  },
+              },
+              {
+                "name": "pageSize",
+                "in": "query",
+                "schema":
+                  {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "default": 20,
+                  },
+              },
+            ],
+          "responses":
+            {
+              "200":
+                {
+                  "description": "Committed owned or authorized result",
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            {
+                              "$ref": "#/components/schemas/SupportCaseDetail",
+                            },
+                        },
+                    },
+                },
+              "400": { "$ref": "#/components/responses/BadRequest" },
+              "401": { "$ref": "#/components/responses/Unauthorized" },
+              "403": { "$ref": "#/components/responses/Forbidden" },
+              "404": { "$ref": "#/components/responses/NotFound" },
+              "409": { "$ref": "#/components/responses/Conflict" },
+              "503":
+                {
+                  "description": "Required storage, access policy or audit unavailable",
+                },
+            },
+        },
+    }
+  "/api/support/cases/{reference}/requests/{key}":
+    {
+      "get":
+        {
+          "summary": "Recover a committed action receipt for the current actor",
+          "x-required-roles": ["CLIENT"],
+          "description": "Live session and owned account or explicit case grants required. All responses use no-store. Successful reads and writes require a committed audit. Private notes never enter public projections.",
+          "parameters":
+            [
+              {
+                "name": "reference",
+                "in": "path",
+                "required": true,
+                "schema":
+                  { "type": "string", "pattern": "^CASE-[0-9a-f-]{36}$" },
+              },
+              {
+                "name": "key",
+                "in": "path",
+                "required": true,
+                "schema":
+                  { "type": "string", "minLength": 16, "maxLength": 128 },
+              },
+            ],
+          "responses":
+            {
+              "200":
+                {
+                  "description": "Committed owned or authorized result",
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            {
+                              "$ref": "#/components/schemas/SupportActionReceipt",
+                            },
+                        },
+                    },
+                },
+              "400": { "$ref": "#/components/responses/BadRequest" },
+              "401": { "$ref": "#/components/responses/Unauthorized" },
+              "403": { "$ref": "#/components/responses/Forbidden" },
+              "404": { "$ref": "#/components/responses/NotFound" },
+              "409": { "$ref": "#/components/responses/Conflict" },
+              "503":
+                {
+                  "description": "Required storage, access policy or audit unavailable",
+                },
+            },
+        },
+    }
+  "/api/support/cases/{reference}/replies":
+    {
+      "post":
+        {
+          "summary": "Append an explicitly public reply with version check",
+          "x-required-roles": ["CLIENT"],
+          "description": "Live session and owned account or explicit case grants required. All responses use no-store. Successful reads and writes require a committed audit. Private notes never enter public projections.",
+          "parameters":
+            [
+              {
+                "name": "reference",
+                "in": "path",
+                "required": true,
+                "schema":
+                  { "type": "string", "pattern": "^CASE-[0-9a-f-]{36}$" },
+              },
+              {
+                "name": "Idempotency-Key",
+                "in": "header",
+                "required": true,
+                "schema":
+                  { "type": "string", "pattern": "^[A-Za-z0-9_-]{16,128}$" },
+              },
+            ],
+          "responses":
+            {
+              "200":
+                {
+                  "description": "Committed owned or authorized result",
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            {
+                              "$ref": "#/components/schemas/SupportActionReceipt",
+                            },
+                        },
+                    },
+                },
+              "400": { "$ref": "#/components/responses/BadRequest" },
+              "401": { "$ref": "#/components/responses/Unauthorized" },
+              "403": { "$ref": "#/components/responses/Forbidden" },
+              "404": { "$ref": "#/components/responses/NotFound" },
+              "409": { "$ref": "#/components/responses/Conflict" },
+              "503":
+                {
+                  "description": "Required storage, access policy or audit unavailable",
+                },
+            },
+          "requestBody":
+            {
+              "required": true,
+              "content":
+                {
+                  "application/json":
+                    {
+                      "schema": { "$ref": "#/components/schemas/SupportWrite" },
+                    },
+                },
+            },
+        },
+    }
+  "/api/operations/cases":
+    {
+      "get":
+        {
+          "summary": "List scoped unassigned cases",
+          "x-required-roles": ["TRADING_OPS"],
+          "description": "Live session and owned account or explicit case grants required. All responses use no-store. Successful reads and writes require a committed audit. Private notes never enter public projections.",
+          "parameters":
+            [
+              {
+                "name": "page",
+                "in": "query",
+                "schema":
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100000,
+                    "default": 0,
+                  },
+              },
+              {
+                "name": "pageSize",
+                "in": "query",
+                "schema":
+                  {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "default": 20,
+                  },
+              },
+              {
+                "name": "status",
+                "in": "query",
+                "schema":
+                  {
+                    "type": "string",
+                    "enum":
+                      ["OPEN", "IN_REVIEW", "AWAITING_CLIENT", "RESOLVED"],
+                  },
+              },
+              {
+                "name": "search",
+                "in": "query",
+                "schema": { "type": "string", "maxLength": 120 },
+              },
+            ],
+          "responses":
+            {
+              "200":
+                {
+                  "description": "Committed owned or authorized result",
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            { "$ref": "#/components/schemas/SupportCasePage" },
+                        },
+                    },
+                },
+              "400": { "$ref": "#/components/responses/BadRequest" },
+              "401": { "$ref": "#/components/responses/Unauthorized" },
+              "403": { "$ref": "#/components/responses/Forbidden" },
+              "404": { "$ref": "#/components/responses/NotFound" },
+              "409": { "$ref": "#/components/responses/Conflict" },
+              "503":
+                {
+                  "description": "Required storage, access policy or audit unavailable",
+                },
+            },
+          "x-denied-roles": ["CLIENT"],
+        },
+    }
+  "/api/operations/cases/{reference}":
+    {
+      "get":
+        {
+          "summary": "Read public case detail and a page of public history",
+          "x-required-roles": ["TRADING_OPS"],
+          "description": "Live session and owned account or explicit case grants required. All responses use no-store. Successful reads and writes require a committed audit. Private notes never enter public projections.",
+          "parameters":
+            [
+              {
+                "name": "reference",
+                "in": "path",
+                "required": true,
+                "schema":
+                  { "type": "string", "pattern": "^CASE-[0-9a-f-]{36}$" },
+              },
+              {
+                "name": "page",
+                "in": "query",
+                "schema":
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100000,
+                    "default": 0,
+                  },
+              },
+              {
+                "name": "pageSize",
+                "in": "query",
+                "schema":
+                  {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "default": 20,
+                  },
+              },
+            ],
+          "responses":
+            {
+              "200":
+                {
+                  "description": "Committed owned or authorized result",
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            {
+                              "$ref": "#/components/schemas/SupportCaseDetail",
+                            },
+                        },
+                    },
+                },
+              "400": { "$ref": "#/components/responses/BadRequest" },
+              "401": { "$ref": "#/components/responses/Unauthorized" },
+              "403": { "$ref": "#/components/responses/Forbidden" },
+              "404": { "$ref": "#/components/responses/NotFound" },
+              "409": { "$ref": "#/components/responses/Conflict" },
+              "503":
+                {
+                  "description": "Required storage, access policy or audit unavailable",
+                },
+            },
+          "x-denied-roles": ["CLIENT"],
+        },
+    }
+  "/api/operations/cases/{reference}/requests/{key}":
+    {
+      "get":
+        {
+          "summary": "Recover a committed action receipt for the current actor",
+          "x-required-roles": ["TRADING_OPS"],
+          "description": "Live session and owned account or explicit case grants required. All responses use no-store. Successful reads and writes require a committed audit. Private notes never enter public projections.",
+          "parameters":
+            [
+              {
+                "name": "reference",
+                "in": "path",
+                "required": true,
+                "schema":
+                  { "type": "string", "pattern": "^CASE-[0-9a-f-]{36}$" },
+              },
+              {
+                "name": "key",
+                "in": "path",
+                "required": true,
+                "schema":
+                  { "type": "string", "minLength": 16, "maxLength": 128 },
+              },
+            ],
+          "responses":
+            {
+              "200":
+                {
+                  "description": "Committed owned or authorized result",
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            {
+                              "$ref": "#/components/schemas/SupportActionReceipt",
+                            },
+                        },
+                    },
+                },
+              "400": { "$ref": "#/components/responses/BadRequest" },
+              "401": { "$ref": "#/components/responses/Unauthorized" },
+              "403": { "$ref": "#/components/responses/Forbidden" },
+              "404": { "$ref": "#/components/responses/NotFound" },
+              "409": { "$ref": "#/components/responses/Conflict" },
+              "503":
+                {
+                  "description": "Required storage, access policy or audit unavailable",
+                },
+            },
+          "x-denied-roles": ["CLIENT"],
+        },
+    }
+  "/api/operations/cases/{reference}/replies":
+    {
+      "post":
+        {
+          "summary": "Append an explicitly public reply with version check",
+          "x-required-roles": ["TRADING_OPS"],
+          "description": "Live session and owned account or explicit case grants required. All responses use no-store. Successful reads and writes require a committed audit. Private notes never enter public projections.",
+          "parameters":
+            [
+              {
+                "name": "reference",
+                "in": "path",
+                "required": true,
+                "schema":
+                  { "type": "string", "pattern": "^CASE-[0-9a-f-]{36}$" },
+              },
+              {
+                "name": "Idempotency-Key",
+                "in": "header",
+                "required": true,
+                "schema":
+                  { "type": "string", "pattern": "^[A-Za-z0-9_-]{16,128}$" },
+              },
+            ],
+          "responses":
+            {
+              "200":
+                {
+                  "description": "Committed owned or authorized result",
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            {
+                              "$ref": "#/components/schemas/SupportActionReceipt",
+                            },
+                        },
+                    },
+                },
+              "400": { "$ref": "#/components/responses/BadRequest" },
+              "401": { "$ref": "#/components/responses/Unauthorized" },
+              "403": { "$ref": "#/components/responses/Forbidden" },
+              "404": { "$ref": "#/components/responses/NotFound" },
+              "409": { "$ref": "#/components/responses/Conflict" },
+              "503":
+                {
+                  "description": "Required storage, access policy or audit unavailable",
+                },
+            },
+          "x-denied-roles": ["CLIENT"],
+          "requestBody":
+            {
+              "required": true,
+              "content":
+                {
+                  "application/json":
+                    {
+                      "schema": { "$ref": "#/components/schemas/SupportWrite" },
+                    },
+                },
+            },
+        },
+    }
+  "/api/support/cases/by-request/{key}":
+    {
+      "get":
+        {
+          "summary": "Recover owned case by original creation key; 404 does not justify a new key",
+          "x-required-roles": ["CLIENT"],
+          "description": "Live session and owned account or explicit case grants required. All responses use no-store. Successful reads and writes require a committed audit. Private notes never enter public projections.",
+          "parameters":
+            [
+              {
+                "name": "key",
+                "in": "path",
+                "required": true,
+                "schema":
+                  { "type": "string", "minLength": 16, "maxLength": 128 },
+              },
+            ],
+          "responses":
+            {
+              "200":
+                {
+                  "description": "Committed owned or authorized result",
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            { "$ref": "#/components/schemas/SupportCase" },
+                        },
+                    },
+                },
+              "400": { "$ref": "#/components/responses/BadRequest" },
+              "401": { "$ref": "#/components/responses/Unauthorized" },
+              "403": { "$ref": "#/components/responses/Forbidden" },
+              "404": { "$ref": "#/components/responses/NotFound" },
+              "409": { "$ref": "#/components/responses/Conflict" },
+              "503":
+                {
+                  "description": "Required storage, access policy or audit unavailable",
+                },
+            },
+        },
+    }
+  "/api/support/cases/{reference}/reopen":
+    {
+      "post":
+        {
+          "summary": "Reopen a resolved owned case with a public reason",
+          "x-required-roles": ["CLIENT"],
+          "description": "Live session and owned account or explicit case grants required. All responses use no-store. Successful reads and writes require a committed audit. Private notes never enter public projections.",
+          "parameters":
+            [
+              {
+                "name": "reference",
+                "in": "path",
+                "required": true,
+                "schema":
+                  { "type": "string", "pattern": "^CASE-[0-9a-f-]{36}$" },
+              },
+              {
+                "name": "Idempotency-Key",
+                "in": "header",
+                "required": true,
+                "schema":
+                  { "type": "string", "pattern": "^[A-Za-z0-9_-]{16,128}$" },
+              },
+            ],
+          "responses":
+            {
+              "200":
+                {
+                  "description": "Committed owned or authorized result",
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            {
+                              "$ref": "#/components/schemas/SupportActionReceipt",
+                            },
+                        },
+                    },
+                },
+              "400": { "$ref": "#/components/responses/BadRequest" },
+              "401": { "$ref": "#/components/responses/Unauthorized" },
+              "403": { "$ref": "#/components/responses/Forbidden" },
+              "404": { "$ref": "#/components/responses/NotFound" },
+              "409": { "$ref": "#/components/responses/Conflict" },
+              "503":
+                {
+                  "description": "Required storage, access policy or audit unavailable",
+                },
+            },
+          "requestBody":
+            {
+              "required": true,
+              "content":
+                {
+                  "application/json":
+                    {
+                      "schema": { "$ref": "#/components/schemas/SupportWrite" },
+                    },
+                },
+            },
+        },
+    }
+  "/api/operations/cases/{reference}/transitions":
+    {
+      "post":
+        {
+          "summary": "Publish an allowed case status change and mandatory public explanation",
+          "x-required-roles": ["TRADING_OPS"],
+          "description": "Live session and owned account or explicit case grants required. All responses use no-store. Successful reads and writes require a committed audit. Private notes never enter public projections.",
+          "parameters":
+            [
+              {
+                "name": "reference",
+                "in": "path",
+                "required": true,
+                "schema":
+                  { "type": "string", "pattern": "^CASE-[0-9a-f-]{36}$" },
+              },
+              {
+                "name": "Idempotency-Key",
+                "in": "header",
+                "required": true,
+                "schema":
+                  { "type": "string", "pattern": "^[A-Za-z0-9_-]{16,128}$" },
+              },
+            ],
+          "responses":
+            {
+              "200":
+                {
+                  "description": "Committed owned or authorized result",
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            {
+                              "$ref": "#/components/schemas/SupportActionReceipt",
+                            },
+                        },
+                    },
+                },
+              "400": { "$ref": "#/components/responses/BadRequest" },
+              "401": { "$ref": "#/components/responses/Unauthorized" },
+              "403": { "$ref": "#/components/responses/Forbidden" },
+              "404": { "$ref": "#/components/responses/NotFound" },
+              "409": { "$ref": "#/components/responses/Conflict" },
+              "503":
+                {
+                  "description": "Required storage, access policy or audit unavailable",
+                },
+            },
+          "x-denied-roles": ["CLIENT"],
+          "requestBody":
+            {
+              "required": true,
+              "content":
+                {
+                  "application/json":
+                    {
+                      "schema":
+                        { "$ref": "#/components/schemas/SupportTransition" },
+                    },
+                },
+            },
+        },
+    }
+  "/api/operations/cases/{reference}/notes":
+    {
+      "get":
+        {
+          "summary": "Read a scoped page of private staff notes",
+          "x-required-roles": ["TRADING_OPS"],
+          "description": "Live session and owned account or explicit case grants required. All responses use no-store. Successful reads and writes require a committed audit. Private notes never enter public projections.",
+          "parameters":
+            [
+              {
+                "name": "reference",
+                "in": "path",
+                "required": true,
+                "schema":
+                  { "type": "string", "pattern": "^CASE-[0-9a-f-]{36}$" },
+              },
+              {
+                "name": "page",
+                "in": "query",
+                "schema":
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100000,
+                    "default": 0,
+                  },
+              },
+              {
+                "name": "pageSize",
+                "in": "query",
+                "schema":
+                  {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "default": 20,
+                  },
+              },
+            ],
+          "responses":
+            {
+              "200":
+                {
+                  "description": "Committed owned or authorized result",
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            {
+                              "type": "object",
+                              "properties":
+                                {
+                                  "items":
+                                    {
+                                      "type": "array",
+                                      "items":
+                                        {
+                                          "$ref": "#/components/schemas/SupportPrivateNote",
+                                        },
+                                    },
+                                  "total": { "type": "integer" },
+                                  "page": { "type": "integer" },
+                                  "pageSize": { "type": "integer" },
+                                },
+                            },
+                        },
+                    },
+                },
+              "400": { "$ref": "#/components/responses/BadRequest" },
+              "401": { "$ref": "#/components/responses/Unauthorized" },
+              "403": { "$ref": "#/components/responses/Forbidden" },
+              "404": { "$ref": "#/components/responses/NotFound" },
+              "409": { "$ref": "#/components/responses/Conflict" },
+              "503":
+                {
+                  "description": "Required storage, access policy or audit unavailable",
+                },
+            },
+          "x-denied-roles": ["CLIENT"],
+        },
+      "post":
+        {
+          "summary": "Append a private staff note without changing public activity/version",
+          "x-required-roles": ["TRADING_OPS"],
+          "description": "Live session and owned account or explicit case grants required. All responses use no-store. Successful reads and writes require a committed audit. Private notes never enter public projections.",
+          "parameters":
+            [
+              {
+                "name": "reference",
+                "in": "path",
+                "required": true,
+                "schema":
+                  { "type": "string", "pattern": "^CASE-[0-9a-f-]{36}$" },
+              },
+              {
+                "name": "Idempotency-Key",
+                "in": "header",
+                "required": true,
+                "schema":
+                  { "type": "string", "pattern": "^[A-Za-z0-9_-]{16,128}$" },
+              },
+            ],
+          "responses":
+            {
+              "200":
+                {
+                  "description": "Committed owned or authorized result",
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            {
+                              "$ref": "#/components/schemas/SupportActionReceipt",
+                            },
+                        },
+                    },
+                },
+              "400": { "$ref": "#/components/responses/BadRequest" },
+              "401": { "$ref": "#/components/responses/Unauthorized" },
+              "403": { "$ref": "#/components/responses/Forbidden" },
+              "404": { "$ref": "#/components/responses/NotFound" },
+              "409": { "$ref": "#/components/responses/Conflict" },
+              "503":
+                {
+                  "description": "Required storage, access policy or audit unavailable",
+                },
+            },
+          "x-denied-roles": ["CLIENT"],
+          "requestBody":
+            {
+              "required": true,
+              "content":
+                {
+                  "application/json":
+                    {
+                      "schema": { "$ref": "#/components/schemas/SupportWrite" },
+                    },
+                },
+            },
+        },
+    }
+  "/api/operations/cases/{reference}/exports":
+    {
+      "post":
+        {
+          "summary": "Retain an export identity/digest association; recheck requester, matching managed context, both resources, expiry and bytes",
+          "x-required-roles": ["TRADING_OPS"],
+          "description": "Live session and owned account or explicit case grants required. All responses use no-store. Successful reads and writes require a committed audit. Private notes never enter public projections.",
+          "parameters":
+            [
+              {
+                "name": "reference",
+                "in": "path",
+                "required": true,
+                "schema":
+                  { "type": "string", "pattern": "^CASE-[0-9a-f-]{36}$" },
+              },
+              {
+                "name": "X-Operations-Context",
+                "in": "header",
+                "required": true,
+                "schema": { "type": "string", "format": "uuid" },
+              },
+            ],
+          "responses":
+            {
+              "200":
+                {
+                  "description": "Committed owned or authorized result",
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            {
+                              "type": "object",
+                              "properties":
+                                {
+                                  "exportId":
+                                    { "type": "string", "format": "uuid" },
+                                  "orderId": { "type": "integer" },
+                                  "digest": { "type": "string" },
+                                  "expiresAt":
+                                    { "type": "string", "format": "date-time" },
+                                },
+                            },
+                        },
+                    },
+                },
+              "400": { "$ref": "#/components/responses/BadRequest" },
+              "401": { "$ref": "#/components/responses/Unauthorized" },
+              "403": { "$ref": "#/components/responses/Forbidden" },
+              "404": { "$ref": "#/components/responses/NotFound" },
+              "409": { "$ref": "#/components/responses/Conflict" },
+              "503":
+                {
+                  "description": "Required storage, access policy or audit unavailable",
+                },
+            },
+          "x-denied-roles": ["CLIENT"],
+          "requestBody":
+            {
+              "required": true,
+              "content":
+                {
+                  "application/json":
+                    {
+                      "schema":
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": ["exportId"],
+                          "properties":
+                            {
+                              "exportId":
+                                { "type": "string", "format": "uuid" },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    }
+  "/api/support/updates":
+    {
+      "get":
+        {
+          "summary": "Read up to 100 owned public updates without marking them read",
+          "x-required-roles": ["CLIENT"],
+          "description": "Live session and owned account or explicit case grants required. All responses use no-store. Successful reads and writes require a committed audit. Private notes never enter public projections.",
+          "parameters":
+            [
+              {
+                "name": "cursor",
+                "in": "query",
+                "schema":
+                  {
+                    "type": "integer",
+                    "format": "int64",
+                    "minimum": 0,
+                    "default": 0,
+                  },
+              },
+            ],
+          "responses":
+            {
+              "200":
+                {
+                  "description": "Committed owned or authorized result",
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            {
+                              "type": "object",
+                              "properties":
+                                {
+                                  "items":
+                                    {
+                                      "type": "array",
+                                      "items":
+                                        {
+                                          "type": "object",
+                                          "properties":
+                                            {
+                                              "id":
+                                                {
+                                                  "type": "integer",
+                                                  "format": "int64",
+                                                },
+                                              "reference": { "type": "string" },
+                                              "subject": { "type": "string" },
+                                              "kind": { "type": "string" },
+                                              "status":
+                                                {
+                                                  "type": "string",
+                                                  "enum":
+                                                    [
+                                                      "OPEN",
+                                                      "IN_REVIEW",
+                                                      "AWAITING_CLIENT",
+                                                      "RESOLVED",
+                                                    ],
+                                                },
+                                              "recordedAt":
+                                                {
+                                                  "type": "string",
+                                                  "format": "date-time",
+                                                },
+                                            },
+                                        },
+                                    },
+                                  "cursor":
+                                    { "type": "integer", "format": "int64" },
+                                  "hasMore": { "type": "boolean" },
+                                  "reset": { "type": "boolean" },
+                                  "unread": { "type": "integer" },
+                                },
+                            },
+                        },
+                    },
+                },
+              "400": { "$ref": "#/components/responses/BadRequest" },
+              "401": { "$ref": "#/components/responses/Unauthorized" },
+              "403": { "$ref": "#/components/responses/Forbidden" },
+              "404": { "$ref": "#/components/responses/NotFound" },
+              "409": { "$ref": "#/components/responses/Conflict" },
+              "503":
+                {
+                  "description": "Required storage, access policy or audit unavailable",
+                },
+            },
+        },
+    }
+  "/api/support/updates/read":
+    {
+      "post":
+        {
+          "summary": "Explicitly advance the current recipient watermark; owned and idempotent",
+          "x-required-roles": ["CLIENT"],
+          "description": "Live session and owned account or explicit case grants required. All responses use no-store. Successful reads and writes require a committed audit. Private notes never enter public projections.",
+          "parameters": [],
+          "responses":
+            {
+              "200":
+                {
+                  "description": "Committed owned or authorized result",
+                  "content":
+                    {
+                      "application/json":
+                        {
+                          "schema":
+                            {
+                              "type": "object",
+                              "properties": { "unread": { "type": "integer" } },
+                            },
+                        },
+                    },
+                },
+              "400": { "$ref": "#/components/responses/BadRequest" },
+              "401": { "$ref": "#/components/responses/Unauthorized" },
+              "403": { "$ref": "#/components/responses/Forbidden" },
+              "404": { "$ref": "#/components/responses/NotFound" },
+              "409": { "$ref": "#/components/responses/Conflict" },
+              "503":
+                {
+                  "description": "Required storage, access policy or audit unavailable",
+                },
+            },
+          "requestBody":
+            {
+              "required": true,
+              "content":
+                {
+                  "application/json":
+                    {
+                      "schema":
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": ["cursor"],
+                          "properties":
+                            {
+                              "cursor":
+                                {
+                                  "type": "integer",
+                                  "format": "int64",
+                                  "minimum": 0,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    }
 components:
   securitySchemes:
     bearerAuth:
@@ -2528,62 +4409,6 @@ components:
       schema:
         type: integer
         format: int64
-    AnalyticsFrom:
-      name: from
-      in: query
-      required: true
-      description: Inclusive reporting period start.
-      schema:
-        type: string
-        format: date
-    AnalyticsTo:
-      name: to
-      in: query
-      required: true
-      description: Inclusive reporting period end; must not precede from.
-      schema:
-        type: string
-        format: date
-    AnalyticsTimezone:
-      name: timezone
-      in: query
-      required: false
-      schema:
-        type: string
-        default: UTC
-    AnalyticsGranularity:
-      name: granularity
-      in: query
-      required: false
-      schema:
-        type: string
-        enum: [day, week, month]
-        default: day
-    AnalyticsMarket:
-      name: market
-      in: query
-      required: false
-      schema:
-        type: string
-    AnalyticsAssetClass:
-      name: asset_class
-      in: query
-      required: false
-      schema:
-        type: string
-    AnalyticsInstrument:
-      name: instrument
-      in: query
-      required: false
-      schema:
-        type: string
-    AnalyticsSegment:
-      name: segment
-      in: query
-      required: false
-      description: Approved pseudonymous segment key; entitlement is checked by the service.
-      schema:
-        type: string
   responses:
     BadRequest:
       description: Invalid or malformed request
@@ -2628,25 +4453,457 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-    UnprocessableEntity:
-      description: Invalid or unsupported analytics filters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    TooManyRequests:
-      description: Query rate or concurrency limit exceeded
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    ServiceUnavailable:
-      description: Reporting source unavailable; no values are fabricated
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
   schemas:
+    "NewSupportCase":
+      {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["category", "subject", "description"],
+        "properties":
+          {
+            "category":
+              {
+                "type": "string",
+                "enum":
+                  [
+                    "ORDER_QUESTION",
+                    "ACCOUNT_REVIEW",
+                    "HISTORICAL_RECORD",
+                    "TRADING_AVAILABILITY",
+                    "OTHER",
+                  ],
+              },
+            "subject": { "type": "string", "minLength": 5, "maxLength": 120 },
+            "description":
+              {
+                "type": "string",
+                "minLength": 10,
+                "maxLength": 4000,
+                "description": "Trimmed plain text; no ISO controls except newline/tab. Never interpreted as HTML.",
+              },
+            "orderId": { "type": "integer", "minimum": 1, "nullable": true },
+          },
+      }
+    "SupportWrite":
+      {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["expectedVersion", "body"],
+        "properties":
+          {
+            "expectedVersion":
+              { "type": "integer", "format": "int64", "minimum": 1 },
+            "body":
+              {
+                "type": "string",
+                "minLength": 10,
+                "maxLength": 4000,
+                "description": "Trimmed plain text; no ISO controls except newline/tab. Never interpreted as HTML.",
+              },
+          },
+      }
+    "SupportTransition":
+      {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["expectedVersion", "body", "status"],
+        "properties":
+          {
+            "expectedVersion":
+              { "type": "integer", "format": "int64", "minimum": 1 },
+            "body":
+              {
+                "type": "string",
+                "minLength": 10,
+                "maxLength": 4000,
+                "description": "Trimmed plain text; no ISO controls except newline/tab. Never interpreted as HTML.",
+              },
+            "status":
+              {
+                "type": "string",
+                "enum": ["OPEN", "IN_REVIEW", "AWAITING_CLIENT", "RESOLVED"],
+              },
+          },
+      }
+    "SupportCase":
+      {
+        "type": "object",
+        "properties":
+          {
+            "reference": { "type": "string" },
+            "orderId": { "type": "integer", "nullable": true },
+            "category": { "type": "string" },
+            "subject": { "type": "string" },
+            "status":
+              {
+                "type": "string",
+                "enum": ["OPEN", "IN_REVIEW", "AWAITING_CLIENT", "RESOLVED"],
+              },
+            "version": { "type": "integer", "format": "int64" },
+            "createdAt": { "type": "string", "format": "date-time" },
+            "updatedAt": { "type": "string", "format": "date-time" },
+            "detailUrl": { "type": "string" },
+          },
+      }
+    "SupportCasePage":
+      {
+        "type": "object",
+        "properties":
+          {
+            "items":
+              {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/SupportCase" },
+              },
+            "total": { "type": "integer" },
+            "page": { "type": "integer" },
+            "pageSize": { "type": "integer" },
+          },
+      }
+    "SupportPublicEvent":
+      {
+        "type": "object",
+        "properties":
+          {
+            "id": { "type": "integer", "format": "int64" },
+            "version": { "type": "integer" },
+            "kind": { "type": "string" },
+            "authorRole":
+              { "type": "string", "enum": ["CLIENT", "OPERATIONS"] },
+            "body": { "type": "string" },
+            "previousStatus": { "type": "string", "nullable": true },
+            "status":
+              {
+                "type": "string",
+                "enum": ["OPEN", "IN_REVIEW", "AWAITING_CLIENT", "RESOLVED"],
+              },
+            "recordedAt": { "type": "string", "format": "date-time" },
+          },
+      }
+    "SupportPrivateNote":
+      {
+        "type": "object",
+        "properties":
+          {
+            "id": { "type": "string", "format": "uuid" },
+            "actor": { "type": "integer" },
+            "body": { "type": "string" },
+            "recordedAt": { "type": "string", "format": "date-time" },
+          },
+      }
+    "SupportCaseDetail":
+      {
+        "allOf":
+          [
+            { "$ref": "#/components/schemas/SupportCase" },
+            {
+              "type": "object",
+              "properties":
+                {
+                  "events":
+                    {
+                      "type": "array",
+                      "items":
+                        { "$ref": "#/components/schemas/SupportPublicEvent" },
+                    },
+                  "totalEvents": { "type": "integer" },
+                  "page": { "type": "integer" },
+                  "pageSize": { "type": "integer" },
+                },
+            },
+          ],
+      }
+    "SupportActionReceipt":
+      {
+        "type": "object",
+        "properties":
+          {
+            "reference": { "type": "string" },
+            "version": { "type": "integer" },
+            "status":
+              {
+                "type": "string",
+                "enum": ["OPEN", "IN_REVIEW", "AWAITING_CLIENT", "RESOLVED"],
+              },
+            "recorded":
+              {
+                "type": "boolean",
+                "description": "Private-note acknowledgement only",
+              },
+          },
+      }
+    OperationsAccessPolicy:
+      type: "object"
+      properties:
+        configured:
+          type: "boolean"
+        purposes:
+          type: "array"
+          items:
+            type: "string"
+        policyVersion:
+          type: "string"
+    OperationsContext:
+      type: "object"
+      properties:
+        referenceType:
+          type: string
+          enum: [MANAGED, EXTERNAL]
+        caseReference:
+          type: string
+        contextId:
+          type: "string"
+          format: "uuid"
+        expiresAt:
+          type:
+            - "string"
+            - "null"
+          format: "date-time"
+        purposeCode:
+          type: "string"
+    OperationsOrder:
+      type: "object"
+      properties:
+        accountReference:
+          type: "string"
+        ticker:
+          type: "string"
+        side:
+          type: "string"
+        quantity:
+          type: "string"
+        currency:
+          type: "string"
+        recordKind:
+          type: "string"
+        executionMode:
+          type: "string"
+        status:
+          type: "string"
+        rejectionStage:
+          type: "string"
+        rejectionCode:
+          type: "string"
+        reason:
+          type: "string"
+        evidenceStatus:
+          type: "string"
+        queueCategory:
+          type: "string"
+        orderId:
+          type: "integer"
+        instrumentId:
+          type: "integer"
+        version:
+          type: "integer"
+        attempts:
+          type: "integer"
+        submittedAt:
+          type:
+            - "string"
+            - "null"
+          format: "date-time"
+        acceptedAt:
+          type:
+            - "string"
+            - "null"
+          format: "date-time"
+        updatedAt:
+          type:
+            - "string"
+            - "null"
+          format: "date-time"
+        deadline:
+          type:
+            - "string"
+            - "null"
+          format: "date-time"
+        nextAttempt:
+          type:
+            - "string"
+            - "null"
+          format: "date-time"
+        leaseUntil:
+          type:
+            - "string"
+            - "null"
+          format: "date-time"
+    OperationsOrderPage:
+      type: "object"
+      properties:
+        items:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/OperationsOrder"
+        nextCursor:
+          type:
+            - "string"
+            - "null"
+        hasMore:
+          type: "boolean"
+        retrievedAt:
+          type:
+            - "string"
+            - "null"
+          format: "date-time"
+    OperationsEvidenceRow:
+      type: "object"
+      properties:
+        reference:
+          type: "string"
+        recordedAt:
+          type:
+            - "string"
+            - "null"
+          format: "date-time"
+        values:
+          type: "object"
+          description: "Section-specific allowlisted facts only. Decimal values use exact strings; missing historical values are NOT_RECORDED."
+    OperationsEvidencePage:
+      type: "object"
+      properties:
+        items:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/OperationsEvidenceRow"
+        page:
+          type: "integer"
+        hasMore:
+          type: "boolean"
+    OperationsFinding:
+      type: "object"
+      properties:
+        code:
+          type: "string"
+        explanation:
+          type: "string"
+    OperationsInvestigation:
+      type: "object"
+      properties:
+        order:
+          $ref: "#/components/schemas/OperationsOrder"
+        submittedActor:
+          type: "string"
+        acceptedPolicy: {}
+        currentPolicy: {}
+        snapshotAt:
+          type:
+            - "string"
+            - "null"
+          format: "date-time"
+        evidenceStatus:
+          type: "string"
+          enum:
+            - "PENDING"
+            - "COMPLETE_FOR_INTERNAL_BOOKING"
+            - "INCOMPLETE_LEGACY"
+            - "INCOMPLETE"
+        findings:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/OperationsFinding"
+        sections:
+          type: "object"
+          additionalProperties:
+            $ref: "#/components/schemas/OperationsEvidencePage"
+        exportAllowed:
+          type: "boolean"
+        orderingNote:
+          type: "string"
+        historicalContext:
+          type: "string"
+    OperationsExport:
+      type: "object"
+      properties:
+        exportId:
+          type: "string"
+          format: "uuid"
+        state:
+          const: "READY"
+        snapshotAt:
+          type:
+            - "string"
+            - "null"
+          format: "date-time"
+        expiresAt:
+          type:
+            - "string"
+            - "null"
+          format: "date-time"
+        orderVersion:
+          type: "integer"
+        digest:
+          type: "string"
+          pattern: "^[0-9a-f]{64}$"
+    OperationsReconciliation:
+      type: "object"
+      properties:
+        runId:
+          type:
+            - "string"
+            - "null"
+          format: "uuid"
+        checkedAt:
+          type:
+            - "string"
+            - "null"
+          format: "date-time"
+        status:
+          type: "string"
+        coverage:
+          type: "string"
+        items:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/OperationsEvidenceRow"
+        hasMore:
+          type: "boolean"
+        page:
+          type: "integer"
+    OperationsReadiness:
+      type: "object"
+      properties:
+        checkedAt:
+          type:
+            - "string"
+            - "null"
+          format: "date-time"
+        schemaReady:
+          type: "boolean"
+        referenceDataReady:
+          type: "boolean"
+        runtimePermissions:
+          type: "object"
+          properties:
+            operationalAccess:
+              type: "boolean"
+            evidenceProtected:
+              type: "boolean"
+        workerHealth:
+          type: "object"
+          description: "Process-local status, poll/completion/failure timestamps and failed-job count."
+        providerHealth:
+          type: "object"
+          description: "Passive transport observations, interval, sanitized failure and latency; no traffic older than 120 seconds is UNKNOWN."
+        admissionEnabled:
+          type: "boolean"
+        workerEnabled:
+          type: "boolean"
+        providerConfigured:
+          type: "boolean"
+        enabledPolicies:
+          type: "integer"
+        outboxDelivery:
+          const: "NOT_CONFIGURED"
+        cashMovementProcessing:
+          const: "SYNCHRONOUS"
+        reconciliation:
+          type: "object"
+          properties:
+            status:
+              const: "SCOPED_VIEW_REQUIRED"
+        note:
+          type: "string"
     LoginRequest:
       type: object
       required:
@@ -3976,13 +6233,29 @@ components:
       type: object
       properties:
         order:
-          $ref: '#/components/schemas/WorkspaceOrder'
+          $ref: "#/components/schemas/WorkspaceOrder"
         evidenceCompleteness:
           type: string
           enum:
-          - INCOMPLETE_LEGACY
-          - RETAINED_INTERNAL_EVIDENCE
-          - MISSING_FILL
+            - INCOMPLETE_LEGACY
+            - RETAINED_INTERNAL_EVIDENCE
+            - PENDING
+            - INTEGRITY_FINDING
+            - PARTIAL
+        eventTotal:
+          type: integer
+          description: Total owned events; retrieve pages through the order events endpoint.
+        quoteCoverage:
+          enum: [PARTIAL, RETAINED_OBSERVATIONS]
+        evidenceChecks:
+          type: array
+          items:
+            type: object
+            properties:
+              code: { type: string }
+              state:
+                { enum: [RETAINED, PENDING, NOT_APPLICABLE, INTEGRITY_FINDING] }
+              explanation: { type: string }
         explanation:
           type: string
         fills:
@@ -4025,7 +6298,17 @@ components:
           format: date
     PortfolioValuation:
       type: object
-      required: [currency, status, totalValue, holdingsValue, cashBalance, snapshotAt, quoteAsOf, unpricedTickers]
+      required:
+        [
+          currency,
+          status,
+          totalValue,
+          holdingsValue,
+          cashBalance,
+          snapshotAt,
+          quoteAsOf,
+          unpricedTickers,
+        ]
       properties:
         currency:
           const: USD
@@ -4033,23 +6316,23 @@ components:
           type: string
           enum: [COMPLETE, UNAVAILABLE]
         totalValue:
-          type: [string, 'null']
+          type: [string, "null"]
           description: Posted cash plus exact owned-quantity/quote-price products, rounded HALF_UP to cents. Null if cash or any price is unavailable.
-          example: '1050.07'
+          example: "1050.07"
         holdingsValue:
-          type: [string, 'null']
+          type: [string, "null"]
           description: Exact position products summed before rounding to cents. Null if any position is unpriced; zero for no holdings.
-          example: '50.06'
+          example: "50.06"
         cashBalance:
-          type: [string, 'null']
+          type: [string, "null"]
           description: Posted USD cash, including cash reserved for pending buys. Null if the eligible cash account is missing.
-          example: '1000.01'
+          example: "1000.01"
         snapshotAt:
           type: string
           format: date-time
           description: Time of the consistent ledger snapshot, before provider calls.
         quoteAsOf:
-          type: [string, 'null']
+          type: [string, "null"]
           format: date-time
           description: Oldest accepted quote or metadata timestamp; null when no quote was accepted.
         unpricedTickers:
@@ -4135,7 +6418,7 @@ components:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/InstrumentSummary'
+            $ref: "#/components/schemas/InstrumentSummary"
         page:
           type: integer
         pageSize:
@@ -4145,6 +6428,10 @@ components:
     WorkspaceTradingAvailability:
       type: object
       properties:
+        buyAllowed:
+          type: boolean
+        sellAllowed:
+          type: boolean
         enabled:
           type: boolean
         code:
@@ -4166,8 +6453,8 @@ components:
           type: integer
         clientId:
           type:
-          - integer
-          - 'null'
+            - integer
+            - "null"
         email:
           type: string
         displayName:
@@ -4206,8 +6493,8 @@ components:
           type: boolean
         netWorth:
           type:
-          - number
-          - 'null'
+            - number
+            - "null"
       description: Existing client onboarding profile; retains address and preference fields.
     CompleteClientOnboardingRequest:
       properties:
@@ -4612,3 +6899,23 @@ components:
           type: string
         message:
           type: string
+    ClientRetainedQuote:
+      type: object
+      additionalProperties: false
+      properties:
+        quoteId: { type: integer }
+        stage: { enum: [ADMISSION, EXECUTION] }
+        applicableSide: { enum: [ASK, BID] }
+        price:
+          {
+            type: [string, "null"],
+            description: Exact retained applicable-side decimal.,
+          }
+        usedForFill: { type: boolean }
+        source: { type: [string, "null"] }
+        receivedAt: { type: [string, "null"] }
+        providerTime: { type: [string, "null"] }
+        metadataTime: { type: [string, "null"] }
+        currency: { type: [string, "null"] }
+        stale: { type: [boolean, "null"] }
+        marketState: { type: [string, "null"] }

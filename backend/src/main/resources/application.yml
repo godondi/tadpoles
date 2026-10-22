@@ -27,3 +27,11 @@ trading:
   admission-enabled: ${TRADING_ADMISSION_ENABLED:false}
   worker-enabled: ${TRADING_WORKER_ENABLED:false}
   local-demo-setup: ${TRADING_LOCAL_DEMO_SETUP:false}
+
+# No account evidence is enabled until an approved purpose policy and grants are provisioned.
+operations:
+  access-enabled: ${OPERATIONS_ACCESS_ENABLED:false}
+  allowed-purposes: ${OPERATIONS_ALLOWED_PURPOSES:}
+  policy-version: ${OPERATIONS_POLICY_VERSION:}
+  context-seconds: ${OPERATIONS_CONTEXT_SECONDS:0}
+  export-seconds: ${OPERATIONS_EXPORT_SECONDS:0}

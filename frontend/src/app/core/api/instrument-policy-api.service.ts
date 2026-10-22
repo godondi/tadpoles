@@ -1,3 +1,4 @@
+import { EvidencePage } from './operations-api.service';
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { buildApiUrl } from './api-url';
@@ -49,6 +50,10 @@ export class InstrumentPolicyApi {
 
   get(id: number) {
     return this.http.get<PolicyRow>(this.url('/' + id));
+  }
+
+  history(id: number, page = 0) {
+    return this.http.get<EvidencePage>(this.url('/' + id + '/history'), { params: { page } });
   }
 
   test(symbol: string) {

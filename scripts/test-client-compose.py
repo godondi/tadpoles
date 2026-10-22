@@ -186,6 +186,12 @@ FRONTEND_CONTAINER_PORT=4000
             str(uuid.uuid4()),
         )
         assert code == 200 and receipt["status"] == "SETTLED"
+        case_key = str(uuid.uuid4())
+        code, support = api("/api/support/cases", {
+            "category": "ACCOUNT_REVIEW", "subject": "Account receipt review",
+            "description": "Please explain the retained account movement receipt."
+        }, token, case_key)
+        assert code == 200 and support["orderId"] is None, support
         sql(
             "UPDATE instrument_trading_policies SET enabled=false,revision=revision+1 WHERE provider_symbol='AAPL'"
         )
@@ -209,6 +215,9 @@ FRONTEND_CONTAINER_PORT=4000
             )
             == "1"
         )
+        code, recovered_support = api("/api/support/cases/by-request/" + case_key, token=token)
+        assert code == 200 and recovered_support["reference"] == support["reference"], recovered_support
+        assert sql("SELECT count(*) FROM schema_migrations WHERE version=12") == "1"
         # Same retained PostgreSQL volume, populated old schema, then the normal new migration/init wiring.
         compose("stop", "backend")
         sql("CREATE DATABASE tadpoles_upgrade_test")
@@ -235,10 +244,10 @@ FRONTEND_CONTAINER_PORT=4000
         token = login()
         assert (
             sql(
-                "SELECT count(*) FROM schema_migrations WHERE version BETWEEN 3 AND 8",
+                "SELECT count(*) FROM schema_migrations WHERE version BETWEEN 3 AND 12",
                 "tadpoles_upgrade_test",
             )
-            == "6"
+            == "10"
         )
         assert (
             sql(

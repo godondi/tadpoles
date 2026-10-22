@@ -96,7 +96,7 @@ Paths below are relative to this directory. “Repeatable” means safe to rerun
 
 The runner tracks versions, **not file checksums**. Editing a recorded migration's behavior would not update an existing database. For future behavior changes:
 
-1. Add the next numbered migration (currently `011_<purpose>.sql`), with preconditions, a transaction and its version marker.
+1. Add the next numbered migration (currently `013_<purpose>.sql`), with preconditions, a transaction and its version marker.
 2. Update the fresh snapshot to the same final structure and add that version to fresh reference bookkeeping.
 3. Update fresh-versus-upgrade tests and any explicit migration lists in backend tests. Test with existing data, not only an empty database.
 4. Review runtime grants for new tables and update this guide/diagram.
@@ -197,3 +197,19 @@ All rehearsal scripts use disposable names and clean up their own resources. The
 - An executable-token comparison against the pre-cleanup SQL confirmed that formatting/comments changed no operations or literal values in the retained SQL files. Shell syntax and whitespace checks on this cleanup's files passed.
 
 The rehearsals removed their temporary containers, databases and volumes. No retained application database was migrated or reset by this cleanup.
+
+## Operations investigation extension
+
+Migration `011_operations_workspace.sql` adds explicit per-account grants and immutable grant events, expiring actor-owned purpose contexts, immutable access events, protected export artifacts, prospective decision contexts and scoped reconciliation findings. It projects known ownership from retained older reconciliation reports without rewriting those reports. Unknown ownership stays redacted. The fresh schema and reference markers include version 11. Reapply runtime grants after upgrade: the application may read grants but cannot provision or mutate them.
+
+The detailed [Operations guide](../ImplementationDocumentation/Frontend/OperationsPageImplementation/OperationsRoleCrashCourse.MD) describes configuration, grant provisioning, scope, evidence coverage and download expiry. No production grants or automatic retention purge are seeded.
+
+
+Standard local `docker compose build` followed by `docker compose up` runs `database/demo/seed-role-workspaces.sh` after migrations. It creates the existing role identities and, when local demo setup and Operations access are enabled, applies `database/demo/operations_workspace.sql` for `demo.client` only. No Operations overlay or manual grant SQL is required. The fixture seed is repeatable and preserves revocations. The separate `docker-compose.market-fixture.yml` remains an optional explicit synthetic-data test choice; normal startup uses the configured real provider. Hardened startup excludes the local seed service. The Operations guide above includes all five environment settings and error explanations by component.
+
+
+## Managed support history
+
+Migration `012_managed_support.sql` adds owned cases, immutable public activity, separate private notes, actor-scoped action receipts, owned recipient watermarks and private export associations. Composite ownership constraints bind optional linked orders; deferred checks keep public status/version/time consistent with history. Runtime privileges permit only the required projection and read-watermark updates and prohibit immutable support history mutation.
+
+Purpose contexts now distinguish `EXTERNAL` and `MANAGED`, retaining verified case identity for managed investigations. Existing contexts default to external; no historical case or new account grant is fabricated. New `CASE_READ`/`CASE_UPDATE` permissions require explicit approved provisioning. Fresh DDL/reference markers include version 12. Reapply `runtime-grants.sql` after migration and check support readiness. Do not drop retained support rows during application rollback.

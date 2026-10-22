@@ -22,7 +22,9 @@ INSERT INTO schema_migrations (version)
     (7),
     (8),
     (9),
-    (10)
+    (10),
+    (11),
+    (12)
 ON CONFLICT
     DO NOTHING;
 

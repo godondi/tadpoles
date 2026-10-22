@@ -35,7 +35,9 @@ import { CatalogRefreshService } from '../../core/api/catalog-refresh.service';
       </form>
       <div class="table-wrapper" tabindex="0" aria-label="Instrument policies, scroll horizontally">
         <table>
-          <caption>Catalog and validation state</caption>
+          <caption>
+            Catalog and validation state
+          </caption>
           <thead>
             <tr>
               <th>Symbol</th>
@@ -82,7 +84,9 @@ import { CatalogRefreshService } from '../../core/api/catalog-refresh.service';
                   {{
                     loading()
                       ? 'Loading instruments…'
-                      : 'No matching instruments. Try clearing your search.'
+                      : search || page > 0
+                        ? 'No matching instruments. Try clearing your search.'
+                        : 'No instruments are loaded. The demo catalog is added only after successful provider checks. Check the provider configuration, then restart the backend, or add and validate an instrument.'
                   }}
                 </td>
               </tr>

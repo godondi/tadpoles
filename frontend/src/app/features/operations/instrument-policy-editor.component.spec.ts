@@ -6,6 +6,45 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { InstrumentPolicyEditorComponent } from './instrument-policy-editor.component';
 describe('Operations instrument controls', () => {
+  it('shows provider-test progress and failures next to the symbol instead of the save button', async () => {
+    TestBed.configureTestingModule({
+      imports: [InstrumentPolicyEditorComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'new' })) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(InstrumentPolicyEditorComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.componentInstance.form.providerSymbol = 'SPY';
+    fixture.detectChanges();
+    fixture.nativeElement.querySelector('[data-test-symbol]').click();
+    fixture.detectChanges();
+    expect(
+      fixture.nativeElement.querySelector('#instrument-symbol').closest('.form-field').textContent,
+    ).toContain('Checking the symbol');
+    const http = TestBed.inject(HttpTestingController);
+    http
+      .expectOne((request) => request.url.endsWith('/test'))
+      .flush(
+        { message: 'Provider is unavailable; no changes saved' },
+        { status: 503, statusText: 'Unavailable' },
+      );
+    fixture.detectChanges();
+    const inline = fixture.nativeElement.querySelector('[data-symbol-error]');
+    expect(inline.textContent).toContain('Provider is unavailable');
+    expect(inline.closest('.form-field').querySelector('#instrument-symbol')).not.toBeNull();
+    expect(fixture.componentInstance.message()).toBe('');
+    expect(fixture.componentInstance.testing()).toBe(false);
+    fixture.componentInstance.invalidate();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-symbol-error]')).toBeNull();
+    http.verify();
+  });
+
   it('provides a symbol test beside the input and invalidates results when the symbol changes', async () => {
     TestBed.configureTestingModule({
       imports: [InstrumentPolicyEditorComponent],
@@ -36,6 +75,9 @@ describe('Operations instrument controls', () => {
     f.detectChanges();
     expect(old.cancelled).toBe(true);
     expect(f.nativeElement.textContent).not.toContain('Recognized: AAPL');
+    http
+      .match((r) => r.url.endsWith('/history'))
+      .forEach((r) => r.flush({ items: [], page: 0, hasMore: false }));
     http.verify();
   });
 });
@@ -73,6 +115,9 @@ describe('Operations form structure', () => {
       expect(control.closest('.form-field')).not.toBeNull();
     }
     expect(form.querySelectorAll('.checkbox-field input[type="checkbox"]').length).toBe(3);
+    http
+      .match((r) => r.url.endsWith('/history'))
+      .forEach((r) => r.flush({ items: [], page: 0, hasMore: false }));
     http.verify();
   });
 });
@@ -142,7 +187,13 @@ describe('routed instrument saves', () => {
     expect(harness.routeNativeElement!.querySelector('form')).toBe(form);
     expect(harness.routeNativeElement!.textContent).toContain('SPY saved. Revision 1.');
     expect(form.querySelector('a[href="/operations/instruments?search=SPY"]')).not.toBeNull();
+    http
+      .expectOne((r) => r.url.endsWith('/42/history'))
+      .flush({ items: [], page: 0, hasMore: false });
     http.expectNone((r) => r.method === 'GET');
+    http
+      .match((r) => r.url.endsWith('/history'))
+      .forEach((r) => r.flush({ items: [], page: 0, hasMore: false }));
     http.verify();
   });
 
@@ -162,6 +213,9 @@ describe('routed instrument saves', () => {
     expect(editor.form.reason).toBe('Enable verified provider listing');
     expect(TestBed.inject(Router).url).toBe('/operations/instruments/new');
     expect(form.querySelector('[type="submit"]')!.hasAttribute('disabled')).toBe(false);
+    http
+      .match((r) => r.url.endsWith('/history'))
+      .forEach((r) => r.flush({ items: [], page: 0, hasMore: false }));
     http.verify();
   });
 
@@ -184,6 +238,9 @@ describe('routed instrument saves', () => {
     await harness.fixture.whenStable();
     harness.detectChanges();
     expect(harness.routeNativeElement!.textContent).toContain('Revision 2');
+    http
+      .match((r) => r.url.endsWith('/history'))
+      .forEach((r) => r.flush({ items: [], page: 0, hasMore: false }));
     http.verify();
   });
 
@@ -204,6 +261,9 @@ describe('routed instrument saves', () => {
     expect(TestBed.inject(Router).url).toBe('/operations/instruments/9');
     expect(editor.form.ticker).toBe('MSFT');
     expect(harness.routeNativeElement!.textContent).not.toContain('SPY saved');
+    http
+      .match((r) => r.url.endsWith('/history'))
+      .forEach((r) => r.flush({ items: [], page: 0, hasMore: false }));
     http.verify();
   });
 
@@ -219,6 +279,9 @@ describe('routed instrument saves', () => {
       'required fields',
     );
     http.expectNone((r) => r.method === 'POST');
+    http
+      .match((r) => r.url.endsWith('/history'))
+      .forEach((r) => r.flush({ items: [], page: 0, hasMore: false }));
     http.verify();
   });
 });

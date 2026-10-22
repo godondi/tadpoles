@@ -16,12 +16,7 @@ import com.neueda.leap.mapper.TradingMapper;
 import com.neueda.leap.service.TradingService;
 import com.neueda.leap.service.impl.PortfolioValuationService;
 import com.neueda.leap.trading.TradingModels.*;
-import java.math.BigDecimal;
-import java.nio.file.*;
-import java.sql.*;
-import java.time.*;
-import java.util.*;
-import java.util.concurrent.*;
+
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -31,12 +26,24 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.testcontainers.containers.PostgreSQLContainer;
 
+import java.math.BigDecimal;
+import java.nio.file.*;
+import java.sql.*;
+import java.time.*;
+import java.util.*;
+import java.util.concurrent.*;
+
 @org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 @SpringBootTest(
         properties = {
             "trading.admission-enabled=true",
             "trading.worker-enabled=false",
-            "banking.encryption-key=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+            "banking.encryption-key=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+            "operations.access-enabled=true",
+            "operations.allowed-purposes=ORDER_REVIEW,INCIDENT",
+            "operations.policy-version=test-v1",
+            "operations.context-seconds=600",
+            "operations.export-seconds=600"
         })
 class TradingPostgresTest {
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:15-alpine");
@@ -66,35 +73,21 @@ class TradingPostgresTest {
         r.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
     }
 
-    @Autowired
-    org.springframework.test.web.servlet.MockMvc mvc;
-    @Autowired
-    TradingService service;
-    @Autowired
-    TradingTransactions tx;
-    @Autowired
-    DemoAccountSetup demoSetup;
-    @Autowired
-    CatalogSetup catalogSetup;
-    @Autowired
-    TradingMapper db;
-    @Autowired
-    ObjectMapper json;
-    @Autowired
-    com.neueda.leap.service.BankingService banking;
-    @Autowired
-    PortfolioValuationService valuations;
+    @Autowired org.springframework.test.web.servlet.MockMvc mvc;
+    @Autowired TradingService service;
+    @Autowired TradingTransactions tx;
+    @Autowired DemoAccountSetup demoSetup;
+    @Autowired CatalogSetup catalogSetup;
+    @Autowired TradingMapper db;
+    @Autowired ObjectMapper json;
+    @Autowired com.neueda.leap.service.BankingService banking;
+    @Autowired PortfolioValuationService valuations;
 
-    @MockBean
-    Clock clock;
-    @MockBean
-    TradingQuotes quotes;
-    @MockBean
-    BookingProbe probe;
-    @MockBean
-    com.neueda.leap.service.FauxnanceQuoteService provider;
-    @MockBean
-    com.neueda.leap.service.FauxnanceDailyCandleService providerCandles;
+    @MockBean Clock clock;
+    @MockBean TradingQuotes quotes;
+    @MockBean BookingProbe probe;
+    @MockBean com.neueda.leap.service.FauxnanceQuoteService provider;
+    @MockBean com.neueda.leap.service.FauxnanceDailyCandleService providerCandles;
     Instant now = Instant.parse("2026-10-14T14:00:00Z");
     int client, actor, instrument;
 
@@ -131,6 +124,7 @@ class TradingPostgresTest {
         script("database/schema/001_tadpoles_schema.sql");
         script("database/migrations/003_workspace_roles.sql");
         script("database/migrations/004_client_simulation.sql");
+        sql("INSERT INTO schema_migrations(version) VALUES(3) ON CONFLICT DO NOTHING");
         script("database/demo/role_workspaces.sql");
         script("database/migrations/005_client_banking.sql");
         script("database/migrations/006_trading_cutover.sql");
@@ -138,6 +132,8 @@ class TradingPostgresTest {
         script("database/migrations/008_trading_controls.sql");
         script("database/migrations/009_quote_cache_age.sql");
         script("database/migrations/010_quote_cache_twenty_minutes.sql");
+        script("database/migrations/011_operations_workspace.sql");
+        script("database/migrations/012_managed_support.sql");
         script("backend/src/test/resources/provider_accounts.sql");
         client =
                 Integer.parseInt(
@@ -222,6 +218,24 @@ class TradingPostgresTest {
                                 + " j.client_id=p.client_id AND j.instrument_id=p.instrument_id)"));
     }
 
+    com.fasterxml.jackson.databind.JsonNode decisionContext(int order, String stage)
+            throws Exception {
+        return json.readTree(
+                scalar(
+                        "SELECT c.facts::text FROM order_decision_contexts c "
+                                + "JOIN order_rule_decisions d USING(decision_id) WHERE d.order_id="
+                                + order
+                                + " AND d.stage='"
+                                + stage
+                                + "'"));
+    }
+
+    String checkResult(com.fasterxml.jackson.databind.JsonNode context, String code) {
+        for (var check : context.path("checks"))
+            if (code.equals(check.path("code").asText())) return check.path("result").asText();
+        throw new AssertionError("Missing check " + code);
+    }
+
     @Test
     void buyPartialAndFullSaleUseExecutionSideAndNeverResurrectPositions() throws Exception {
         var preview = service.preview(client, buy("10"));
@@ -235,7 +249,14 @@ class TradingPostgresTest {
                 "SELECT reserved FROM client_cash_accounts WHERE client_id="
                         + client
                         + " AND currency='USD'");
+        var admission = decisionContext(order, "ADMISSION");
+        assertEquals("PASS", checkResult(admission, "INSUFFICIENT_CASH"));
+        assertEquals("NOT_EVALUATED", checkResult(admission, "INSUFFICIENT_UNITS"));
+        assertEquals("10000", admission.path("resources").path("cashAvailable").asText());
         fill(order, "50", "51");
+        var execution = decisionContext(order, "EXECUTION");
+        assertEquals("PASS", checkResult(execution, "INSUFFICIENT_EXECUTION_CASH"));
+        assertEquals("500", execution.path("resources").path("reservationAmount").asText());
         assertEquals(1, db.positions(client).size(), "A filled buy creates a visible position");
         int sell = id(submit(key(), new Command(instrument, "SELL", "4", "MARKET")));
         fill(sell, "52", "53");
@@ -379,6 +400,10 @@ class TradingPostgresTest {
         tx.book(claim, q, null);
         tx.book(claim, q, null);
         assertEquals("REJECTED", db.workerOrder(first).get("status"));
+        var evidence = decisionContext(first, "EXECUTION");
+        assertEquals("FAIL", checkResult(evidence, "INSUFFICIENT_EXECUTION_CASH"));
+        assertEquals("NOT_EVALUATED", checkResult(evidence, "INSUFFICIENT_EXECUTION_UNITS"));
+        assertEquals("5000", evidence.path("resources").path("reservationAmount").asText());
         equalDecimal(
                 "5000",
                 "SELECT reserved FROM client_cash_accounts WHERE client_id="
@@ -426,6 +451,13 @@ class TradingPostgresTest {
                     IllegalStateException.class,
                     () -> tx.book(claim, quote(claim.policy(), "49", "50"), null));
             assertNull(db.fillFor(id));
+            assertEquals(
+                    "0",
+                    scalar(
+                            "SELECT count(*) FROM order_decision_contexts c JOIN"
+                                    + " order_rule_decisions d USING(decision_id) WHERE"
+                                    + " d.stage='EXECUTION' AND d.order_id="
+                                    + id));
             assertEquals("ACTIVE", db.reservationFor(id).get("state"));
             assertEquals("EXECUTING", db.workerOrder(id).get("status"));
             reconciled();
@@ -1440,6 +1472,8 @@ class TradingPostgresTest {
         script("database/migrations/008_trading_controls.sql");
         script("database/migrations/009_quote_cache_age.sql");
         script("database/migrations/010_quote_cache_twenty_minutes.sql");
+        script("database/migrations/011_operations_workspace.sql");
+        script("database/migrations/012_managed_support.sql");
         demoSetup.initialize();
         equalDecimal(
                 "10000",
@@ -1588,14 +1622,1035 @@ class TradingPostgresTest {
                 .andExpect(
                         org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath(
                                         "$.pendingJobs")
-                                .value(0))
+                                .doesNotExist())
                 .andExpect(
                         org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath(
                                         "$.cashMovementProcessing")
                                 .value("SYNCHRONOUS"))
                 .andExpect(
                         org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath(
-                                        "$.reconciliation.runId")
-                                .isEmpty());
+                                        "$.reconciliation.status")
+                                .value("SCOPED_VIEW_REQUIRED"));
+    }
+
+    int operationsUser(String username) throws Exception {
+        return Integer.parseInt(
+                scalar("SELECT user_id FROM users WHERE username='" + username + "'"));
+    }
+
+    void operationsGrant(String username, int scope, String permission) throws Exception {
+        int staff = operationsUser(username);
+        int approver = operationsUser("demo.finance");
+        sql(
+                "INSERT INTO"
+                    + " operations_access_grants(grant_id,staff_user_id,permission,client_id,account_reference,valid_from,valid_until,approved_by,approval_reference)"
+                    + " VALUES ('"
+                        + UUID.randomUUID()
+                        + "',"
+                        + staff
+                        + ",'"
+                        + permission
+                        + "',"
+                        + scope
+                        + ",'CASE-ACCOUNT-"
+                        + scope
+                        + "','"
+                        + now.minusSeconds(60)
+                        + "','"
+                        + now.plusSeconds(3600)
+                        + "',"
+                        + approver
+                        + ",'TEST-APPROVAL')");
+    }
+
+    String operationsContext(String token) throws Exception {
+        String response =
+                mvc.perform(
+                                post("/api/operations/access-contexts")
+                                        .header("Authorization", "Bearer " + token)
+                                        .contentType("application/json")
+                                        .content(
+                                                "{\"purposeCode\":\"ORDER_REVIEW\",\"referenceType\":\"EXTERNAL\",\"caseReference\":\"TEST-CASE-123\"}"))
+                        .andExpect(status().isOk())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        return json.readTree(response).get("contextId").asText();
+    }
+
+    @Test
+    void operationsReadsOnlyGrantedAccountsAndAuditsBeforeDisclosure() throws Exception {
+        int order = id(submit(key(), buy("2")));
+        fill(order, "49", "50");
+        int other =
+                Integer.parseInt(
+                        scalar(
+                                "SELECT client_id FROM clients JOIN users USING(user_id) WHERE"
+                                        + " username='demo.client2'"));
+        int otherActor = operationsUser("demo.client2");
+        int hidden = id(service.submit(other, otherActor, key(), buy("1")));
+        operationsGrant("demo.operations", client, "ORDER_READ");
+        operationsGrant("demo.operations", client, "EVIDENCE_READ");
+        String token = login("demo.operations"), context = operationsContext(token);
+        mvc.perform(
+                        get("/api/operations/orders")
+                                .header("Authorization", "Bearer " + token)
+                                .header("X-Operations-Context", context))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].orderId").value(order))
+                .andExpect(jsonPath("$.hasMore").value(false));
+        String body =
+                mvc.perform(
+                                get("/api/operations/orders/" + order)
+                                        .header("Authorization", "Bearer " + token)
+                                        .header("X-Operations-Context", context))
+                        .andExpect(status().isOk())
+                        .andExpect(
+                                jsonPath("$.evidenceStatus").value("COMPLETE_FOR_INTERNAL_BOOKING"))
+                        .andExpect(jsonPath("$.sections.postings.items.length()").value(2))
+                        .andExpect(
+                                jsonPath(
+                                                "$.sections.decisions.items[0].values.decisionContext.schemaVersion")
+                                        .value("1"))
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        assertFalse(body.contains("000000001"));
+        assertFalse(body.contains("idempotency_key"));
+        assertFalse(body.contains("claim_token"));
+        for (String suffix : List.of("", "/quotes", "/attempts", "/postings"))
+            mvc.perform(
+                            get("/api/operations/orders/" + hidden + suffix)
+                                    .header("Authorization", "Bearer " + token)
+                                    .header("X-Operations-Context", context))
+                    .andExpect(status().isNotFound());
+        assertEquals(
+                "4",
+                scalar("SELECT count(*) FROM operations_access_events WHERE outcome='DENIED'"));
+        assertEquals(
+                "2",
+                scalar(
+                        "SELECT count(*) FROM operations_access_events WHERE action IN"
+                                + " ('SEARCH','INVESTIGATE')"));
+        sql(
+                "CREATE FUNCTION fail_operations_audit() RETURNS trigger LANGUAGE plpgsql AS $$"
+                    + " BEGIN RAISE EXCEPTION 'test audit failure'; END $$; CREATE TRIGGER"
+                    + " fail_audit BEFORE INSERT ON operations_access_events FOR EACH ROW EXECUTE"
+                    + " FUNCTION fail_operations_audit()");
+        mvc.perform(
+                        get("/api/operations/orders/" + order)
+                                .header("Authorization", "Bearer " + token)
+                                .header("X-Operations-Context", context))
+                .andExpect(status().is5xxServerError());
+    }
+
+    @Test
+    void operationsContextsGrantsAndMixedRolesFailClosed() throws Exception {
+        int order = id(submit(key(), buy("1")));
+        operationsGrant("demo.operations", client, "EVIDENCE_READ");
+        String token = login("demo.operations"), context = operationsContext(token);
+        mvc.perform(
+                        get("/api/operations/orders/" + order)
+                                .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/operations/orders/" + order)).andExpect(status().isUnauthorized());
+        for (String user :
+                List.of("demo.client", "demo.analyst", "demo.compliance", "demo.finance"))
+            mvc.perform(
+                            get("/api/operations/orders/" + order)
+                                    .header("Authorization", "Bearer " + login(user))
+                                    .header("X-Operations-Context", context))
+                    .andExpect(status().isForbidden());
+        sql(
+                "INSERT INTO user_roles SELECT "
+                        + operationsUser("demo.analyst")
+                        + ",role_id FROM roles WHERE role_name='TRADING_OPS'");
+        operationsGrant("demo.analyst", client, "EVIDENCE_READ");
+        mvc.perform(
+                        get("/api/operations/orders/" + order)
+                                .header("Authorization", "Bearer " + login("demo.analyst"))
+                                .header("X-Operations-Context", context))
+                .andExpect(status().isForbidden());
+        now = now.plusSeconds(601);
+        mvc.perform(
+                        get("/api/operations/orders/" + order)
+                                .header("Authorization", "Bearer " + login("demo.operations"))
+                                .header("X-Operations-Context", context))
+                .andExpect(status().isForbidden());
+        token = login("demo.operations");
+        context = operationsContext(token);
+        sql(
+                "UPDATE operations_access_grants SET revoked_at='"
+                        + now
+                        + "' WHERE staff_user_id="
+                        + operationsUser("demo.operations"));
+        mvc.perform(
+                        get("/api/operations/orders/" + order)
+                                .header("Authorization", "Bearer " + token)
+                                .header("X-Operations-Context", context))
+                .andExpect(status().isForbidden());
+        sql(
+                "INSERT INTO user_roles SELECT "
+                        + operationsUser("demo.operations")
+                        + ",role_id FROM roles WHERE role_name='CLIENT'");
+        mvc.perform(
+                        get("/api/operations/readiness")
+                                .header("Authorization", "Bearer " + login("demo.operations")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void operationsPaginationBindsFiltersAndScopeAndUsesEqualTimestampTieBreak() throws Exception {
+        for (int n = 0; n < 3; n++) submit(key(), buy("1"));
+        operationsGrant("demo.operations", client, "ORDER_READ");
+        String token = login("demo.operations"), context = operationsContext(token);
+        String first =
+                mvc.perform(
+                                get("/api/operations/orders")
+                                        .param("pageSize", "1")
+                                        .header("Authorization", "Bearer " + token)
+                                        .header("X-Operations-Context", context))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.hasMore").value(true))
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        String cursor = json.readTree(first).get("nextCursor").asText();
+        String second =
+                mvc.perform(
+                                get("/api/operations/orders")
+                                        .param("pageSize", "1")
+                                        .param("cursor", cursor)
+                                        .header("Authorization", "Bearer " + token)
+                                        .header("X-Operations-Context", context))
+                        .andExpect(status().isOk())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        assertNotEquals(
+                json.readTree(first).at("/items/0/orderId"),
+                json.readTree(second).at("/items/0/orderId"));
+        mvc.perform(
+                        get("/api/operations/orders")
+                                .param("pageSize", "1")
+                                .param("cursor", cursor)
+                                .param("side", "SELL")
+                                .header("Authorization", "Bearer " + token)
+                                .header("X-Operations-Context", context))
+                .andExpect(status().isBadRequest());
+        operationsGrant("demo.operations", client, "ORDER_READ");
+        mvc.perform(
+                        get("/api/operations/orders")
+                                .param("pageSize", "1")
+                                .param("cursor", cursor)
+                                .header("Authorization", "Bearer " + token)
+                                .header("X-Operations-Context", context))
+                .andExpect(status().isBadRequest());
+        mvc.perform(
+                        get("/api/operations/orders")
+                                .param("accountReference", "%_")
+                                .header("Authorization", "Bearer " + token)
+                                .header("X-Operations-Context", context))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void operationsExportIsExactAuditedIdempotentAndRevocable() throws Exception {
+        int order = id(submit(key(), buy("1")));
+        fill(order, "49", "50");
+        operationsGrant("demo.operations", client, "EVIDENCE_READ");
+        operationsGrant("demo.operations", client, "EVIDENCE_EXPORT");
+        String token = login("demo.operations"), context = operationsContext(token), key = key();
+        String body = "{\"orderId\":" + order + "}";
+        String receipt =
+                mvc.perform(
+                                post("/api/operations/evidence-exports")
+                                        .header("Authorization", "Bearer " + token)
+                                        .header("X-Operations-Context", context)
+                                        .header("Idempotency-Key", key)
+                                        .contentType("application/json")
+                                        .content(body))
+                        .andExpect(status().isOk())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        String exportId = json.readTree(receipt).get("exportId").asText();
+        mvc.perform(
+                        post("/api/operations/evidence-exports")
+                                .header("Authorization", "Bearer " + token)
+                                .header("X-Operations-Context", context)
+                                .header("Idempotency-Key", key)
+                                .contentType("application/json")
+                                .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.exportId").value(exportId));
+        byte[] bytes =
+                mvc.perform(
+                                get("/api/operations/evidence-exports/" + exportId + "/download")
+                                        .header("Authorization", "Bearer " + token)
+                                        .header("X-Operations-Context", context))
+                        .andExpect(status().isOk())
+                        .andExpect(
+                                org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                                        .header()
+                                        .string("Cache-Control", "no-store"))
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsByteArray();
+        assertEquals(
+                json.readTree(receipt).get("digest").asText(),
+                com.neueda.leap.service.OperationsAccessService.digest(bytes));
+        var files = new HashMap<String, byte[]>();
+        try (var zip = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(bytes))) {
+            java.util.zip.ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null)
+                files.put(entry.getName(), zip.readAllBytes());
+        }
+        var manifest = json.readTree(files.get("manifest.json"));
+        for (var file : manifest.get("files"))
+            assertEquals(
+                    file.get("sha256").asText(),
+                    com.neueda.leap.service.OperationsAccessService.digest(
+                            files.get(file.get("path").asText())));
+        assertEquals("1", scalar("SELECT count(*) FROM operations_evidence_exports"));
+        sql(
+                "UPDATE operations_access_grants SET revoked_at='"
+                        + now
+                        + "' WHERE permission='EVIDENCE_EXPORT'");
+        mvc.perform(
+                        get("/api/operations/evidence-exports/" + exportId + "/download")
+                                .header("Authorization", "Bearer " + token)
+                                .header("X-Operations-Context", context))
+                .andExpect(status().isForbidden());
+        assertEquals("1", scalar("SELECT count(*) FROM order_fills"));
+    }
+
+    @Test
+    void operationsReconciliationRedactsOtherAccountsAndKeepsFinanceAuthority() throws Exception {
+        int order = id(submit(key(), buy("1")));
+        operationsGrant("demo.operations", client, "RECONCILIATION_READ");
+        String token = login("demo.operations"), context = operationsContext(token);
+        mvc.perform(
+                        get("/api/operations/reconciliations/latest")
+                                .header("Authorization", "Bearer " + token)
+                                .header("X-Operations-Context", context))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("UNAVAILABLE"));
+        sql("DELETE FROM order_execution_jobs WHERE order_id=" + order);
+        mvc.perform(
+                        post("/api/finance/reconciliations")
+                                .header("Authorization", "Bearer " + login("demo.finance")))
+                .andExpect(status().isOk());
+        mvc.perform(
+                        get("/api/operations/reconciliations/latest")
+                                .header("Authorization", "Bearer " + token)
+                                .header("X-Operations-Context", context))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].values.orderId").value(order));
+        mvc.perform(post("/api/finance/reconciliations").header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/operations/readiness").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reconciliation.exceptions").doesNotExist())
+                .andExpect(jsonPath("$.historicalExceptions").doesNotExist());
+        assertEquals("1", scalar("SELECT count(*) FROM reconciliation_runs"));
+    }
+
+    String supportBody(Integer order, String subject) throws Exception {
+        var body = new LinkedHashMap<String, Object>();
+        body.put("category", "ORDER_QUESTION");
+        body.put("subject", subject);
+        body.put("description", "Please explain the retained order receipt.");
+        if (order != null) body.put("orderId", order);
+        return json.writeValueAsString(body);
+    }
+
+    String createSupport(String token, String request, String body) throws Exception {
+        return mvc.perform(
+                        post("/api/support/cases")
+                                .header("Authorization", "Bearer " + token)
+                                .header("Idempotency-Key", request)
+                                .contentType("application/json")
+                                .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("reference").value(org.hamcrest.Matchers.startsWith("CASE-")))
+                .andExpect(jsonPath("status").value("OPEN"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+    }
+
+    @Test
+    void supportCreationRecoversOneOwnedReceiptAndRejectsConflictingReplay() throws Exception {
+        int order = id(submit(key(), buy("1")));
+        String token = login("demo.client"),
+                request = key(),
+                body = supportBody(order, "Receipt question");
+        String first = createSupport(token, request, body);
+        assertEquals(first, createSupport(token, request, body));
+        var receipt = json.readTree(first);
+        assertEquals(order, receipt.path("orderId").asInt());
+        mvc.perform(
+                        get("/api/support/cases/by-request/" + request)
+                                .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("reference").value(receipt.path("reference").asText()));
+        mvc.perform(
+                        post("/api/support/cases")
+                                .header("Authorization", "Bearer " + token)
+                                .header("Idempotency-Key", request)
+                                .contentType("application/json")
+                                .content(supportBody(order, "Different question")))
+                .andExpect(status().isConflict());
+        assertEquals("1", scalar("SELECT count(*) FROM support_cases"));
+        assertEquals("1", scalar("SELECT count(*) FROM support_case_events"));
+    }
+
+    @Test
+    void supportOwnershipIncludesNestedOrderRecoverySearchAndUnknownFields() throws Exception {
+        int order = id(submit(key(), buy("1")));
+        String token = login("demo.client"), other = login("demo.client2"), request = key();
+        String reference =
+                json.readTree(createSupport(token, request, supportBody(order, "Order question")))
+                        .path("reference")
+                        .asText();
+        mvc.perform(
+                        get("/api/support/cases/" + reference)
+                                .header("Authorization", "Bearer " + other))
+                .andExpect(status().isNotFound());
+        mvc.perform(
+                        get("/api/support/cases/by-request/" + request)
+                                .header("Authorization", "Bearer " + other))
+                .andExpect(status().isNotFound());
+        mvc.perform(
+                        get("/api/support/cases")
+                                .param("search", reference)
+                                .header("Authorization", "Bearer " + other))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("total").value(0));
+        mvc.perform(
+                        post("/api/support/cases")
+                                .header("Authorization", "Bearer " + other)
+                                .header("Idempotency-Key", key())
+                                .contentType("application/json")
+                                .content(supportBody(order, "Foreign question")))
+                .andExpect(status().isNotFound());
+        mvc.perform(
+                        post("/api/support/cases")
+                                .header("Authorization", "Bearer " + token)
+                                .header("Idempotency-Key", key())
+                                .contentType("application/json")
+                                .content(
+                                        supportBody(null, "Account question")
+                                                .replace("{", "{\"clientId\":999,")))
+                .andExpect(status().isBadRequest());
+        assertTrue(
+                json.readTree(createSupport(token, key(), supportBody(null, "Account question")))
+                        .path("orderId")
+                        .isNull());
+    }
+
+    @Test
+    void supportParallelCreationIsAtomicAndDoesNotChangeFinancialFacts() throws Exception {
+        int order = id(submit(key(), buy("1")));
+        String before =
+                scalar("SELECT row_to_json(t)::text FROM client_trades t WHERE trade_id=" + order);
+        String token = login("demo.client"),
+                request = key(),
+                body = supportBody(order, "Pending question");
+        var executor = Executors.newFixedThreadPool(2);
+        try {
+            var a = executor.submit(() -> createSupport(token, request, body));
+            var b = executor.submit(() -> createSupport(token, request, body));
+            assertEquals(a.get(), b.get());
+        } finally {
+            executor.shutdownNow();
+        }
+        assertEquals("1", scalar("SELECT count(*) FROM support_cases"));
+        assertEquals(
+                before,
+                scalar("SELECT row_to_json(t)::text FROM client_trades t WHERE trade_id=" + order));
+        reconciled();
+    }
+
+    @Test
+    void supportStaffQueueScopesBeforeCountAndPagingAndRevocation() throws Exception {
+        String owner = login("demo.client"),
+                other = login("demo.client2"),
+                staff = login("demo.operations");
+        String reference =
+                json.readTree(createSupport(owner, key(), supportBody(null, "Account review")))
+                        .path("reference")
+                        .asText();
+        createSupport(other, key(), supportBody(null, "Another account review"));
+        operationsGrant("demo.operations", client, "CASE_READ");
+        mvc.perform(
+                        get("/api/operations/cases")
+                                .header("Authorization", "Bearer " + staff)
+                                .param("pageSize", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("total").value(1))
+                .andExpect(jsonPath("items[0].reference").value(reference));
+        mvc.perform(
+                        get("/api/operations/cases/" + reference)
+                                .header("Authorization", "Bearer " + staff))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("events[0].authorRole").value("CLIENT"));
+        sql(
+                "UPDATE operations_access_grants SET revoked_at='"
+                        + now
+                        + "' WHERE permission='CASE_READ'");
+        mvc.perform(
+                        get("/api/operations/cases/" + reference)
+                                .header("Authorization", "Bearer " + staff))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/operations/cases").header("Authorization", "Bearer " + owner))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void supportAuditFailureRollsBackCaseAndFirstEvent() throws Exception {
+        String token = login("demo.client");
+        sql(
+                "CREATE FUNCTION reject_case_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN"
+                    + " IF NEW.action='CASE_CREATED' THEN RAISE EXCEPTION 'fixture'; END IF; RETURN"
+                    + " NEW; END $$; CREATE TRIGGER test_case_audit BEFORE INSERT ON"
+                    + " operations_access_events FOR EACH ROW EXECUTE FUNCTION"
+                    + " reject_case_audit()");
+        mvc.perform(
+                        post("/api/support/cases")
+                                .header("Authorization", "Bearer " + token)
+                                .header("Idempotency-Key", key())
+                                .contentType("application/json")
+                                .content(supportBody(null, "Account question")))
+                .andExpect(status().isServiceUnavailable());
+        assertEquals("0", scalar("SELECT count(*) FROM support_cases"));
+        assertEquals("0", scalar("SELECT count(*) FROM support_case_events"));
+    }
+
+    String supportWrite(
+            String token, String path, String request, long version, String body, String state)
+            throws Exception {
+        var content = new LinkedHashMap<String, Object>();
+        content.put("expectedVersion", version);
+        content.put("body", body);
+        if (state != null) content.put("status", state);
+        return mvc.perform(
+                        post(path)
+                                .header("Authorization", "Bearer " + token)
+                                .header("Idempotency-Key", request)
+                                .contentType("application/json")
+                                .content(json.writeValueAsString(content)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+    }
+
+    @Test
+    void supportPublicLifecyclePrivateNotesAndRetryAreIndependentOfFinancialState()
+            throws Exception {
+        int order = id(submit(key(), buy("1")));
+        fill(order, "49", "50");
+        String before =
+                scalar("SELECT row_to_json(t)::text FROM client_trades t WHERE trade_id=" + order);
+        String owner = login("demo.client"), staff = login("demo.operations");
+        operationsGrant("demo.operations", client, "CASE_READ");
+        operationsGrant("demo.operations", client, "CASE_UPDATE");
+        String ref =
+                json.readTree(createSupport(owner, key(), supportBody(order, "Execution question")))
+                        .path("reference")
+                        .asText();
+        String owned = "/api/support/cases/" + ref, ops = "/api/operations/cases/" + ref;
+        String visible =
+                mvc.perform(get(owned).header("Authorization", "Bearer " + owner))
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        supportWrite(staff, ops + "/notes", key(), 1, "Private investigation details", null);
+        assertEquals(
+                visible,
+                mvc.perform(get(owned).header("Authorization", "Bearer " + owner))
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString());
+        mvc.perform(get(ops + "/notes").header("Authorization", "Bearer " + staff))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("items[0].body").value("Private investigation details"));
+        String request = key();
+        String reply =
+                supportWrite(
+                        staff,
+                        ops + "/replies",
+                        request,
+                        1,
+                        "Please clarify the price you expected.",
+                        null);
+        assertEquals(
+                json.readTree(reply),
+                json.readTree(
+                        supportWrite(
+                                staff,
+                                ops + "/replies",
+                                request,
+                                1,
+                                "Please clarify the price you expected.",
+                                null)));
+        supportWrite(
+                staff,
+                ops + "/transitions",
+                key(),
+                2,
+                "Please provide the time of your observation.",
+                "AWAITING_CLIENT");
+        supportWrite(
+                owner,
+                owned + "/replies",
+                key(),
+                3,
+                "I was looking at the earlier indicative quote.",
+                null);
+        mvc.perform(get(owned).header("Authorization", "Bearer " + owner))
+                .andExpect(jsonPath("status").value("IN_REVIEW"))
+                .andExpect(jsonPath("version").value(4));
+        supportWrite(
+                staff,
+                ops + "/transitions",
+                key(),
+                4,
+                "The receipt retains the execution quote used for booking.",
+                "RESOLVED");
+        supportWrite(
+                owner,
+                owned + "/reopen",
+                key(),
+                5,
+                "Please explain the reservation release as well.",
+                null);
+        mvc.perform(get(owned).header("Authorization", "Bearer " + owner))
+                .andExpect(jsonPath("status").value("IN_REVIEW"))
+                .andExpect(jsonPath("totalEvents").value(6));
+        assertEquals(
+                before,
+                scalar("SELECT row_to_json(t)::text FROM client_trades t WHERE trade_id=" + order));
+        assertEquals("6", scalar("SELECT count(*) FROM support_case_events"));
+        reconciled();
+    }
+
+    @Test
+    void supportWritesRejectStaleVersionsAndForeignActorsWithoutPublicChanges() throws Exception {
+        String owner = login("demo.client"),
+                other = login("demo.client2"),
+                staff = login("demo.operations");
+        operationsGrant("demo.operations", client, "CASE_READ");
+        operationsGrant("demo.operations", client, "CASE_UPDATE");
+        String ref =
+                json.readTree(createSupport(owner, key(), supportBody(null, "Account question")))
+                        .path("reference")
+                        .asText();
+        String path = "/api/support/cases/" + ref + "/replies";
+        String body = "{\"expectedVersion\":1,\"body\":\"Additional public information.\"}";
+        mvc.perform(
+                        post(path)
+                                .header("Authorization", "Bearer " + other)
+                                .header("Idempotency-Key", key())
+                                .contentType("application/json")
+                                .content(body))
+                .andExpect(status().isNotFound());
+        supportWrite(owner, path, key(), 1, "Additional public information.", null);
+        mvc.perform(
+                        post(path)
+                                .header("Authorization", "Bearer " + owner)
+                                .header("Idempotency-Key", key())
+                                .contentType("application/json")
+                                .content(body))
+                .andExpect(status().isConflict());
+        mvc.perform(
+                        post("/api/operations/cases/" + ref + "/transitions")
+                                .header("Authorization", "Bearer " + staff)
+                                .header("Idempotency-Key", key())
+                                .contentType("application/json")
+                                .content(
+                                        "{\"expectedVersion\":2,\"status\":\"RESOLVED\",\"body\":\"\"}"))
+                .andExpect(status().isBadRequest());
+        assertEquals("2", scalar("SELECT count(*) FROM support_case_events"));
+    }
+
+    @Test
+    void supportUpdatesAreOwnedDurableExplicitlyReadAndIgnorePrivateNotes() throws Exception {
+        String owner = login("demo.client"),
+                other = login("demo.client2"),
+                staff = login("demo.operations");
+        operationsGrant("demo.operations", client, "CASE_READ");
+        operationsGrant("demo.operations", client, "CASE_UPDATE");
+        String ref =
+                json.readTree(createSupport(owner, key(), supportBody(null, "Account question")))
+                        .path("reference")
+                        .asText();
+        String path = "/api/support/updates";
+        String first =
+                mvc.perform(get(path).header("Authorization", "Bearer " + owner))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("unread").value(1))
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        long cursor = json.readTree(first).path("cursor").asLong();
+        assertTrue(cursor > 0);
+        supportWrite(
+                staff,
+                "/api/operations/cases/" + ref + "/notes",
+                key(),
+                1,
+                "Private investigation content.",
+                null);
+        assertEquals(
+                first,
+                mvc.perform(get(path).header("Authorization", "Bearer " + owner))
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString());
+        mvc.perform(get(path).header("Authorization", "Bearer " + other))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("unread").value(0))
+                .andExpect(jsonPath("items").isEmpty());
+        mvc.perform(
+                        post(path + "/read")
+                                .header("Authorization", "Bearer " + other)
+                                .contentType("application/json")
+                                .content("{\"cursor\":" + cursor + "}"))
+                .andExpect(status().isNotFound());
+        for (int i = 0; i < 2; i++)
+            mvc.perform(
+                            post(path + "/read")
+                                    .header("Authorization", "Bearer " + owner)
+                                    .contentType("application/json")
+                                    .content("{\"cursor\":" + cursor + "}"))
+                    .andExpect(status().isOk());
+        mvc.perform(get(path).header("Authorization", "Bearer " + owner))
+                .andExpect(jsonPath("unread").value(0));
+        supportWrite(
+                staff,
+                "/api/operations/cases/" + ref + "/replies",
+                key(),
+                1,
+                "A new public response for the client.",
+                null);
+        mvc.perform(
+                        get(path)
+                                .param("cursor", Long.toString(cursor))
+                                .header("Authorization", "Bearer " + owner))
+                .andExpect(jsonPath("unread").value(1))
+                .andExpect(jsonPath("items.length()").value(1));
+    }
+
+    @Test
+    void supportManagedPurposeConfinesEvidenceAndRechecksCaseGrant() throws Exception {
+        int order = id(submit(key(), buy("1"))), unrelated = id(submit(key(), buy("1")));
+        String owner = login("demo.client"), staff = login("demo.operations");
+        operationsGrant("demo.operations", client, "CASE_READ");
+        operationsGrant("demo.operations", client, "ORDER_READ");
+        operationsGrant("demo.operations", client, "EVIDENCE_READ");
+        String ref =
+                json.readTree(createSupport(owner, key(), supportBody(order, "Order question")))
+                        .path("reference")
+                        .asText();
+        String context =
+                json.readTree(
+                                mvc.perform(
+                                                post("/api/operations/access-contexts")
+                                                        .header("Authorization", "Bearer " + staff)
+                                                        .contentType("application/json")
+                                                        .content(
+                                                                "{\"purposeCode\":\"ORDER_REVIEW\",\"referenceType\":\"MANAGED\",\"caseReference\":\""
+                                                                        + ref
+                                                                        + "\"}"))
+                                        .andExpect(status().isOk())
+                                        .andReturn()
+                                        .getResponse()
+                                        .getContentAsString())
+                        .path("contextId")
+                        .asText();
+        mvc.perform(
+                        get("/api/operations/orders/" + order)
+                                .header("Authorization", "Bearer " + staff)
+                                .header("X-Operations-Context", context))
+                .andExpect(status().isOk());
+        mvc.perform(
+                        get("/api/operations/orders/" + unrelated)
+                                .header("Authorization", "Bearer " + staff)
+                                .header("X-Operations-Context", context))
+                .andExpect(status().isNotFound());
+        mvc.perform(
+                        post("/api/operations/access-contexts")
+                                .header("Authorization", "Bearer " + staff)
+                                .contentType("application/json")
+                                .content(
+                                        "{\"purposeCode\":\"ORDER_REVIEW\",\"referenceType\":\"EXTERNAL\",\"caseReference\":\""
+                                                + ref
+                                                + "\"}"))
+                .andExpect(status().isBadRequest());
+        sql(
+                "UPDATE operations_access_grants SET revoked_at='"
+                        + now
+                        + "' WHERE permission='CASE_READ'");
+        mvc.perform(
+                        get("/api/operations/orders/" + order)
+                                .header("Authorization", "Bearer " + staff)
+                                .header("X-Operations-Context", context))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void supportClientEvidenceAndSideControlsUseSafeRetainedFacts() throws Exception {
+        int order = id(submit(key(), buy("1")));
+        String owner = login("demo.client");
+        mvc.perform(get("/api/orders/" + order).header("Authorization", "Bearer " + owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("evidenceCompleteness").value("PENDING"))
+                .andExpect(jsonPath("quotes[0].stage").value("ADMISSION"))
+                .andExpect(jsonPath("quotes[0].applicableSide").value("ASK"))
+                .andExpect(jsonPath("quotes[0].price").value("50"));
+        sql(
+                "UPDATE instrument_trading_policies SET buy_allowed=false WHERE instrument_id="
+                        + instrument);
+        mvc.perform(
+                        get("/api/workspace/client/trading-availability")
+                                .param("instrumentId", Integer.toString(instrument))
+                                .header("Authorization", "Bearer " + owner))
+                .andExpect(jsonPath("buyAllowed").value(false))
+                .andExpect(jsonPath("sellAllowed").value(true))
+                .andExpect(jsonPath("code").value("SELL_ONLY"));
+    }
+
+    @Test
+    void supportWriteReceiptsRecoverByActorAndParallelUpdatesCannotOverwrite() throws Exception {
+        String owner = login("demo.client"), other = login("demo.client2");
+        String ref =
+                json.readTree(createSupport(owner, key(), supportBody(null, "Account question")))
+                        .path("reference")
+                        .asText();
+        String path = "/api/support/cases/" + ref, request = key();
+        supportWrite(
+                owner, path + "/replies", request, 1, "Additional information for the case.", null);
+        mvc.perform(get(path + "/requests/" + request).header("Authorization", "Bearer " + owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("version").value(2));
+        mvc.perform(get(path + "/requests/" + request).header("Authorization", "Bearer " + other))
+                .andExpect(status().isNotFound());
+        var executor = Executors.newFixedThreadPool(2);
+        Callable<Integer> write =
+                () ->
+                        mvc.perform(
+                                        post(path + "/replies")
+                                                .header("Authorization", "Bearer " + owner)
+                                                .header("Idempotency-Key", key())
+                                                .contentType("application/json")
+                                                .content(
+                                                        "{\"expectedVersion\":2,\"body\":\"Concurrent"
+                                                            + " new public information.\"}"))
+                                .andReturn()
+                                .getResponse()
+                                .getStatus();
+        try {
+            var a = executor.submit(write);
+            var b = executor.submit(write);
+            assertEquals(Set.of(200, 409), Set.of(a.get(), b.get()));
+        } finally {
+            executor.shutdownNow();
+        }
+        assertEquals("3", scalar("SELECT count(*) FROM support_case_events"));
+    }
+
+    @Test
+    void supportExportAssociationRechecksBothResourcesAndDoesNotPublishBytes() throws Exception {
+        int order = id(submit(key(), buy("1")));
+        fill(order, "49", "50");
+        String owner = login("demo.client"), staff = login("demo.operations");
+        for (String permission :
+                List.of("CASE_READ", "CASE_UPDATE", "EVIDENCE_READ", "EVIDENCE_EXPORT"))
+            operationsGrant("demo.operations", client, permission);
+        String ref =
+                json.readTree(createSupport(owner, key(), supportBody(order, "Execution question")))
+                        .path("reference")
+                        .asText();
+        String context =
+                json.readTree(
+                                mvc.perform(
+                                                post("/api/operations/access-contexts")
+                                                        .header("Authorization", "Bearer " + staff)
+                                                        .contentType("application/json")
+                                                        .content(
+                                                                "{\"purposeCode\":\"ORDER_REVIEW\",\"referenceType\":\"MANAGED\",\"caseReference\":\""
+                                                                        + ref
+                                                                        + "\"}"))
+                                        .andExpect(status().isOk())
+                                        .andReturn()
+                                        .getResponse()
+                                        .getContentAsString())
+                        .path("contextId")
+                        .asText();
+        var export =
+                json.readTree(
+                        mvc.perform(
+                                        post("/api/operations/evidence-exports")
+                                                .header("Authorization", "Bearer " + staff)
+                                                .header("X-Operations-Context", context)
+                                                .header("Idempotency-Key", key())
+                                                .contentType("application/json")
+                                                .content("{\"orderId\":" + order + "}"))
+                                .andExpect(status().isOk())
+                                .andReturn()
+                                .getResponse()
+                                .getContentAsString());
+        String path = "/api/operations/cases/" + ref + "/exports",
+                body = "{\"exportId\":\"" + export.path("exportId").asText() + "\"}";
+        mvc.perform(
+                        post(path)
+                                .header("Authorization", "Bearer " + staff)
+                                .header("X-Operations-Context", context)
+                                .contentType("application/json")
+                                .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("digest").value(export.path("digest").asText()));
+        String publicCase =
+                mvc.perform(
+                                get("/api/support/cases/" + ref)
+                                        .header("Authorization", "Bearer " + owner))
+                        .andExpect(status().isOk())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+        assertFalse(publicCase.contains(export.path("exportId").asText()));
+        sql(
+                "UPDATE operations_access_grants SET revoked_at='"
+                        + now
+                        + "' WHERE permission='EVIDENCE_EXPORT'");
+        mvc.perform(
+                        post(path)
+                                .header("Authorization", "Bearer " + staff)
+                                .header("X-Operations-Context", context)
+                                .contentType("application/json")
+                                .content(body))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void supportAvailabilityDoesNotOfferAHaltedSide() throws Exception {
+        String owner = login("demo.client");
+        sql(
+                "UPDATE instrument_trading_policies SET buy_allowed=false WHERE instrument_id="
+                        + instrument);
+        mvc.perform(
+                        get("/api/workspace/client/trading-availability")
+                                .param("instrumentId", Integer.toString(instrument))
+                                .header("Authorization", "Bearer " + owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("buyAllowed").value(false))
+                .andExpect(jsonPath("sellAllowed").value(true))
+                .andExpect(jsonPath("code").value("SELL_ONLY"));
+    }
+
+    @Test
+    void supportProjectionCannotAdvanceWithoutHistoryAndReadinessReportsSchema() throws Exception {
+        String owner = login("demo.client");
+        createSupport(owner, key(), supportBody(null, "Account question"));
+        assertThrows(
+                SQLException.class,
+                () -> sql("UPDATE support_cases SET version=version+1,status='RESOLVED'"));
+        mvc.perform(
+                        get("/api/operations/readiness")
+                                .header("Authorization", "Bearer " + login("demo.operations")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("supportSchemaReady").value(true));
+    }
+
+    @Test
+    void supportAvailabilityCannotHideDisabledInstrumentBehindMissingBank() throws Exception {
+        String owner = login("demo.client");
+        sql("UPDATE bank_references SET active=false,is_default=false WHERE client_id=" + client);
+        sql(
+                "UPDATE instrument_trading_policies SET enabled=false WHERE instrument_id="
+                        + instrument);
+        mvc.perform(
+                        get("/api/workspace/client/trading-availability")
+                                .param("instrumentId", Integer.toString(instrument))
+                                .header("Authorization", "Bearer " + owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("buyAllowed").value(false))
+                .andExpect(jsonPath("sellAllowed").value(false));
+    }
+
+    @Test
+    void supportFullLifecycleLeavesPendingFilledAndRejectedFinancialSnapshotsUnchanged()
+            throws Exception {
+        int rejected = id(submit(key(), new Command(instrument, "SELL", "1", "MARKET")));
+        int pending = id(submit(key(), buy("1")));
+        int filled = id(submit(key(), buy("1")));
+        fill(filled, "49", "50");
+        String owner = login("demo.client"), staff = login("demo.operations");
+        operationsGrant("demo.operations", client, "CASE_READ");
+        operationsGrant("demo.operations", client, "CASE_UPDATE");
+        var tables =
+                List.of(
+                        "client_trades",
+                        "client_cash_accounts",
+                        "client_positions",
+                        "cash_journal",
+                        "position_journal",
+                        "order_fills",
+                        "order_reservations",
+                        "order_execution_jobs",
+                        "order_events",
+                        "order_quote_observations",
+                        "order_rule_decisions");
+        var before = new LinkedHashMap<String, String>();
+        for (String table : tables)
+            before.put(
+                    table,
+                    scalar(
+                            "SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),"
+                                + " '[]'::jsonb)::text FROM "
+                                    + table
+                                    + " t"));
+        for (int order : new int[] {pending, filled, rejected}) {
+            String ref =
+                    json.readTree(createSupport(owner, key(), supportBody(order, "Receipt review")))
+                            .path("reference")
+                            .asText();
+            String publicPath = "/api/support/cases/" + ref,
+                    staffPath = "/api/operations/cases/" + ref;
+            supportWrite(
+                    staff,
+                    staffPath + "/replies",
+                    key(),
+                    1,
+                    "The retained receipt is under review.",
+                    null);
+            supportWrite(
+                    staff,
+                    staffPath + "/transitions",
+                    key(),
+                    2,
+                    "The public explanation is now available.",
+                    "RESOLVED");
+            supportWrite(
+                    owner,
+                    publicPath + "/reopen",
+                    key(),
+                    3,
+                    "Please clarify one more receipt detail.",
+                    null);
+            for (String table : tables)
+                assertEquals(
+                        before.get(table),
+                        scalar(
+                                "SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),"
+                                    + " '[]'::jsonb)::text FROM "
+                                        + table
+                                        + " t"),
+                        table);
+        }
     }
 }

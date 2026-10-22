@@ -53,7 +53,7 @@ describe('AuthService authoritative initialization', () => {
   it('bootstraps staff identity without a client profile', async () => {
     const auth = await login(['TRADING_OPS']);
     expect(auth.roles()).toEqual(['TRADING_OPS']);
-    expect(auth.home()).toBe('/operations/instruments');
+    expect(auth.home()).toBe('/operations/overview');
     http.expectNone((r) => r.url.endsWith('/profile'));
   });
   it('loads client profile only on entering client context', async () => {

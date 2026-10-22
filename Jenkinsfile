@@ -72,6 +72,10 @@ pipeline {
                     docker build -t "tadpole-frontend:${image_tag}" -t tadpole-frontend:latest -f frontend/Dockerfile frontend
                     docker build -t "tadpole-nginx:${image_tag}" -t tadpole-nginx:latest -f nginx/Dockerfile nginx
                 '''
+                sh 'python3 scripts/test-client-compose.py'
+                sh 'python3 scripts/test-operations-demo.py'
+                sh 'python3 scripts/test-hardened-config.py'
+                sh 'python3 scripts/test-client-recovery.py'
             }
         }
 
@@ -81,7 +85,7 @@ pipeline {
         //         sh 'python3 scripts/test-hardened-config.py'
         //     }
         // }
-        
+
         stage('Archive Backend Artifact') {
             steps {
                 archiveArtifacts artifacts: 'backend/target/*.jar', fingerprint: true

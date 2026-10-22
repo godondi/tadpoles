@@ -14,7 +14,7 @@ import { filter } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TopNavComponent } from '../shared/top-nav/top-nav.component';
 import { AuthService } from '../core/auth/auth.service';
-import { isInstrumentManagementRoute, WORKSPACES } from '../core/auth/workspace-policy';
+import { routeRole, WORKSPACES } from '../core/auth/workspace-policy';
 
 @Component({
   selector: 'app-authenticated-shell',
@@ -81,7 +81,7 @@ export class AuthenticatedShellComponent {
     WORKSPACES.filter((w) => this.auth.roles().includes(w.role)).map((w) => ({
       ...w,
       links: w.links.filter(
-        (link) => !isInstrumentManagementRoute(link[1]) || !this.auth.roles().includes('CLIENT'),
+        (link) => routeRole(link[1]) !== 'TRADING_OPS' || !this.auth.roles().includes('CLIENT'),
       ),
     })),
   );
