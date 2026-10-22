@@ -9,6 +9,7 @@ import { CatalogRefreshService } from '../../core/api/catalog-refresh.service';
 import { OperationsContextComponent } from './operations-context.component';
 import { EvidenceTableComponent } from './evidence-table.component';
 import { OperationsResource } from './operations-resource';
+import { createIdempotencyKey } from '../../core/idempotency-key';
 
 @Component({
   selector: 'app-operations-investigation',
@@ -234,7 +235,15 @@ export class OperationsOrderDetailComponent {
   export() {
     this.exporting.set(true);
     this.actionMessage.set('');
-    this.exportKey ||= crypto.randomUUID();
+    if (!this.exportKey) {
+      const key = createIdempotencyKey();
+      if (!key) {
+        this.actionMessage.set('Unable to create a secure export reference. Please reload and try again.');
+        this.exporting.set(false);
+        return;
+      }
+      this.exportKey = key;
+    }
     this.api
       .createExport(this.id, this.exportKey)
       .pipe(takeUntil(this.cancel), takeUntilDestroyed(this.destroy))

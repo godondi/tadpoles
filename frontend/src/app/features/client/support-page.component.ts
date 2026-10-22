@@ -17,6 +17,7 @@ import { SupportUpdatesComponent } from './support-updates.component';
 import { OperationsContextComponent } from '../operations/operations-context.component';
 import { CatalogRefreshService } from '../../core/api/catalog-refresh.service';
 import { PageResource } from '../../shared/workspace/page-resource';
+import { createIdempotencyKey } from '../../core/idempotency-key';
 
 @Component({
   selector: 'app-support-page',
@@ -498,7 +499,14 @@ export class SupportPageComponent {
       );
       return;
     }
-    this.requestKey ||= crypto.randomUUID();
+    if (!this.requestKey) {
+      const key = createIdempotencyKey();
+      if (!key) {
+        this.notice.set('Unable to create a secure request reference. Please reload and try again.');
+        return;
+      }
+      this.requestKey = key;
+    }
     if (!this.remember()) return;
     this.submitted = body;
     this.busy.set(true);
@@ -572,7 +580,16 @@ export class SupportPageComponent {
       this.writeNotice.set('Enter 10–4000 characters.');
       return;
     }
-    this.pendingWrite ??= { key: crypto.randomUUID(), action, body };
+    if (!this.pendingWrite) {
+      const key = createIdempotencyKey();
+      if (!key) {
+        this.writeNotice.set(
+          'Unable to create a secure request reference. Please reload and try again.',
+        );
+        return;
+      }
+      this.pendingWrite = { key, action, body };
+    }
     this.pendingWrite.body = body;
     if (!this.rememberWrite()) return;
     this.writeBusy.set(true);

@@ -4,11 +4,19 @@ The [provider-backed USD trading guide](../impDocs/Frontend/ClientPageImplementa
 
 ## Fresh local Compose
 
-Use Docker Compose with Node/Maven builds performed by the project Dockerfiles. Copy `.env.template` only if `.env` does not already exist. Configure the required provider URL/key, database settings, signing key and ports locally; never publish their values. Then run:
+Use Docker Compose with Node/Maven builds performed by the project Dockerfiles. Copy `.env.template` only if `.env` does not already exist. Configure the required provider URL/key, database settings, signing key and ports locally; never publish their values. `JWT_SECRET` must be a unique secret of at least 32 bytes because the backend signs HS256 tokens with it. Generate one with `openssl rand -base64 32`. Then run:
 
 ```bash
 docker compose config --quiet
 docker compose up --build -d
+```
+
+If the backend exits with `JWT secret must be at least 32 bytes`, replace the
+`JWT_SECRET` value in `.env` with a newly generated value and recreate the backend:
+
+```bash
+openssl rand -base64 32
+docker compose up --build -d backend
 ```
 
 Fresh databases load `database/fresh/001_schema.sql` followed by `002_reference.sql`. The migration service runs before the local demo seed and backend. Local demo setup creates the unique USD 10,000 opening once and validates the 14-symbol catalog. The normal stack never starts the HTTP test fixture. A recognized symbol still requires a fresh quote and explicitly open provider session before trading.
