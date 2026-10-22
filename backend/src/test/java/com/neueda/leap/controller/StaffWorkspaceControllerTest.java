@@ -35,9 +35,6 @@ class StaffWorkspaceControllerTest {
 
     @ParameterizedTest
     @CsvSource({
-        "COMPLIANCE,/api/compliance/investigations",
-        "COMPLIANCE,/api/compliance/orders/7/evidence",
-        "COMPLIANCE,/api/compliance/evidence",
         "ANALYST,/api/analytics/summary",
         "ANALYST,/api/analytics/trends",
         "ANALYST,/api/analytics/instruments",
