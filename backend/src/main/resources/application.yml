@@ -35,3 +35,12 @@ operations:
   policy-version: ${OPERATIONS_POLICY_VERSION:}
   context-seconds: ${OPERATIONS_CONTEXT_SECONDS:0}
   export-seconds: ${OPERATIONS_EXPORT_SECONDS:0}
+
+# Compliance access is fail-closed until an approved policy and account grants exist.
+compliance:
+  access-enabled: ${COMPLIANCE_ACCESS_ENABLED:false}
+  allowed-purposes: ${COMPLIANCE_ALLOWED_PURPOSES:}
+  policy-version: ${COMPLIANCE_POLICY_VERSION:}
+  scope-label: ${COMPLIANCE_SCOPE_LABEL:Assigned accounts only}
+  context-seconds: ${COMPLIANCE_CONTEXT_SECONDS:0}
+  export-seconds: ${COMPLIANCE_EXPORT_SECONDS:0}
