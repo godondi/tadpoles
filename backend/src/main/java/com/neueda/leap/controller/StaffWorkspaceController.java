@@ -10,18 +10,6 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api")
 public class StaffWorkspaceController {
     @GetMapping({
-        "/compliance/investigations",
-        "/compliance/orders/{id}/evidence",
-        "/compliance/evidence"
-    })
-    @PreAuthorize("hasRole('COMPLIANCE')")
-    public void compliance() {
-        unavailable(
-                "Investigation evidence is not available yet. Approved access scopes, purposes and"
-                        + " evidence policies must be configured. Exports are disabled.");
-    }
-
-    @GetMapping({
         "/analytics/summary",
         "/analytics/trends",
         "/analytics/instruments",
