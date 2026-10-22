@@ -11,7 +11,8 @@ INSERT INTO roles (role_name)
     ('TRADING_OPS'),
     ('COMPLIANCE'),
     ('ANALYST'),
-    ('FINANCE')
+    ('FINANCE'),
+    ('ADVISOR')
 ON CONFLICT (role_name)
     DO NOTHING;
 
@@ -25,7 +26,8 @@ WITH demo_accounts (
         ('demo.operations', 'demo.operations@tadpoles.test', 'Demo Operations'),
         ('demo.compliance', 'demo.compliance@tadpoles.test', 'Demo Compliance'),
         ('demo.analyst', 'demo.analyst@tadpoles.test', 'Demo Analyst'),
-        ('demo.finance', 'demo.finance@tadpoles.test', 'Demo Finance'))
+        ('demo.finance', 'demo.finance@tadpoles.test', 'Demo Finance'),
+        ('demo.advisor', 'demo.advisor@tadpoles.test', 'Demo Advisor'))
 INSERT INTO users (username, email, password_hash, display_name, enabled)
 SELECT
     username,
@@ -48,7 +50,8 @@ WITH demo_roles (
         ('demo.operations', 'demo.operations@tadpoles.test', 'TRADING_OPS'),
         ('demo.compliance', 'demo.compliance@tadpoles.test', 'COMPLIANCE'),
         ('demo.analyst', 'demo.analyst@tadpoles.test', 'ANALYST'),
-        ('demo.finance', 'demo.finance@tadpoles.test', 'FINANCE'))
+        ('demo.finance', 'demo.finance@tadpoles.test', 'FINANCE'),
+        ('demo.advisor', 'demo.advisor@tadpoles.test', 'ADVISOR'))
 INSERT INTO user_roles (user_id, role_id)
 SELECT
     users.user_id,
@@ -88,6 +91,44 @@ WHERE
     AND users.email = users.username || '@tadpoles.test'
 ON CONFLICT (user_id)
     DO NOTHING;
+
+-- A real linked advisor identity, not a browser-side login or ownership bypass.
+INSERT INTO advisors (user_id, advisor_name)
+SELECT user_id, 'Demo Advisor'
+FROM users
+WHERE username = 'demo.advisor'
+    AND email = 'demo.advisor@tadpoles.test'
+ON CONFLICT (user_id)
+    DO NOTHING;
+
+-- Only the designated positive demo fixture is assigned. Never silently reassign
+-- an existing client, and leave demo.client2 and all other assignments untouched.
+DO $$
+DECLARE
+    demo_advisor_id integer;
+    existing_advisor_id integer;
+BEGIN
+    SELECT a.advisor_id INTO STRICT demo_advisor_id
+    FROM advisors a JOIN users u USING (user_id)
+    WHERE u.username = 'demo.advisor'
+        AND u.email = 'demo.advisor@tadpoles.test';
+
+    SELECT c.advisor_id INTO STRICT existing_advisor_id
+    FROM clients c JOIN users u USING (user_id)
+    WHERE u.username = 'demo.client'
+        AND u.email = 'demo.client@tadpoles.test'
+    FOR UPDATE OF c;
+
+    IF existing_advisor_id IS NOT NULL AND existing_advisor_id <> demo_advisor_id THEN
+        RAISE EXCEPTION 'demo.client already has a different advisor; preserve the existing assignment and resolve explicitly';
+    END IF;
+
+    UPDATE clients c SET advisor_id = demo_advisor_id
+    FROM users u
+    WHERE c.user_id = u.user_id AND u.username = 'demo.client'
+        AND u.email = 'demo.client@tadpoles.test' AND c.advisor_id IS NULL;
+END
+$$;
 
 -- Demo identities bypass registration, so create their empty ledger accounts explicitly.
 -- Never replace balances, grants or quarantine flags on a repeated seed.

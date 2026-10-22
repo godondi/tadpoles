@@ -53,6 +53,12 @@ export const WORKSPACES = [
       ['Reconciliation', '/finance/reconciliation'],
     ],
   },
+  {
+    role: 'ADVISOR',
+    label: 'Advisor workspace',
+    home: '/advisor/clients',
+    links: [['Assigned clients', '/advisor/clients']],
+  },
 ] as const;
 export type WorkspaceRole = (typeof WORKSPACES)[number]['role'];
 export function normalizeRoles(value: unknown): WorkspaceRole[] {
@@ -79,6 +85,7 @@ export function routeRole(url: string): WorkspaceRole | null {
   if (/^\/compliance\/(investigations(?:\/\d+)?|evidence)$/.test(path)) return 'COMPLIANCE';
   if (/^\/analytics\/(overview|trends|instruments)$/.test(path)) return 'ANALYST';
   if (/^\/finance\/(overview|reconciliation)$/.test(path)) return 'FINANCE';
+  if (/^\/advisor\/clients(?:\/[1-9]\d*)?$/.test(path)) return 'ADVISOR';
   return null;
 }
 export function safeReturnUrl(value: string | null, roles: readonly string[]): string {

@@ -196,6 +196,20 @@ export const routes: Routes = [
             canActivate: client,
             loadComponent: () => import('./profile').then((m) => m.ProfileComponent),
           },
+          {
+            path: 'advisor/clients',
+            loadComponent: () =>
+              import('./features/advisor/advisor-clients-page.component').then(
+                (m) => m.AdvisorClientsPageComponent,
+              ),
+          },
+          {
+            path: 'advisor/clients/:id',
+            loadComponent: () =>
+              import('./features/advisor/advisor-client-detail-page.component').then(
+                (m) => m.AdvisorClientDetailPageComponent,
+              ),
+          },
           { path: 'trades', redirectTo: 'app/orders', pathMatch: 'full' },
           {
             path: 'trade/:symbol',

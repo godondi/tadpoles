@@ -15,6 +15,9 @@ import { OrderStatusService } from '../../core/api/order-status.service';
 import { PageResource } from '../../shared/workspace/page-resource';
 import { RequestStateComponent } from '../../shared/workspace/request-state.component';
 import { OrdersTableComponent } from '../../shared/workspace/orders-table.component';
+import { ClientAdvisoryApi } from './advisory/client-advisory-api.service';
+import { ClientAdvisory } from './advisory/client-advisory-models';
+import { ClientRecommendationsComponent } from './advisory/client-recommendations.component';
 
 @Component({
   selector: 'app-account-page',
@@ -24,6 +27,7 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
     RouterLink,
     RequestStateComponent,
     OrdersTableComponent,
+    ClientRecommendationsComponent,
   ],
   template: `
     <header class="workspace-heading">
@@ -173,6 +177,7 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
                   <th>Owned</th>
                   <th>Reserved to sell</th>
                   <th>Available to sell</th>
+                  <th scope="col">Advisor’s</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -186,6 +191,15 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
                     <td>{{ p.owned }}</td>
                     <td>{{ p.reserved }}</td>
                     <td>{{ p.available }}</td>
+                    <td>
+                      @if (advisory.error()) {
+                        <span role="status">Unavailable</span>
+                      } @else if (advisory.loading() && !advisory.data()) {
+                        <span role="status">Loading…</span>
+                      } @else {
+                        {{ guidanceStatus(p.instrumentId) }}
+                      }
+                    </td>
                     <td>
                       <a
                         [routerLink]="['/app/trade', p.instrumentId]"
@@ -210,6 +224,14 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
           </div>
         }
       </section>
+      <app-client-recommendations
+        [advisory]="advisory.data()"
+        [positions]="data.currentPositions ?? []"
+        [loading]="advisory.loading()"
+        [error]="advisory.error()"
+        [status]="advisory.status()"
+        (retry)="loadAdvisory()"
+      />
       @if (data.migrationExceptions?.length) {
         <section class="notice">
           <h2>Historical records need review</h2>
@@ -245,9 +267,11 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
 })
 export class AccountPageComponent {
   private readonly api = inject(WorkspaceApi);
+  private readonly advisoryApi = inject(ClientAdvisoryApi);
   readonly resource = new PageResource<Portfolio>();
   readonly recent = new PageResource<Page<Order>>();
   readonly valuation = new PageResource<PortfolioValuation>();
+  readonly advisory = new PageResource<ClientAdvisory>();
 
   constructor() {
     this.load();
@@ -261,6 +285,11 @@ export class AccountPageComponent {
     this.resource.load(this.api.portfolio(), true);
     this.loadOrders();
     this.loadValuation();
+    this.loadAdvisory();
+  }
+
+  loadAdvisory() {
+    this.advisory.load(this.advisoryApi.advisory(), true);
   }
 
   loadValuation() {
@@ -273,5 +302,11 @@ export class AccountPageComponent {
 
   hasUnits(value: string) {
     return /[1-9]/.test(value);
+  }
+
+  guidanceStatus(instrumentId: number): string {
+    if (this.advisory.error() || !this.advisory.data()) return 'Unavailable';
+    const status = this.advisory.data()?.guidance.find((item) => item.instrumentId === instrumentId)?.status;
+    return !status || status === 'NONE' ? 'N/A' : status;
   }
 }
