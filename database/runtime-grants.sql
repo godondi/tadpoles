@@ -103,6 +103,15 @@ GRANT SELECT, INSERT ON operations_access_contexts, operations_access_events,
 REVOKE UPDATE, DELETE, TRUNCATE ON operations_access_contexts, operations_access_events,
     operations_evidence_exports, order_decision_contexts, reconciliation_findings FROM :"runtime_role";
 
+-- Compliance access is separate from Operations and cannot provision or widen grants.
+GRANT SELECT ON compliance_access_grants, compliance_grant_events TO :"runtime_role";
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON compliance_access_grants, compliance_grant_events
+    FROM :"runtime_role";
+GRANT SELECT, INSERT ON compliance_access_contexts, compliance_access_events,
+    compliance_evidence_exports TO :"runtime_role";
+REVOKE UPDATE, DELETE, TRUNCATE ON compliance_access_contexts, compliance_access_events,
+    compliance_evidence_exports FROM :"runtime_role";
+
 GRANT SELECT, INSERT ON support_cases, support_case_events, support_case_notes, support_case_requests, support_case_exports TO :"runtime_role";
 REVOKE UPDATE ON support_cases FROM :"runtime_role";
 GRANT UPDATE(status,version,updated_at) ON support_cases TO :"runtime_role";

@@ -45,6 +45,13 @@ services:
       OPERATIONS_POLICY_VERSION: ${OPERATIONS_POLICY_VERSION:-local-demo-v1}
       OPERATIONS_CONTEXT_SECONDS: ${OPERATIONS_CONTEXT_SECONDS:-3600}
       OPERATIONS_EXPORT_SECONDS: ${OPERATIONS_EXPORT_SECONDS:-3600}
+      # Local demo defaults. Hardened deployments require explicit Compliance policy/grants.
+      COMPLIANCE_ACCESS_ENABLED: ${COMPLIANCE_ACCESS_ENABLED:-true}
+      COMPLIANCE_ALLOWED_PURPOSES: ${COMPLIANCE_ALLOWED_PURPOSES:-ORDER_REVIEW}
+      COMPLIANCE_POLICY_VERSION: ${COMPLIANCE_POLICY_VERSION:-local-compliance-v1}
+      COMPLIANCE_SCOPE_LABEL: ${COMPLIANCE_SCOPE_LABEL:-Assigned accounts only}
+      COMPLIANCE_CONTEXT_SECONDS: ${COMPLIANCE_CONTEXT_SECONDS:-3600}
+      COMPLIANCE_EXPORT_SECONDS: ${COMPLIANCE_EXPORT_SECONDS:-3600}
       # Fictitious local demo only. Hardened deployments require a separately provisioned key.
       BANKING_ENCRYPTION_KEY: ${BANKING_ENCRYPTION_KEY:-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
@@ -111,9 +118,12 @@ services:
       PGUSER: ${POSTGRES_USER}
       PGPASSWORD: ${POSTGRES_PASSWORD}
       PGDATABASE: ${POSTGRES_DB}
+      COMPLIANCE_ACCESS_ENABLED: ${COMPLIANCE_ACCESS_ENABLED:-true}
+      COMPLIANCE_LOCAL_DEMO_SETUP: ${COMPLIANCE_LOCAL_DEMO_SETUP:-true}
     volumes:
       - ./database/demo/role_workspaces.sql:/role_workspaces.sql:ro
       - ./database/demo/operations_workspace.sql:/operations_workspace.sql:ro
+      - ./database/demo/compliance_workspace.sql:/compliance_workspace.sql:ro
       - ./database/demo/seed-role-workspaces.sh:/seed-role-workspaces.sh:ro
     command: ["sh", "/seed-role-workspaces.sh"]
     depends_on:
