@@ -35,13 +35,39 @@ The repository does not yet contain an authoritative reporting feed for portfoli
 
 The analytics service remains fail-closed in authoritative mode. The default local Compose configuration now seeds fixed pseudonymous rows into the separate reporting database and labels every response `DEMONSTRATION`. A production-like configuration without an approved reporting loader still returns `503`. The page does not display notebook values, random values, or unlabeled zeros.
 
+## 3. Switching analyst data modes
+
+The mode is selected by `ANALYTICS_DATA_MODE` in the Compose environment file. The checked-in local default is `demo`.
+
+### Demo mode (available now)
+
+1. Set `ANALYTICS_DATA_MODE=demo` in `.env`.
+2. Run `docker-compose up -d --force-recreate analytics-api` (or the normal `docker-compose up -d`).
+3. Sign in as `demo.analyst` and open Analytics. The response metadata contains `data_mode=DEMONSTRATION`, and the UI displays the “Demonstration data” warning.
+
+The Compose seed job runs with the reporting-database owner credential. The API continues to connect as the read-only `analytics_reader`; demo mode queries only rows marked `is_demo=true` and the `demo-fixture` watermark. The seed is repeatable and does not require deleting the reporting volume.
+
+### Authoritative/live mode (not connected yet)
+
+1. Set `ANALYTICS_DATA_MODE=authoritative` in `.env`.
+2. Recreate the API with `docker-compose up -d --force-recreate analytics-api`.
+3. The API then selects only `is_demo=false` rows and the authoritative watermark. Demo fixtures remain stored but are not selected.
+
+**Important:** this repository does not yet include the committed outbox/CDC loader or approved live portfolio/benchmark feed. Therefore authoritative mode currently returns `503`/unavailable; changing the setting does not turn the fixed demo fixtures into live data. Do not advertise authoritative mode as operational until the loader, definitions, reconciliation, and freshness gates described below are complete.
+
+To switch back, restore `ANALYTICS_DATA_MODE=demo` and recreate `analytics-api`. Do not use `docker-compose down -v` for a mode switch; it deletes the persistent reporting database and unrelated local data.
+
+### What the demo charts represent
+
+The fixture is deterministic, not captured market history. It uses weekday-only dates through the latest closed fixture date, staggered instrument activity, variable fill counts and quantities, and five independently varying cumulative return paths. The API re-indexes the selected performance window to 100 at its first point. These choices make the example shapes less repetitive while keeping rebuilds and tests reproducible. Do not use the demo curves to infer real returns, benchmark performance, market events, or execution behavior.
+
 This behavior is required by the analytics design and supports:
 
 - BR-16: analytics must not contend with live transactional workloads.
 - BR-17: displayed metrics must have approved definitions.
 - BR-09 and BR-14: transactional and legal state remain owned by the Spring domain.
 
-## 3. How the performance visualization works
+## 4. How the performance visualization works
 
 ### Response shape
 
@@ -84,7 +110,7 @@ A connected service returns a list of date points:
 
 ### Normalization rule
 
-The values should be indexed to 100 at the beginning of the selected period. The service that produces these values must document:
+The values are indexed to 100 at the beginning of the selected period. The local demo service applies this normalization to its deterministic fixture path. Authoritative values still require an approved loader and must document:
 
 - Whether portfolio values include cash, fees, dividends, and corporate actions.
 - Which price and benchmark providers are used.
@@ -107,7 +133,7 @@ The three buttons are intentionally explicit:
 
 The page's date filters remain visible because the reporting period and the selected visualization window are separate policy decisions. A future implementation may constrain the date range server-side or make the period selector update the date range, but it must keep the contract unambiguous.
 
-## 4. How the holdings visualization works
+## 5. How the holdings visualization works
 
 ### Response shape
 
@@ -136,11 +162,11 @@ The component sorts by numeric `market_value` in descending order:
 1. Keep rows 1 through 5.
 2. If there are more than five rows, sum the remaining market values into `Other`.
 3. Sum the remaining percentages into `Other`.
-4. Use the first remainder currency for the `Other` display. This is only valid when the reporting contract guarantees one currency; multi-currency reporting must be separated into currency groups or use an approved conversion basis.
+4. Keep remainder holdings separated by currency. The default demo portfolio uses one valuation currency; a multi-currency response must not be reduced to one combined doughnut without an approved FX basis.
 
 The chart slice size uses market value. The exact table shows both market value and percentage, so a user can inspect the aggregation instead of relying on a visual angle.
 
-## 5. How to use the page today
+## 6. How to use the page today
 
 1. In the default local Compose deployment, sign in with `demo.analyst` and password `RoleDemo2026!`; the verified JWT contains `ANALYST`.
 2. Open `/analytics/overview`.
@@ -152,7 +178,7 @@ The chart slice size uses market value. The exact table shows both market value 
 
 The `trends` and `instruments` tabs continue to use their existing aggregate-report contracts. The new portfolio visualizations are shown on the overview only because they are portfolio-level context rather than instrument-activity rankings.
 
-## 6. How to connect real data
+## 7. How to connect real data
 
 ### Step 1: Approve definitions
 
@@ -184,9 +210,9 @@ The Spring transaction service remains authoritative for live order, fill, cash,
 
 Benchmark data should enter through a separately approved market-data ingestion path. The loader should preserve provider timestamps and distinguish business event time from received time.
 
-### Step 4: Implement repository queries
+### Step 4: Extend the existing repository queries for the approved source
 
-Replace `unavailable()` in the two FastAPI routes with bounded reporting queries. Requirements:
+The local demonstration repository queries already exist. Replace or extend the demo-only source path with bounded authoritative reporting queries only after the source and definitions are approved. Requirements:
 
 - Read only from the separate reporting database.
 - Validate `period`, date range, timezone, and filters.
@@ -197,7 +223,7 @@ Replace `unavailable()` in the two FastAPI routes with bounded reporting queries
 - Return delayed/partial metadata when only some data is affected.
 - Enforce query timeout, row bounds, and analyst entitlement.
 
-### Step 5: Add integration fixtures
+### Step 5: Add authoritative integration fixtures
 
 Create deterministic PostgreSQL fixtures for:
 
@@ -212,7 +238,7 @@ Create deterministic PostgreSQL fixtures for:
 
 Add the two new paths to `docs/api.yaml` with successful response examples and `401`, `403`, `422`, `429`, and `503` responses. Keep the examples clearly marked as contract examples, not production data.
 
-## 7. Test strategy
+## 8. Test strategy
 
 Run focused tests first:
 
@@ -221,9 +247,9 @@ cd frontend && npm test -- --watch=false
 cd analytics-service && pytest -q
 ```
 
-The current environment used for this implementation did not expose `node`, `npm`, `npx`, or `pytest`, so executable test runs could not be completed here. Static workspace diagnostics reported no errors in the touched TypeScript or Python files.
+Use the commands above after changing either mode or fixture data. The demo fixtures are checked into the reporting seed; authoritative-mode tests should continue proving fail-closed behavior until a real loader is connected.
 
-When runtimes are available, add these assertions before enabling live data:
+Before enabling live data, retain or add these assertions:
 
 - Angular HTTP tests verify exact URLs, auth headers, filters, and period values.
 - Component tests verify the three periods, loading/error states, exact tables, and `Other` aggregation.
@@ -234,11 +260,11 @@ When runtimes are available, add these assertions before enabling live data:
 
 Then run the broader project gates from `AnalyticsPageImplementation.MD`.
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
 ### The charts show unavailable
 
-This is expected until the reporting source is connected. Check the FastAPI readiness endpoint, reporting database health, loader watermark, and service logs without exposing tokens or protected values.
+In authoritative mode this is expected until the reporting source is connected. In demo mode, check `ANALYTICS_DATA_MODE=demo`, the seed job exit status, FastAPI readiness, and `data_mode=DEMONSTRATION` metadata. Check service logs without exposing tokens or protected values.
 
 ### A chart is blank after a successful response
 
@@ -259,7 +285,7 @@ Confirm the response is sorted by market value in the component and that the sou
 
 The frontend does not intentionally replace missing values with zero. Inspect the source payload and definition version. A missing value should remain missing and the report should carry a warning or partial status.
 
-## 9. Files changed by this refactor
+## 10. Files changed by this refactor
 
 - `frontend/src/app/core/api/analytics-api.service.ts`
 - `frontend/src/app/core/api/analytics-api.service.spec.ts`

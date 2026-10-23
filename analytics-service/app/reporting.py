@@ -363,12 +363,21 @@ def portfolio_performance(
     rows = session.execute(
         text(
             """
-            SELECT snapshot_date, portfolio_value, sp500_value, dow_jones_value,
-                   nasdaq_100_value, russell_2000_value
-            FROM reporting.fact_portfolio_performance
-            WHERE is_demo = :is_demo
-              AND snapshot_date BETWEEN :window_start AND :window_end
-            ORDER BY snapshot_date
+             WITH selected AS (
+              SELECT snapshot_date, portfolio_value, sp500_value, dow_jones_value,
+                  nasdaq_100_value, russell_2000_value
+              FROM reporting.fact_portfolio_performance
+              WHERE is_demo = :is_demo
+                AND snapshot_date BETWEEN :window_start AND :window_end
+             )
+             SELECT snapshot_date,
+                 portfolio_value / NULLIF(FIRST_VALUE(portfolio_value) OVER (ORDER BY snapshot_date), 0) * 100 AS portfolio_value,
+                 sp500_value / NULLIF(FIRST_VALUE(sp500_value) OVER (ORDER BY snapshot_date), 0) * 100 AS sp500_value,
+                 dow_jones_value / NULLIF(FIRST_VALUE(dow_jones_value) OVER (ORDER BY snapshot_date), 0) * 100 AS dow_jones_value,
+                 nasdaq_100_value / NULLIF(FIRST_VALUE(nasdaq_100_value) OVER (ORDER BY snapshot_date), 0) * 100 AS nasdaq_100_value,
+                 russell_2000_value / NULLIF(FIRST_VALUE(russell_2000_value) OVER (ORDER BY snapshot_date), 0) * 100 AS russell_2000_value
+             FROM selected
+             ORDER BY snapshot_date
             """
         ),
         {"is_demo": _is_demo(), "window_start": window_start, "window_end": filters.period_end},
