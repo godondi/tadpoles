@@ -15,6 +15,8 @@ def token(roles: list[str]) -> str:
         {
             "sub": "analyst-1",
             "roles": roles,
+            "iss": "tadpoles",
+            "aud": ["tadpoles-workspace"],
             "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
         },
         settings.jwt_secret or "test-jwt-secret-test-jwt-secret-123456",
@@ -30,6 +32,12 @@ def test_live_health_does_not_require_reporting_data() -> None:
     response = client.get("/health/live")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+def test_ready_health_reports_unavailable_without_reporting_database() -> None:
+    response = client.get("/health/ready")
+    assert response.status_code == 503
+    assert "Reporting database" in response.json()["message"]
 
 
 def test_analytics_requires_a_token() -> None:
@@ -53,13 +61,22 @@ def test_analyst_sees_explicit_unavailable_state() -> None:
         headers=headers(["ANALYST"]),
     )
     assert response.status_code == 503
-    assert "reporting source" in response.json()["detail"]
+    assert "reporting database" in response.json()["detail"]
 
 
 def test_invalid_date_order_is_rejected_before_reporting_query() -> None:
     response = client.get(
         "/api/analytics/trends",
         params={"from": "2026-10-03", "to": "2026-10-02"},
+        headers=headers(["ANALYST"]),
+    )
+    assert response.status_code == 422
+
+
+def test_trends_rejects_unapproved_measure() -> None:
+    response = client.get(
+        "/api/analytics/trends",
+        params={"from": "2026-10-01", "to": "2026-10-02", "measure": "not_a_metric"},
         headers=headers(["ANALYST"]),
     )
     assert response.status_code == 422
@@ -73,4 +90,4 @@ def test_portfolio_visualization_endpoints_keep_the_reporting_boundary() -> None
             headers=headers(["ANALYST"]),
         )
         assert response.status_code == 503
-        assert "reporting source" in response.json()["detail"]
+        assert "reporting database" in response.json()["detail"]

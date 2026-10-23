@@ -4,6 +4,7 @@ import { buildAnalyticsApiUrl } from './api-url';
 
 export type AnalyticsView = 'overview' | 'trends' | 'instruments';
 export type Granularity = 'day' | 'week' | 'month';
+export type AnalyticsMeasure = 'fills_booked' | 'orders_filled' | 'executed_quantity';
 export type ReportingStatus = 'CURRENT' | 'DATA_DELAYED' | 'LOADING' | 'PARTIAL' | 'UNAVAILABLE';
 
 export interface AnalyticsFilters {
@@ -19,6 +20,7 @@ export interface AnalyticsFilters {
 
 export interface ReportMetadata {
   reporting_status: ReportingStatus;
+  data_mode: 'DEMONSTRATION' | 'AUTHORITATIVE';
   data_as_of: string | null;
   last_successful_load_at: string | null;
   period_start: string;
@@ -37,6 +39,8 @@ export interface MetricValue {
   currency: string | null;
   definition: string;
   definition_pending: boolean;
+  event_date?: string | null;
+  definition_version?: string | null;
 }
 
 export interface SummaryResponse {
@@ -55,7 +59,7 @@ export interface TrendPoint {
 export interface TrendsResponse {
   filters: AnalyticsFilters;
   metadata: ReportMetadata;
-  measure: string;
+  measure: AnalyticsMeasure;
   unit: string;
   currency: string | null;
   points: TrendPoint[];
@@ -67,7 +71,7 @@ export interface InstrumentRow {
   display_name: string;
   market: string;
   asset_class: string;
-  measure: string;
+  measure: AnalyticsMeasure;
   value: number | string;
   unit: string;
   currency: string | null;
@@ -76,7 +80,7 @@ export interface InstrumentRow {
 export interface InstrumentsResponse {
   filters: AnalyticsFilters;
   metadata: ReportMetadata;
-  measure: string;
+  measure: AnalyticsMeasure;
   page: number;
   page_size: number;
   total: number;
@@ -111,7 +115,7 @@ export interface PortfolioHoldingsResponse {
   filters: AnalyticsFilters;
   metadata: ReportMetadata;
   holdings: HoldingAllocation[];
-  total_market_value: number | string;
+  total_market_value: number | string | null;
   currency: string | null;
   message?: string | null;
 }
@@ -134,15 +138,15 @@ export class AnalyticsApiService {
     });
   }
 
-  trends(filters: AnalyticsFilters) {
+  trends(filters: AnalyticsFilters, measure: AnalyticsMeasure = 'fills_booked') {
     return this.http.get<TrendsResponse>(this.url('/api/analytics/trends'), {
-      params: this.params(filters),
+      params: this.params(filters).set('measure', measure),
     });
   }
 
-  instruments(filters: AnalyticsFilters, measure = 'fills_booked', page = 1) {
+  instruments(filters: AnalyticsFilters, measure: AnalyticsMeasure = 'fills_booked', page = 1, pageSize = 25) {
     return this.http.get<InstrumentsResponse>(this.url('/api/analytics/instruments'), {
-      params: this.params(filters).set('measure', measure).set('page', page),
+      params: this.params(filters).set('measure', measure).set('page', page).set('page_size', pageSize),
     });
   }
 
