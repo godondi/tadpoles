@@ -114,6 +114,13 @@ GRANT UPDATE(last_event) ON support_read_state TO :"runtime_role";
 GRANT SELECT, INSERT ON support_read_state TO :"runtime_role";
 REVOKE DELETE, TRUNCATE ON support_read_state FROM :"runtime_role";
 
+-- Advisory writes append their own history through a narrowly scoped SECURITY DEFINER trigger.
+GRANT SELECT, INSERT, UPDATE ON advisor_guidance, advisor_recommendations TO :"runtime_role";
+REVOKE DELETE, TRUNCATE ON advisor_guidance, advisor_recommendations FROM :"runtime_role";
+GRANT SELECT ON advisor_guidance_history, advisor_recommendation_history TO :"runtime_role";
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON advisor_guidance_history, advisor_recommendation_history FROM :"runtime_role";
+REVOKE ALL ON FUNCTION append_advisor_history(), guard_advisor_projection() FROM :"runtime_role";
+
 REVOKE TRUNCATE, TRIGGER ON ALL TABLES IN SCHEMA public FROM :"runtime_role";
 
 REVOKE CREATE ON SCHEMA public FROM :"runtime_role";

@@ -58,7 +58,8 @@ class FreshTradingSchemaTest extends AbstractPostgresIntegrationTest {
                     "009_quote_cache_age.sql",
                     "010_quote_cache_twenty_minutes.sql",
                     "011_operations_workspace.sql",
-                    "012_managed_support.sql"
+                    "012_managed_support.sql",
+                    "013_advisor_workspace.sql"
                 }) executeSqlScript(Path.of("../database/migrations/" + file));
         var upgraded = shape();
         try (var c = newConnection();
@@ -73,7 +74,7 @@ class FreshTradingSchemaTest extends AbstractPostgresIntegrationTest {
                 var s = c.createStatement();
                 var r = s.executeQuery("SELECT count(*) FROM schema_migrations")) {
             r.next();
-            assertEquals(10, r.getInt(1));
+            assertEquals(11, r.getInt(1));
         }
     }
 }
