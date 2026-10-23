@@ -11,6 +11,14 @@ const staff = () =>
   import('./shared/workspace/staff-page.component').then((m) => m.StaffPageComponent);
 const analytics = () =>
   import('./features/analytics/analytics-page.component').then((m) => m.AnalyticsPageComponent);
+const financeOverview = () =>
+  import('./features/finance/overview/finance-overview.component').then(
+    (m) => m.FinanceOverviewComponent,
+  );
+const financeReconciliation = () =>
+  import('./features/finance/reconciliation/finance-reconciliation.component').then(
+    (m) => m.FinanceReconciliationComponent,
+  );
 const message = () =>
   import('./shared/workspace/message-page.component').then((m) => m.MessagePageComponent);
 const client = [clientGuard];
@@ -75,10 +83,7 @@ export const routes: Routes = [
           { path: 'operations/cases', data: { staff: true }, loadComponent: () => import('./features/client/support-page.component').then(m => m.SupportPageComponent) },
           {
             path: 'finance/reconciliation',
-            loadComponent: () =>
-              import('./shared/workspace/reconciliation-page.component').then(
-                (m) => m.ReconciliationPageComponent,
-              ),
+            loadComponent: financeReconciliation,
           },
           {
             path: 'operations/overview',
@@ -271,7 +276,7 @@ export const routes: Routes = [
             ],
           ].map(([path, title, section, description, expectation, endpoint, back]) => ({
             path,
-            loadComponent: staff,
+            loadComponent: path === 'finance/overview' ? financeOverview : staff,
             data: { title, section, description, expectation, endpoint, back },
           })),
         ],
