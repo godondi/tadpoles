@@ -28,8 +28,7 @@ public interface ComplianceAccessMapper {
               AND revoked_at IS NULL AND valid_from <= #{now} AND valid_until > #{now}
             ORDER BY permission,client_id,grant_id
             """)
-    List<String> allGrantIdentities(
-            @Param("actor") int actor, @Param("now") Instant now);
+    List<String> allGrantIdentities(@Param("actor") int actor, @Param("now") Instant now);
 
     @Select(
             """
@@ -67,6 +66,28 @@ public interface ComplianceAccessMapper {
 
     @Insert(
             """
+INSERT INTO compliance_access_contexts(context_id,actor,purpose_code,case_reference,created_at,expires_at,
+    policy_version,scope_version,reference_type,investigation_id,managed_reviewer,managed_version)
+VALUES(#{id},#{actor},#{purpose},#{caseReference},#{now},#{expires},#{policy},#{scope},
+    'MANAGED',#{investigation},#{managedReviewer},#{managedVersion})
+""")
+    void createManagedContext(Map<String, Object> p);
+
+    @Select(
+            """
+SELECT i.investigation_id,i.client_id,i.order_id,i.reviewer,i.version
+FROM compliance_investigations i WHERE i.reference=#{reference} AND i.reviewer=#{actor}
+  AND EXISTS(SELECT 1 FROM compliance_access_grants g WHERE g.staff_user_id=#{actor}
+    AND g.permission='INVESTIGATION_READ' AND g.client_id=i.client_id AND g.revoked_at IS NULL
+    AND g.valid_from<=#{now} AND g.valid_until>#{now})
+""")
+    Map<String, Object> managed(
+            @Param("reference") String reference,
+            @Param("actor") int actor,
+            @Param("now") Instant now);
+
+    @Insert(
+            """
             INSERT INTO compliance_access_events(
                 event_id,actor,context_id,action,target_type,target_id,filter_digest,
                 scope_version,outcome,returned_count,recorded_at,correlation_id,export_id)
@@ -77,12 +98,11 @@ public interface ComplianceAccessMapper {
 
     @Select(
             """
-            SELECT purpose_code,case_reference,policy_version,scope_version,expires_at,revoked_at
+            SELECT *
             FROM compliance_access_contexts
             WHERE context_id=#{context} AND actor=#{actor}
             """)
-    Map<String, Object> contextDetails(
-            @Param("context") UUID context, @Param("actor") int actor);
+    Map<String, Object> contextDetails(@Param("context") UUID context, @Param("actor") int actor);
 
     @Select(
             """

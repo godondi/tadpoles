@@ -8,6 +8,8 @@ import { AuthService } from '../../core/auth/auth.service';
 import {
   SupportApiService,
   SupportCase,
+  SupportCasePage,
+  CaseQueueView,
   CaseDetail,
   CASE_CATEGORIES,
   NewCase,
@@ -18,11 +20,21 @@ import { OperationsContextComponent } from '../operations/operations-context.com
 import { CatalogRefreshService } from '../../core/api/catalog-refresh.service';
 import { PageResource } from '../../shared/workspace/page-resource';
 import { createIdempotencyKey } from '../../core/idempotency-key';
+import { SupportIntakeComponent } from './support-intake.component';
+import { SupportWorkbenchComponent } from '../operations/support-workbench.component';
 
 @Component({
   selector: 'app-support-page',
   standalone: true,
-  imports: [FormsModule, RouterLink, DatePipe, OperationsContextComponent, SupportUpdatesComponent],
+  imports: [
+    FormsModule,
+    RouterLink,
+    DatePipe,
+    OperationsContextComponent,
+    SupportUpdatesComponent,
+    SupportIntakeComponent,
+    SupportWorkbenchComponent,
+  ],
   template: `
     <header class="workspace-heading">
       <div>
@@ -66,6 +78,11 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
                 }
               </select></label
             >
+            <app-support-intake
+              [category]="category"
+              [disabled]="busy() || uncertain()"
+              (changed)="intakeState = $event"
+            />
             <label
               >Subject
               <input
@@ -88,7 +105,12 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
                 [readonly]="busy() || uncertain()"
               ></textarea>
             </label>
-            <button type="submit" [disabled]="busy() || (!!orderId && !order.data())">
+            <button
+              type="submit"
+              [disabled]="
+                busy() || (!uncertain() && !intakeState.valid) || (!!orderId && !order.data())
+              "
+            >
               {{ uncertain() ? 'Retry with same request key' : 'Submit case' }}
             </button>
             @if (requestKey) {
@@ -153,20 +175,22 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
               Next activity
             </button>
           </div>
-          <div class="form-field">
-            <label
-              >Public message
-              <textarea
-                name="reply"
-                [(ngModel)]="reply"
-                minlength="10"
-                maxlength="4000"
-                rows="5"
-                [readonly]="writeBusy()"
-              ></textarea>
-            </label>
-          </div>
-          @if (item.status !== 'RESOLVED') {
+          @if (!staff || item.actions?.reply || item.actions?.transitions?.length) {
+            <div class="form-field">
+              <label
+                >Public message
+                <textarea
+                  name="reply"
+                  [(ngModel)]="reply"
+                  minlength="10"
+                  maxlength="4000"
+                  rows="5"
+                  [readonly]="writeBusy()"
+                ></textarea>
+              </label>
+            </div>
+          }
+          @if (item.status !== 'RESOLVED' && (!staff || item.actions?.reply)) {
             <button type="button" (click)="send('replies')" [disabled]="writeBusy()">
               Send public reply
             </button>
@@ -175,16 +199,21 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
               Reopen with public reason
             </button>
           }
-          @if (staff && item.status !== 'RESOLVED') {
+          @if (staff && item.actions?.transitions?.length) {
             <label
               >New public status
               <select name="nextStatus" [(ngModel)]="nextStatus">
-                <option value="IN_REVIEW">In review</option>
-                <option value="AWAITING_CLIENT">Awaiting client</option>
-                <option value="RESOLVED">Resolved</option>
+                <option value="">Choose allowed status</option>
+                @for (state of item.actions?.transitions; track state) {
+                  <option [value]="state">{{ label(state) }}</option>
+                }
               </select></label
             >
-            <button type="button" (click)="send('transitions')" [disabled]="writeBusy()">
+            <button
+              type="button"
+              (click)="send('transitions')"
+              [disabled]="writeBusy() || !allowedTransition()"
+            >
               Publish status and explanation
             </button>
           }
@@ -211,20 +240,22 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
                 Next notes
               </button>
             }
-            <label
-              >Internal note
-              <textarea
-                name="internalNote"
-                [(ngModel)]="internalNote"
-                minlength="10"
-                maxlength="4000"
-                rows="4"
-                [readonly]="writeBusy()"
-              ></textarea>
-            </label>
-            <button type="button" (click)="send('notes')" [disabled]="writeBusy()">
-              Save internal note
-            </button>
+            @if (item.actions?.note) {
+              <label
+                >Internal note
+                <textarea
+                  name="internalNote"
+                  [(ngModel)]="internalNote"
+                  minlength="10"
+                  maxlength="4000"
+                  rows="4"
+                  [readonly]="writeBusy()"
+                ></textarea>
+              </label>
+              <button type="button" (click)="send('notes')" [disabled]="writeBusy()">
+                Save internal note
+              </button>
+            }
           }
           @if (writePending()) {
             <button type="button" (click)="recoverWrite()" [disabled]="writeBusy()">
@@ -235,6 +266,9 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
             <p class="notice" role="status">{{ writeNotice() }}</p>
           }
         </section>
+        @if (staff && item.workflowEnabled) {
+          <app-support-workbench [reference]="item.reference" (publicChanged)="load()" />
+        }
       }
     } @else {
       @if (!staff) {
@@ -250,6 +284,43 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
         <button type="button" (click)="load()" [disabled]="list.loading()">Refresh cases</button>
       </div>
       <form class="filters" (ngSubmit)="page = 0; load()">
+        @if (staff && list.data()?.workflowEnabled) {
+          <label
+            >Attention view<select name="queueView" [(ngModel)]="queueView" (ngModelChange)="status = ''">
+              <option value="ACTIONABLE">Actionable (unresolved)</option>
+              <option value="ALL">All cases</option>
+              <option value="UNASSIGNED">Unassigned</option>
+              <option value="MINE">My cases</option>
+              <option value="AWAITING_CLIENT">Awaiting client</option>
+              <option value="AWAITING_REVIEW">Awaiting internal review</option>
+              <option value="RESOLVED">Resolved</option>
+            </select></label
+          >
+          <label
+            ><input type="checkbox" name="assignedToMe" [(ngModel)]="assignedToMe" />Assigned to me
+            (workflow enabled)</label
+          >
+          <label
+            >Priority<select name="queuePriority" [(ngModel)]="queuePriority">
+              <option value="">All priorities</option>
+              <option>HIGH</option>
+              <option>NORMAL</option>
+              <option>LOW</option>
+            </select></label
+          >
+          <label
+            >Effective category<select name="queueCategory" [(ngModel)]="queueCategory">
+              <option value="">All effective categories</option>
+              @for (category of categories; track category) {
+                <option>{{ category }}</option>
+              }
+            </select></label
+          >
+          <label
+            ><input type="checkbox" name="overdueOnly" [(ngModel)]="overdueOnly" />Past recorded due
+            time (not an SLA)</label
+          >
+        }
         <label
           >Reference or subject <input name="search" [(ngModel)]="search" maxlength="120" /></label
         ><label
@@ -274,14 +345,23 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
           @if (!result.total) {
             <p>No matching cases.</p>
           } @else {
-            <div class="table-wrapper">
+            <div class="table-wrapper" tabindex="0" aria-label="Support cases, scroll horizontally">
               <table>
+                <caption>
+                  Permitted
+                  {{
+                    staff ? 'Operations case queue' : 'public support cases'
+                  }}
+                </caption>
                 <thead>
                   <tr>
-                    <th>Reference and subject</th>
-                    <th>Category</th>
-                    <th>Status</th>
-                    <th>Public update (UTC)</th>
+                    <th scope="col">Reference and subject</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Public update (UTC)</th>
+                    @if (staff && result.workflowEnabled) {
+                      <th scope="col">Private owner / priority / next action</th>
+                    }
                   </tr>
                 </thead>
                 <tbody>
@@ -294,6 +374,15 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
                       <td>{{ label(item.category) }}</td>
                       <td>{{ label(item.status) }}</td>
                       <td>{{ item.updatedAt | date: 'medium' : 'UTC' }}</td>
+                      @if (staff && result.workflowEnabled) {
+                        <td class="case-prose">
+                          {{ item.assigneeLabel ?? item.assignee ?? 'unassigned' }} /
+                          {{ item.priority ?? 'workflow unavailable' }} <br />{{
+                            item.nextAction ?? 'No next action recorded'
+                          }}
+                          / due {{ (item.dueAt | date: 'medium' : 'UTC') ?? 'not set' }} UTC
+                        </td>
+                      }
                     </tr>
                   }
                 </tbody>
@@ -329,7 +418,7 @@ export class SupportPageComponent {
   readonly staff = !!this.route.snapshot.data['staff'];
   readonly isNew = !!this.route.snapshot.data['new'];
   readonly base = this.staff ? '/operations/cases' : '/app/support';
-  readonly list = new PageResource<Page<SupportCase>>();
+  readonly list = new PageResource<SupportCasePage>();
   readonly detail = new PageResource<CaseDetail>();
   readonly order = new PageResource<OrderDetail>();
   readonly categories = CASE_CATEGORIES;
@@ -345,7 +434,12 @@ export class SupportPageComponent {
   readonly writeNotice = signal('');
   reply = '';
   internalNote = '';
-  nextStatus = 'IN_REVIEW';
+  nextStatus = '';
+  intakeState: { enabled: boolean; intake: Record<string, string | number>; valid: boolean } = {
+    enabled: false,
+    intake: {},
+    valid: false,
+  };
   notePage = 0;
   readonly writePending = signal(false);
   private routeChanged = new Subject<void>();
@@ -361,6 +455,11 @@ export class SupportPageComponent {
   description = '';
   search = '';
   status = '';
+  queueView: CaseQueueView = 'ACTIONABLE';
+  assignedToMe = false;
+  queuePriority = '';
+  queueCategory = '';
+  overdueOnly = false;
   page = 0;
   requestKey = '';
   private storageKey = '';
@@ -372,7 +471,10 @@ export class SupportPageComponent {
         .pipe(takeUntilDestroyed())
         .subscribe(() => {
           if (!this.reference && !this.list.loading())
-            this.list.load(this.api.list(true, this.status, this.search, this.page), true);
+            this.list.load(
+              this.api.list(true, this.status, this.search, this.page, this.queueFilters()),
+              true,
+            );
         });
     }
     this.api.denied.pipe(takeUntilDestroyed()).subscribe(() => {
@@ -451,7 +553,22 @@ export class SupportPageComponent {
   }
   load() {
     if (this.reference) this.detail.load(this.api.detail(this.staff, this.reference, this.page));
-    else this.list.load(this.api.list(this.staff, this.status, this.search, this.page));
+    else
+      this.list.load(
+        this.api.list(this.staff, this.status, this.search, this.page, this.queueFilters()),
+      );
+  }
+  private queueFilters() {
+    if (!this.staff || !this.list.data()?.workflowEnabled) return {};
+    const view: CaseQueueView =
+      this.status && this.queueView === 'ACTIONABLE' ? 'ALL' : this.queueView;
+    return {
+      view,
+      ...(this.assignedToMe ? { assignee: this.auth.identity()?.userId } : {}),
+      ...(this.queuePriority ? { priority: this.queuePriority } : {}),
+      ...(this.queueCategory ? { category: this.queueCategory } : {}),
+      ...(this.overdueOnly ? { overdueOnly: true } : {}),
+    };
   }
   changePage(delta: number) {
     this.page = Math.max(0, this.page + delta);
@@ -480,11 +597,20 @@ export class SupportPageComponent {
   }
   submit() {
     if (this.busy() || (this.orderId && !this.order.data())) return;
+    if (!this.submitted && !this.intakeState.valid) {
+      this.notice.set(
+        'Load the category policy and choose a valid issue reason before submitting.',
+      );
+      return;
+    }
     const body = this.submitted ?? {
       category: this.category,
       subject: this.subject.trim(),
       description: this.description.trim(),
       ...(this.orderId ? { orderId: this.orderId } : {}),
+      ...(this.intakeState.enabled
+        ? { intakeSchemaVersion: 1, intake: this.intakeState.intake }
+        : {}),
     };
     if (
       body.subject.length < 5 ||
@@ -502,7 +628,9 @@ export class SupportPageComponent {
     if (!this.requestKey) {
       const key = createIdempotencyKey();
       if (!key) {
-        this.notice.set('Unable to create a secure request reference. Please reload and try again.');
+        this.notice.set(
+          'Unable to create a secure request reference. Please reload and try again.',
+        );
         return;
       }
       this.requestKey = key;
@@ -562,9 +690,24 @@ export class SupportPageComponent {
   loadNotes() {
     this.notes.load(this.api.notes(this.reference, this.notePage));
   }
+  allowedTransition() {
+    return (
+      this.detail.data()?.actions?.transitions.some((state) => state === this.nextStatus) ?? false
+    );
+  }
   send(action: string) {
     const current = this.detail.data();
     if (!current || this.writeBusy()) return;
+    if (
+      this.staff &&
+      !this.pendingWrite &&
+      ((action === 'replies' && !current.actions?.reply) ||
+        (action === 'notes' && !current.actions?.note) ||
+        (action === 'transitions' && !this.allowedTransition()))
+    ) {
+      this.writeNotice.set('This action is not currently authorized for the case.');
+      return;
+    }
     if (this.pendingWrite && this.pendingWrite.action !== action) {
       this.writeNotice.set('Recover the pending action before starting another action.');
       return;

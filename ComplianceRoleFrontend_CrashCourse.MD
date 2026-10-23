@@ -9,13 +9,14 @@ The Compliance role now has dedicated standalone Angular screens in
 - `ComplianceInvestigationDetailComponent` at
   `/compliance/investigations/:id`
 - `ComplianceEvidencePageComponent` at `/compliance/evidence`
+- `ReviewCasesComponent` at `/compliance/cases` and `/compliance/cases/:reference`
 
 The existing workspace policy and inherited `workspaceGuard` remain the source of role
 authorization. The route table only replaces the three generic `StaffPageComponent`
 loaders; Operations, Analytics, Finance, and Client routes are not changed.
 
-The screens emulate the established Operations layout without reusing Operations
-authorization or shared evidence components:
+The screens use the established workspace layout and shared presentation primitives without
+reusing Operations authorization:
 
 - an access-purpose/context panel;
 - workspace heading and explanatory copy;
@@ -27,10 +28,10 @@ authorization or shared evidence components:
 
 ## Purpose and scope flow
 
-`ComplianceContextComponent` asks the proposed
+`ComplianceContextComponent` asks
 `GET /api/compliance/access-policy` for configured approved purposes. A purpose and
 8–200 character case reference are only input. The frontend requests a server-issued
-context through proposed `POST /api/compliance/access-contexts`; it never fabricates a
+context through `POST /api/compliance/access-contexts`; it never fabricates a
 context ID or scope.
 
 The context is held in memory. It carries the opaque `X-Compliance-Context` header on
@@ -38,23 +39,30 @@ protected reads, expires on the server-provided time, and is cleared on:
 
 - explicit “End context and clear evidence”;
 - auth session change/logout;
-- `401`, `403`, or `409` protected responses;
+- `401`, `403`, or typed `CONTEXT_INVALID` protected responses;
 - local expiry timer.
 
 Purpose policy failure keeps protected searches, detail reads, and export actions
 disabled. The case reference is not stored in local/session storage or put into a URL.
 Only non-sensitive search filters are carried to the detail back link.
 
+Choose EXTERNAL for an approved external reference or MANAGED for a verified review.
+Managed review contexts bind account/optional order, current assigned reviewer and
+review version. Any retained review update invalidates the context; reassignment never
+grants account evidence. Private queue/decision requests use independent investigation
+permissions, not the evidence-purpose token. Findings/proposed public replies never
+publish to the client. Account-only reviews honestly have no order archive.
+
 ## Search walkthrough
 
 1. Sign in as a Compliance user.
 2. Open **Investigations**.
-3. Select a server-approved purpose and enter a case reference. In the current
-   application the purpose endpoint is unavailable, so the context button remains
-   disabled and a precise policy-unavailable message is shown.
-4. Once a real backend issues a context, use the bounded filters:
+3. Select a server-approved purpose and enter the correct EXTERNAL or MANAGED reference.
+   Missing configuration/grants/audit remain explicit unavailable or denied states.
+4. Once the backend issues a context, use the bounded filters:
    positive order ID, UTC start/end (maximum 31 days), safe client reference,
-   instrument, and lifecycle status.
+   instrument, and lifecycle status. UTC-labelled date/time inputs are validated and
+   serialized as UTC Instants; reopening applied filters restores the same UTC wall time.
 5. Apply filters. The adapter sends only defined fields with `page` and `pageSize=25`.
    Scope is expected to be applied by the backend before totals and pagination.
 6. Review the table's order reference, safe client reference, exact quantity/unit,
@@ -65,7 +73,7 @@ Only non-sensitive search filters are carried to the detail back link.
 
 ## Detail walkthrough
 
-The detail page requests the existing proposed-compatible path
+The detail page requests
 `GET /api/compliance/orders/{id}/evidence` only after a valid context exists and the
 ID is a positive integer. It shows:
 
@@ -76,7 +84,7 @@ ID is a positive integer. It shows:
 - server findings with `PASS`, `FAIL`, `NOT_EVALUATED`, and `UNKNOWN`;
 - ordered evidence sections with coverage, source, as-of time, completeness, reference,
   sequence, actor, recorded time, and redacted facts;
-- independently paged section requests through the proposed
+- independently paged section requests through
   `/api/compliance/orders/{id}/evidence/{section}` path;
 - explicit limitations for legacy or partial records;
 - export entitlement state.
@@ -98,15 +106,16 @@ times, expiry, scope, and server manifest data:
 - signature and independent-anchor status;
 - verification state.
 
-The current backend deliberately returns `503`, so the screen presents an unavailable
-state rather than an empty success. There is no retention editor, audit mutator,
+Configured live sources return scoped, audited evidence; missing source/policy/audit
+returns an unavailable state rather than an empty success. There is no retention editor, audit mutator,
 “tamper-proof” badge, guessed download URL, or client-generated CSV/Blob.
 
-The detail screen contains a deliberate export request path for a future authorized
-fixture. It requires `exportAllowed`, `EXPORT_CREATE`, a browser-generated idempotency
-key, and a user click. A `409` is treated as an uncertain outcome requiring receipt
-recovery rather than an automatic duplicate request. Separate download permission is
-represented in the adapter but is not enabled by ordinary rendering.
+The detail screen requires `exportAllowed`, EXPORT_CREATE, an original idempotency key
+and a user click. Unknown outcomes retain opaque recovery metadata and the original
+key; lookup 404 is not permission to replace it. IDEMPOTENCY_CONFLICT does not invalidate
+a valid purpose context. Receipt/download actions recheck independent EXPORT_DOWNLOAD,
+requester, exact Operations-account permission, expiry and stored digest. Only server
+bytes become a download; displayed rows never become a fabricated archive.
 
 ## Adapter and resource behavior
 
@@ -117,7 +126,7 @@ represented in the adapter but is not enabled by ordinary rendering.
 - no-store headers;
 - opaque context header;
 - local denial when context is absent/expired;
-- protected response clearing on `401`, `403`, and `409`;
+- protected response clearing on `401`, `403`, and `CONTEXT_INVALID`;
 - export idempotency header and permission gates.
 
 `ComplianceResource<T>` owns one cancellable request, clears protected data on context
@@ -125,7 +134,7 @@ changes, and maps local error states:
 
 - `400`: invalid filters;
 - `401`: expired session;
-- `403`/`409`: denied or expired purpose context;
+- `403`/`CONTEXT_INVALID`: denied or expired purpose context; other conflicts retain their own meaning;
 - `404`: non-disclosing record not found;
 - `429`: retry later;
 - `503`: source/policy unavailable;
@@ -145,30 +154,23 @@ unavailable states are defined in:
 The fixtures contain safe synthetic references only. They do not contain credentials,
 bank details, identity data, or browser-persisted evidence.
 
-## Actual versus proposed functionality
+## Implemented capability and deployment limits
 
-### Actual in this frontend change
+### Implemented
 
 - Compliance role URLs still exist and remain guard-protected.
 - Dedicated search, detail, and evidence/export layouts are implemented.
 - The adapter, typed models, context gating, cancellation, local error mapping, route
   integration, pagination controls, accessibility structure, and deterministic fixture
   tests are implemented.
-- The current 503 state is presented truthfully.
+- Approved purpose issuance, independent live grants, scoped backend evidence, protected
+  audits, immutable snapshots, original-key recovery and authorized downloads.
+- Separate private review assignment/information/decision/close/reopen lifecycle.
 
-### Proposed/backend-blocked
-
-- Approved Compliance purpose policy and context issuance.
-- Compliance-specific account/object grants and revocation.
-- Successful scoped search/detail/section/evidence responses.
-- Protected access auditing and fail-closed audit dependency behavior.
-- Immutable export snapshots, receipt recovery, manifests, expiry, and authorized
-  downloads.
-- Database tables/migrations/runtime grants and real PostgreSQL evidence tests.
-
-Frontend rendering of a populated test fixture is not production evidence capability.
-The three current server paths remain unavailable until the backend handoff is
-implemented and verified.
+Deploy through schema 017 and reapply restricted runtime grants. Configuration does
+not provision production account permissions, alerting, response-time commitments,
+provider credentials or external settlement evidence. A populated browser fixture is
+not production approval.
 
 ## Login and deployment asset recovery
 
@@ -235,21 +237,13 @@ failed. That unrelated failure and shared test-environment issue were left uncha
 
 ## Backend integration checklist
 
-1. Implement and test the proposed policy/context endpoints with explicit COMPLIANCE
-   authorization and account/object scopes.
-2. Freeze the exact DTOs, enums, nullable fields, page bounds, no-store behavior,
-   context transport, and error payloads against this handoff.
-3. Implement scope-before-count search and repeatable-read detail/first-section
-   snapshots using retained evidence only.
-4. Add deterministic section pagination, completeness/limitation states, and protected
-   access auditing that fails closed.
-5. Add immutable, idempotent export snapshots, manifest/digest semantics, expiry,
-   redaction, receipt recovery, and separate download authorization.
-6. Add additive fresh/upgrade migrations, indexes, foreign keys, append-only guards,
-   and least-privilege runtime grants without deleting or rewriting retained evidence.
-7. Run real PostgreSQL tests for filled/rejected/partial history, scope denial,
-   context expiry/revocation, count leaks, audit/source outage, pagination, export
-   tamper/expiry, and permission loss.
-8. Re-run the focused Compliance tests and the full frontend verification commands
-   after the live contract is available. Do not report the workflow as complete while
-   the backend remains 503.
+1. Apply the actual ordered migration chain through 017 and restricted runtime grants;
+   verify readiness with the intended non-owner role before rollout.
+2. Provision approved purpose configuration and independent account/evidence/export/
+   investigation grants. Do not alias Operations grants or seed production demo users.
+3. Exercise allowed and denied flows, live revocation, original-key recovery and context
+   replacement using real PostgreSQL plus browser cancellation/UTC regressions.
+4. Verify managed narrowing across search/count/sections/history/receipt/download,
+   including unrelated external archives and reassignment away/back.
+5. Preserve explicit partial/unavailable states and the private-public publication
+   boundary; no deployment approval follows merely from fixture/unit success.

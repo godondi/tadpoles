@@ -1,6 +1,7 @@
 package com.neueda.leap.controller;
 
 import com.neueda.leap.service.SupportCaseService;
+import com.neueda.leap.service.SupportWorkflowService;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -10,9 +11,11 @@ import org.springframework.web.bind.annotation.*;
 @PreAuthorize("hasRole('TRADING_OPS') and !hasRole('CLIENT')")
 public class OperationsCaseController {
     private final SupportCaseService cases;
+    private final SupportWorkflowService workflow;
 
-    public OperationsCaseController(SupportCaseService cases) {
+    public OperationsCaseController(SupportCaseService cases, SupportWorkflowService workflow) {
         this.cases = cases;
+        this.workflow = workflow;
     }
 
     @GetMapping
@@ -20,8 +23,14 @@ public class OperationsCaseController {
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "") String search,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int pageSize) {
-        return cases.list(true, status, search, page, pageSize);
+            @RequestParam(defaultValue = "20") int pageSize,
+            @RequestParam(required = false) Integer assignee,
+            @RequestParam(required = false) String priority,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String view,
+            @RequestParam(defaultValue = "false") boolean overdueOnly) {
+        return workflow.queue(
+                status, search, page, pageSize, assignee, priority, category, view, overdueOnly);
     }
 
     @GetMapping("/{reference}")

@@ -134,6 +134,11 @@ class TradingPostgresTest {
         script("database/migrations/010_quote_cache_twenty_minutes.sql");
         script("database/migrations/011_operations_workspace.sql");
         script("database/migrations/012_managed_support.sql");
+        script("database/migrations/013_compliance_workspace.sql");
+        script("database/migrations/014_compliance_context_scope.sql");
+        script("database/migrations/015_compliance_scope_compatibility.sql");
+        script("database/migrations/016_support_workflow.sql");
+        script("database/migrations/017_compliance_referrals.sql");
         script("backend/src/test/resources/provider_accounts.sql");
         client =
                 Integer.parseInt(
@@ -1474,6 +1479,11 @@ class TradingPostgresTest {
         script("database/migrations/010_quote_cache_twenty_minutes.sql");
         script("database/migrations/011_operations_workspace.sql");
         script("database/migrations/012_managed_support.sql");
+        script("database/migrations/013_compliance_workspace.sql");
+        script("database/migrations/014_compliance_context_scope.sql");
+        script("database/migrations/015_compliance_scope_compatibility.sql");
+        script("database/migrations/016_support_workflow.sql");
+        script("database/migrations/017_compliance_referrals.sql");
         demoSetup.initialize();
         equalDecimal(
                 "10000",
@@ -2611,7 +2621,7 @@ class TradingPostgresTest {
                     table,
                     scalar(
                             "SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),"
-                                + " '[]'::jsonb)::text FROM "
+                                    + " '[]'::jsonb)::text FROM "
                                     + table
                                     + " t"));
         for (int order : new int[] {pending, filled, rejected}) {
@@ -2647,7 +2657,7 @@ class TradingPostgresTest {
                         before.get(table),
                         scalar(
                                 "SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),"
-                                    + " '[]'::jsonb)::text FROM "
+                                        + " '[]'::jsonb)::text FROM "
                                         + table
                                         + " t"),
                         table);

@@ -37,6 +37,9 @@ operations:
   export-seconds: ${OPERATIONS_EXPORT_SECONDS:0}
 
 # Compliance access is fail-closed until an approved policy and account grants exist.
+support:
+  workflow-enabled: ${SUPPORT_WORKFLOW_ENABLED:false}
+
 compliance:
   access-enabled: ${COMPLIANCE_ACCESS_ENABLED:false}
   allowed-purposes: ${COMPLIANCE_ALLOWED_PURPOSES:}

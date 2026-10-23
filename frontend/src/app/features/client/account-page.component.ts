@@ -216,7 +216,9 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
           <p>These records are preserved separately and cannot be spent or sold.</p>
           <a routerLink="/app/support/new" [queryParams]="{category: 'HISTORICAL_RECORD'}">Ask about historical records</a>
           @for (e of data.migrationExceptions; track e.id) {
-            <p>Reference {{ e.id }} · {{ e.kind }}</p>
+            <p>Reference {{ e.id }} · {{ e.kind }}
+              <a routerLink="/app/support/new" [queryParams]="{category:'HISTORICAL_RECORD',exceptionId:e.id,recordKind:e.kind,reason:'PROVENANCE'}">Ask about this retained record</a>
+            </p>
           }
         </section>
       }

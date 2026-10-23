@@ -74,6 +74,8 @@ app-root {
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
 a:focus-visible {
   outline: 3px solid var(--primary-green);
   outline-offset: 2px;
@@ -721,7 +723,7 @@ app-banking-page form fieldset,
 
 /* Read-only operational facts use the same detail grid and surface tokens as client receipts. */
 .evidence-details {
-  min-width: 280px;
+  min-width: 0;
   white-space: normal;
 }
 .evidence-json {
@@ -742,3 +744,16 @@ app-banking-page form fieldset,
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.case-workbench, .case-workbench > *, .workbench-grid > *, .evidence-facts, .evidence-facts > div {
+  min-width: 0;
+  max-width: 100%;
+}
+.case-workbench { overflow-wrap: anywhere; }
+.workbench-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: 1rem; }
+.evidence-facts { display: grid; gap: 0.75rem; }
+.evidence-facts dt { color: var(--text-secondary); font-weight: 600; }
+.evidence-facts dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.case-workbench fieldset, app-support-intake fieldset { display: grid; min-width: 0; gap: 1rem; }
+.case-workbench input, .case-workbench select, .case-workbench textarea, app-support-intake input,
+app-support-intake select, app-support-intake textarea { max-width: 100%; min-width: 0; }

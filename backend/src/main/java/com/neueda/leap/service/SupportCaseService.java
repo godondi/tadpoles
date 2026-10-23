@@ -3,8 +3,11 @@ package com.neueda.leap.service;
 import static com.neueda.leap.trading.TradingData.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.neueda.leap.exception.WorkflowException;
 import com.neueda.leap.mapper.OperationsAccessMapper;
 import com.neueda.leap.mapper.SupportCaseMapper;
+import com.neueda.leap.mapper.SupportWorkflowMapper;
+import com.neueda.leap.service.support.SupportCategoryRegistry;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,6 +36,8 @@ public class SupportCaseService {
     private final SessionService sessions;
     private final Clock clock;
     private final com.fasterxml.jackson.databind.ObjectMapper json;
+    private final SupportWorkflowMapper workflow;
+    private final SupportCategoryRegistry categories;
 
     public SupportCaseService(
             SupportCaseMapper db,
@@ -41,7 +46,9 @@ public class SupportCaseService {
             AppUserService users,
             SessionService sessions,
             Clock clock,
-            com.fasterxml.jackson.databind.ObjectMapper json) {
+            com.fasterxml.jackson.databind.ObjectMapper json,
+            SupportWorkflowMapper workflow,
+            SupportCategoryRegistry categories) {
         this.db = db;
         this.grants = grants;
         this.access = access;
@@ -49,6 +56,8 @@ public class SupportCaseService {
         this.sessions = sessions;
         this.clock = clock;
         this.json = json;
+        this.workflow = workflow;
+        this.categories = categories;
     }
 
     Map<String, Object> identity(boolean staff, String permission) {
@@ -172,11 +181,26 @@ public class SupportCaseService {
     public Map<String, Object> create(String key, JsonNode body) {
         var p = identity(false, "CASE_READ");
         key(key);
-        fields(body, Set.of("category", "subject", "description", "orderId"));
+        fields(
+                body,
+                Set.of(
+                        "category",
+                        "subject",
+                        "description",
+                        "orderId",
+                        "intakeSchemaVersion",
+                        "intake"));
         String category = text(body, "category", 1, 40, false),
                 subject = text(body, "subject", 5, 120, false),
                 description = text(body, "description", 10, 4000, true);
         if (!CATEGORIES.contains(category)) throw error(HttpStatus.BAD_REQUEST, "Invalid category");
+        var intake =
+                categories.intake(category, body.get("intakeSchemaVersion"), body.get("intake"));
+        if (!intake.isEmpty() && !workflow.ready())
+            throw new WorkflowException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "WORKFLOW_DISABLED",
+                    "Structured support intake is not ready");
         Integer order = null;
         if (body.hasNonNull("orderId")) {
             if (!body.get("orderId").isIntegralNumber()
@@ -185,19 +209,32 @@ public class SupportCaseService {
                 throw error(HttpStatus.BAD_REQUEST, "Invalid order reference");
             order = body.get("orderId").asInt();
         }
+        String normalized =
+                category.length()
+                        + ":"
+                        + category
+                        + subject.length()
+                        + ":"
+                        + subject
+                        + description.length()
+                        + ":"
+                        + description
+                        + ":"
+                        + order;
+        String intakeJson;
+        try {
+            intakeJson = json.writeValueAsString(intake);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException failure) {
+            throw new IllegalStateException(failure);
+        }
+        if (!intake.isEmpty() && workflow.intakeSize(intakeJson) > 12000)
+            throw new WorkflowException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_INTAKE",
+                    "Structured intake exceeds the 12000-byte retained limit");
         String hash =
                 OperationsAccessService.digest(
-                        category.length()
-                                + ":"
-                                + category
-                                + subject.length()
-                                + ":"
-                                + subject
-                                + description.length()
-                                + ":"
-                                + description
-                                + ":"
-                                + order);
+                        normalized + (intake.isEmpty() ? "" : ":intake-v1:" + intakeJson));
         p.putAll(
                 map(
                         "key",
@@ -212,6 +249,7 @@ public class SupportCaseService {
                         subject));
         db.lockOwner(integer(p, "client"));
         if (order != null && !db.ownedOrder(order, integer(p, "client"))) missing(p);
+        validateIntake(p, intake, order);
         var existing = db.byRequest(p);
         if (existing != null) {
             if (!hash.equals(existing.get("request_hash")))
@@ -241,8 +279,49 @@ public class SupportCaseService {
                         "OPEN"));
         db.create(p);
         db.event(p);
+        if (workflow.supportReady()) {
+            p.putAll(
+                    map(
+                            "workflowVersion",
+                            1,
+                            "kind",
+                            "INITIALIZED",
+                            "facts",
+                            "{\"source\":\"CREATED\",\"templateVersion\":1}"));
+            workflow.initialize(p);
+            workflow.event(p);
+            if (!intake.isEmpty()) {
+                p.put("intake", intakeJson);
+                workflow.intake(p);
+            }
+        }
         audit(p, "CASE_CREATED", reference, 1);
         return summary(db.byRequest(p));
+    }
+
+    void validateIntake(Map<String, Object> p, Map<String, Object> intake, Integer order) {
+        int client = integer(p, "client");
+        if (intake.get("relatedOrderId") instanceof Number related
+                && (!db.ownedOrder(related.intValue(), client)
+                        || (order != null && order != related.intValue()))) missing(p);
+        if (intake.get("movementId") instanceof String movement
+                && !workflow.ownedMovement(UUID.fromString(movement), client)) missing(p);
+        if (intake.get("exceptionId") instanceof Number exception
+                && !workflow.ownedException(exception.longValue(), client)) missing(p);
+        if (intake.get("instrumentId") instanceof Number instrument
+                && !workflow.instrument(instrument.intValue())) missing(p);
+        if (intake.get("duplicateReference") instanceof String reference) {
+            var target = new HashMap<>(p);
+            target.put("reference", reference);
+            if (db.detail(target) == null) missing(p);
+        }
+    }
+
+    public Map<String, Object> intakePolicy() {
+        identity(false, "CASE_READ");
+        var result = new LinkedHashMap<>(categories.policy());
+        result.put("intakeEnabled", categories.enabled() && workflow.ready());
+        return result;
     }
 
     @Transactional
@@ -295,6 +374,38 @@ public class SupportCaseService {
         result.put("page", page);
         result.put("pageSize", size);
         result.put("totalEvents", c.get("version"));
+        if (staff) {
+            boolean update =
+                    access.has(
+                            auditAccess(integer(p, "actor")),
+                            "CASE_UPDATE",
+                            integer(c, "client_id"));
+            String status = string(c, "status");
+            var transitions =
+                    update
+                            ? switch (status) {
+                                case "OPEN" -> List.of("IN_REVIEW", "AWAITING_CLIENT", "RESOLVED");
+                                case "IN_REVIEW" -> List.of("AWAITING_CLIENT", "RESOLVED");
+                                case "AWAITING_CLIENT" -> List.of("IN_REVIEW", "RESOLVED");
+                                default -> List.of();
+                            }
+                            : List.of();
+            boolean workbench = categories.enabled() && workflow.ready();
+            result.put(
+                    "actions",
+                    map(
+                            "reply",
+                            update && !status.equals("RESOLVED"),
+                            "note",
+                            update,
+                            "transitions",
+                            workbench
+                                    ? transitions.stream()
+                                            .filter(s -> !s.equals("RESOLVED"))
+                                            .toList()
+                                    : transitions));
+            result.put("workflowEnabled", workbench);
+        }
         audit(p, "CASE_READ", reference, 1);
         return result;
     }
@@ -368,6 +479,14 @@ public class SupportCaseService {
                         };
                 if (!allowed.contains(target))
                     throw error(HttpStatus.CONFLICT, "Invalid case transition");
+                if (target.equals("RESOLVED")
+                        && (categories.enabled()
+                                || (workflow.supportReady()
+                                        && workflow.requiresResolution((UUID) p.get("id")))))
+                    throw new WorkflowException(
+                            HttpStatus.CONFLICT,
+                            "WORKFLOW_INCOMPLETE",
+                            "Resolve through the category workbench and its retained disposition");
                 next = target;
             } else if (action.equals("REPLY")) {
                 if (previous.equals("RESOLVED"))
@@ -389,6 +508,33 @@ public class SupportCaseService {
                             action));
             db.advance(p);
             db.event(p);
+            if (action.equals("REOPEN") && workflow.supportReady()) {
+                var w = workflow.lock((UUID) p.get("id"));
+                if (w == null)
+                    throw error(HttpStatus.SERVICE_UNAVAILABLE, "Private workflow is unavailable");
+                p.putAll(
+                        map(
+                                "workflowVersion",
+                                number(w, "version") + 1,
+                                "category",
+                                w.get("effective_category"),
+                                "assignee",
+                                w.get("assignee"),
+                                "priority",
+                                w.get("priority"),
+                                "nextAction",
+                                null,
+                                "dueAt",
+                                null,
+                                "revision",
+                                number(w, "checklist_revision") + 1,
+                                "kind",
+                                "REOPENED",
+                                "facts",
+                                "{\"source\":\"CLIENT_REOPEN\",\"templateVersion\":1}"));
+                workflow.advance(p);
+                workflow.event(p);
+            }
             receipt = map("reference", reference, "version", version, "status", next);
         }
         try {

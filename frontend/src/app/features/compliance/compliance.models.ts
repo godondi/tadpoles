@@ -20,6 +20,7 @@ export interface ComplianceContext {
 export interface ComplianceAccessContextRequest {
   purposeCode: string;
   caseReference: string;
+  referenceType?: 'EXTERNAL' | 'MANAGED';
 }
 
 export interface ComplianceSearchFilters {

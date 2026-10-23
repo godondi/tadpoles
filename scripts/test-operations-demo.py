@@ -56,17 +56,24 @@ AUTH_STUB_HOST_PORT=18081
 AUTH_STUB_CONTAINER_PORT=4000
 FRONTEND_HOST_PORT=18086
 FRONTEND_CONTAINER_PORT=4000
+ANALYTICS_POSTGRES_HOST_PORT=18088
+ANALYTICS_HOST_PORT=18089
+ANALYTICS_CONTAINER_PORT=8000
 ''')
     override = directory / 'isolation.yml'
     lines = ['services:']
     for service in ['backend', 'database', 'database-migrate', 'database-demo-seed',
-                    'market-fixture', 'auth-stub', 'frontend']:
+                    'market-fixture', 'frontend']:
         lines += [f'  {service}:', f'    container_name: {PROJECT}-{service}',
                   '    env_file: !reset []']
-        if service in ['database', 'auth-stub', 'frontend']:
+        if service in ['database', 'frontend']:
             lines += ['    ports: !reset []']
         if service == 'backend':
-            lines += ['    environment:', '      SERVER_PORT: "8080"']
+            lines += [f'    image: {PROJECT}-backend:test',
+                      '    environment:', '      SERVER_PORT: "8080"']
+    for service in ['analytics-database', 'analytics-api', 'nginx']:
+        lines += [f'  {service}:', '    profiles: ["not-under-test"]',
+                  '    env_file: !reset []', '    ports: !reset []']
     override.write_text('\n'.join(lines) + '\n')
     command = ['docker', 'compose', '--env-file', str(settings), '-p', PROJECT]
     for file in [ROOT / 'docker-compose.yml', ROOT / 'docker-compose.market-fixture.yml', override]:
@@ -74,8 +81,12 @@ FRONTEND_CONTAINER_PORT=4000
 
     def compose(*args):
         # Detailed build output stays in a diagnostic log, away from application secrets.
-        with open('/tmp/operations-demo-compose-build.log', 'ab') as output:
-            subprocess.run(command + list(args), stdout=output, stderr=subprocess.STDOUT, check=True)
+        log = directory / 'compose-build.log'
+        try:
+            with open(log, 'ab') as output:
+                subprocess.run(command + list(args), stdout=output, stderr=subprocess.STDOUT, check=True)
+        except subprocess.CalledProcessError as failure:
+            raise RuntimeError(log.read_text()[-4000:]) from failure
 
     def sql(statement):
         return subprocess.check_output(
@@ -106,9 +117,9 @@ FRONTEND_CONTAINER_PORT=4000
                 break
             time.sleep(1)
         assert sql('SELECT count(*) FROM instrument_trading_policies') == '14'
-        assert sql('SELECT count(*) FROM operations_access_grants') == '8'
+        assert sql('SELECT count(*) FROM operations_access_grants') == '9'
         sql((ROOT / 'database/demo/operations_workspace.sql').read_text())
-        assert sql('SELECT count(*) FROM operations_access_grants') == '8', 'Seed must be repeatable'
+        assert sql('SELECT count(*) FROM operations_access_grants') == '9', 'Seed must be repeatable'
         assert sql("SELECT count(*) FROM operations_access_grants g JOIN clients c USING(client_id) "
                    "JOIN users u ON u.user_id=c.user_id WHERE u.username<>'demo.client' AND g.permission NOT IN ('CASE_READ','CASE_UPDATE')") == '0'
         references = []
@@ -162,11 +173,11 @@ FRONTEND_CONTAINER_PORT=4000
         sql("UPDATE operations_access_grants SET revoked_at=now() WHERE permission='CASE_READ' AND client_id IN "
             "(SELECT client_id FROM clients JOIN users USING(user_id) WHERE username='demo.client2')")
         sql((ROOT / 'database/demo/operations_workspace.sql').read_text())
-        assert sql('SELECT count(*) FROM operations_access_grants') == '8', 'Seed must honor case revocation'
+        assert sql('SELECT count(*) FROM operations_access_grants') == '9', 'Seed must honor case revocation'
         status, denied = api('/api/operations/cases/' + references[-1], operations)
         assert status == 404, denied
         print('PASS: standard local Operations startup, 14 validated fixture tickers, SPY quote/chart test, '
-              'eight repeatable scoped grants, all-category cases from both local clients without search, public reply, purpose context, scoped filled order/export, '
+              'nine repeatable scoped grants, all-category cases from both local clients without search, public reply, purpose context, scoped filled order/export, '
               'and retained grant revocation.')
     finally:
         compose('down', '--volumes', '--remove-orphans')

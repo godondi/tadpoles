@@ -28,6 +28,8 @@ public interface ComplianceEvidenceMapper {
                   AND g.revoked_at IS NULL
                   AND g.valid_from &lt;= #{now}
                   AND g.valid_until > #{now})
+            AND (#{managedClient}::integer IS NULL OR t.client_id=#{managedClient})
+            AND (#{managedOrder}::integer IS NULL OR t.trade_id=#{managedOrder})
             """;
 
     String COLUMNS =
@@ -88,20 +90,20 @@ public interface ComplianceEvidenceMapper {
                     + COLUMNS
                     + FROM
                     + """
-            <if test='orderId != null'>AND t.trade_id=#{orderId}</if>
-            <if test='clientReference != null'>AND EXISTS (
-              SELECT 1 FROM compliance_access_grants g
-              WHERE g.staff_user_id=#{actor} AND g.permission='EVIDENCE_READ'
-                AND g.client_id=t.client_id AND g.account_reference=#{clientReference}
-                AND g.revoked_at IS NULL AND g.valid_from &lt;= #{now} AND g.valid_until > #{now})
-            </if>
-            <if test='instrument != null'>AND i.ticker=#{instrument}</if>
-            <if test='status != null'>AND t.status=#{status}</if>
-            <if test='from != null'>AND t.submitted_at >= #{from} AND t.submitted_at &lt; #{to}</if>
-            ORDER BY t.submitted_at DESC NULLS LAST,t.trade_id DESC
-            LIMIT #{limit} OFFSET #{offset}
-            </script>
-            """)
+<if test='orderId != null'>AND t.trade_id=#{orderId}</if>
+<if test='clientReference != null'>AND EXISTS (
+  SELECT 1 FROM compliance_access_grants g
+  WHERE g.staff_user_id=#{actor} AND g.permission='EVIDENCE_READ'
+    AND g.client_id=t.client_id AND g.account_reference=#{clientReference}
+    AND g.revoked_at IS NULL AND g.valid_from &lt;= #{now} AND g.valid_until > #{now})
+</if>
+<if test='instrument != null'>AND i.ticker=#{instrument}</if>
+<if test='status != null'>AND t.status=#{status}</if>
+<if test='from != null'>AND t.submitted_at >= #{from} AND t.submitted_at &lt; #{to}</if>
+ORDER BY t.submitted_at DESC NULLS LAST,t.trade_id DESC
+LIMIT #{limit} OFFSET #{offset}
+</script>
+""")
     List<Map<String, Object>> orders(Map<String, Object> parameters);
 
     @Select(
@@ -111,18 +113,18 @@ public interface ComplianceEvidenceMapper {
             """
                     + FROM
                     + """
-            <if test='orderId != null'>AND t.trade_id=#{orderId}</if>
-            <if test='clientReference != null'>AND EXISTS (
-              SELECT 1 FROM compliance_access_grants g
-              WHERE g.staff_user_id=#{actor} AND g.permission='EVIDENCE_READ'
-                AND g.client_id=t.client_id AND g.account_reference=#{clientReference}
-                AND g.revoked_at IS NULL AND g.valid_from &lt;= #{now} AND g.valid_until > #{now})
-            </if>
-            <if test='instrument != null'>AND i.ticker=#{instrument}</if>
-            <if test='status != null'>AND t.status=#{status}</if>
-            <if test='from != null'>AND t.submitted_at >= #{from} AND t.submitted_at &lt; #{to}</if>
-            </script>
-            """)
+<if test='orderId != null'>AND t.trade_id=#{orderId}</if>
+<if test='clientReference != null'>AND EXISTS (
+  SELECT 1 FROM compliance_access_grants g
+  WHERE g.staff_user_id=#{actor} AND g.permission='EVIDENCE_READ'
+    AND g.client_id=t.client_id AND g.account_reference=#{clientReference}
+    AND g.revoked_at IS NULL AND g.valid_from &lt;= #{now} AND g.valid_until > #{now})
+</if>
+<if test='instrument != null'>AND i.ticker=#{instrument}</if>
+<if test='status != null'>AND t.status=#{status}</if>
+<if test='from != null'>AND t.submitted_at >= #{from} AND t.submitted_at &lt; #{to}</if>
+</script>
+""")
     long count(Map<String, Object> parameters);
 
     @Select("<script>SELECT " + COLUMNS + FROM + " AND t.trade_id=#{id}</script>")
@@ -160,6 +162,8 @@ public interface ComplianceEvidenceMapper {
             SELECT f.finding_id::text AS reference,f.kind,f.detected_at AS "occurredAt"
             FROM reconciliation_findings f
             WHERE f.order_id=#{orderId}
+              AND (#{managedClient}::integer IS NULL OR f.client_id=#{managedClient})
+              AND (#{managedOrder}::integer IS NULL OR f.order_id=#{managedOrder})
               AND EXISTS (
                 SELECT 1 FROM compliance_access_grants g
                 WHERE g.staff_user_id=#{actor} AND g.permission='EVIDENCE_READ'

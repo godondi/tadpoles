@@ -5,6 +5,7 @@ import static com.neueda.leap.trading.TradingData.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.neueda.leap.dto.ComplianceDtos.*;
+import com.neueda.leap.exception.WorkflowException;
 import com.neueda.leap.mapper.ComplianceExportMapper;
 import com.neueda.leap.service.ComplianceAccessService.Access;
 
@@ -68,27 +69,24 @@ public class ComplianceExportService {
             UUID previousId = parseReference(previous);
             Map<String, Object> metadata = metadata(previousId);
             if (metadata == null || integer(metadata, "orderId") != request.orderId()) {
-                throw new ResponseStatusException(
-                        HttpStatus.CONFLICT, "Idempotency key belongs to another request");
+                throw new WorkflowException(
+                        HttpStatus.CONFLICT,
+                        "IDEMPOTENCY_CONFLICT",
+                        "Idempotency key belongs to another request");
             }
             authorizeExport(grant, metadata, previousId);
             ExportRecord replay = record(metadata, grant);
             access.success(
-                    grant,
-                    "EXPORT_REPLAY",
-                    "EXPORT",
-                    previous,
-                    key,
-                    1,
-                    parseReference(previous));
+                    grant, "EXPORT_REPLAY", "EXPORT", previous, key, 1, parseReference(previous));
             return replay;
         }
 
         ComplianceEvidenceService.ExportSnapshot snapshot =
                 evidence.snapshotForExport(context, request.orderId());
         if (snapshot.detail().sections().stream().anyMatch(EvidenceSection::hasMore)) {
-            throw new ResponseStatusException(
+            throw new WorkflowException(
                     HttpStatus.CONFLICT,
+                    "EVIDENCE_LIMIT",
                     "Evidence exceeds the single-case export limit; use paginated review");
         }
         byte[] evidenceBytes = encode(snapshot.detail());
@@ -114,17 +112,18 @@ public class ComplianceExportService {
                         "verification",
                         "PASS",
                         "integrityNote",
-                        "Digest checks content consistency only; no independent signature or anchor is configured.");
+                        "Digest checks content consistency only; no independent signature or anchor"
+                                + " is configured.");
         byte[] manifestBytes = encode(manifest);
         Map<String, byte[]> files = new LinkedHashMap<>();
         files.put("evidence.json", evidenceBytes);
         files.put("manifest.json", manifestBytes);
-        files.put("limitations.txt", String.join("\n", snapshot.detail().limitations()).getBytes(StandardCharsets.UTF_8));
+        files.put(
+                "limitations.txt",
+                String.join("\n", snapshot.detail().limitations())
+                        .getBytes(StandardCharsets.UTF_8));
         byte[] archive = zip(files);
-        if (archive.length > 5_000_000) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT, "Evidence exceeds the five megabyte archive limit");
-        }
+        requireArchiveLimit(archive);
         Instant now = clock.instant();
         Instant expires = now.plusSeconds(lifetime);
         UUID exportId = UUID.randomUUID();
@@ -168,16 +167,20 @@ public class ComplianceExportService {
         } catch (DataAccessException failure) {
             throw unavailable();
         }
+        if (grant.investigation() != null)
+            db.associate(
+                    map(
+                            "investigation",
+                            grant.investigation(),
+                            "id",
+                            exportId,
+                            "actor",
+                            grant.actor(),
+                            "now",
+                            now));
         Map<String, Object> saved = metadata(exportId);
         ExportRecord result = record(saved, grant);
-        access.success(
-                grant,
-                "EXPORT_CREATED",
-                "EXPORT",
-                exportId.toString(),
-                key,
-                1,
-                exportId);
+        access.success(grant, "EXPORT_CREATED", "EXPORT", exportId.toString(), key, 1, exportId);
         return result;
     }
 
@@ -196,15 +199,23 @@ public class ComplianceExportService {
                         checkedPage * checkedSize,
                         "now",
                         grant.now());
+        parameters.putAll(grant.parameters());
         List<ExportRecord> items;
         long total;
         try {
             items = db.history(parameters).stream().map(row -> record(row, grant)).toList();
-            total = db.historyCount(grant.actor(), grant.now());
+            total = db.historyCount(parameters);
         } catch (DataAccessException failure) {
             throw unavailable();
         }
-        access.success(grant, "EXPORT_HISTORY", "EXPORT", null, Integer.toString(checkedPage), items.size(), null);
+        access.success(
+                grant,
+                "EXPORT_HISTORY",
+                "EXPORT",
+                null,
+                Integer.toString(checkedPage),
+                items.size(),
+                null);
         return new ExportPage(
                 items, checkedPage, checkedSize, total, access.scopeLabel(), clock.instant());
     }
@@ -228,7 +239,7 @@ public class ComplianceExportService {
         authorizeExport(grant, row, id);
         Instant expires = instant(row, "expiresAt");
         if (expires == null || !expires.isAfter(clock.instant())) {
-            throw new ResponseStatusException(HttpStatus.GONE, "Export has expired");
+            throw new WorkflowException(HttpStatus.GONE, "EXPORT_EXPIRED", "Export has expired");
         }
         Map<String, Object> archive;
         try {
@@ -249,14 +260,26 @@ public class ComplianceExportService {
         return bytes;
     }
 
+    static void requireArchiveLimit(byte[] archive) {
+        if (archive.length > 5_000_000) {
+            throw new WorkflowException(
+                    HttpStatus.CONFLICT,
+                    "ARCHIVE_LIMIT",
+                    "Evidence exceeds the five megabyte archive limit");
+        }
+    }
+
     private void authorizeExport(Access grant, Map<String, Object> row, UUID id) {
         if (row == null || integer(row, "requester") != grant.actor()) {
             access.notFound(grant, id.toString());
         }
         int clientId = integer(row, "clientId");
-        if (!access.has(grant, "EVIDENCE_READ", clientId)
-                && !access.has(grant, "EXPORT_DOWNLOAD", clientId)
-                && !access.has(grant, "EXPORT_CREATE", clientId)) {
+        if ((grant.managedOrder() != null && grant.managedOrder() != integer(row, "orderId"))
+                || (grant.investigation() != null
+                        && !Objects.equals(grant.investigation(), row.get("investigationId")))
+                || !access.has(grant, grant.permission(), clientId)
+                || ("EXPORT_CREATE".equals(grant.permission())
+                        && !access.has(grant, "EVIDENCE_READ", clientId))) {
             access.notFound(grant, id.toString());
         }
     }
@@ -290,7 +313,7 @@ public class ComplianceExportService {
         if (!"EXPIRED".equals(state) && access.has(grant, "EXPORT_DOWNLOAD", clientId)) {
             actions.add("DOWNLOAD");
         }
-        actions.add("RECOVER_RECEIPT");
+        if (access.has(grant, "EVIDENCE_READ", clientId)) actions.add("RECOVER_RECEIPT");
         return new ExportRecord(
                 string(row, "requestReference"),
                 access.scopeLabel(),
@@ -311,7 +334,8 @@ public class ComplianceExportService {
             Map<String, Integer> counts = new LinkedHashMap<>();
             Object rawCounts = value.get("sectionCounts");
             if (rawCounts instanceof Map<?, ?> map) {
-                map.forEach((key, count) -> counts.put(key.toString(), ((Number) count).intValue()));
+                map.forEach(
+                        (key, count) -> counts.put(key.toString(), ((Number) count).intValue()));
             }
             return new Manifest(
                     Objects.toString(value.get("schemaVersion"), ""),

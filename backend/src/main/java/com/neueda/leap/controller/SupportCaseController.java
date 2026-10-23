@@ -23,6 +23,11 @@ public class SupportCaseController {
         return cases.create(key, body);
     }
 
+    @GetMapping("/intake-policy")
+    public Object intakePolicy() {
+        return cases.intakePolicy();
+    }
+
     @GetMapping("/by-request/{key}")
     public Object byRequest(@PathVariable String key) {
         return cases.byRequest(key);

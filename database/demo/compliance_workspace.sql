@@ -22,7 +22,8 @@ FROM users staff
 CROSS JOIN users approver
 CROSS JOIN clients client
 JOIN users owner ON owner.user_id=client.user_id
-CROSS JOIN (VALUES ('EVIDENCE_READ'),('EXPORT_CREATE'),('EXPORT_DOWNLOAD')) requested(permission)
+CROSS JOIN (VALUES ('EVIDENCE_READ'),('EXPORT_CREATE'),('EXPORT_DOWNLOAD'),
+    ('INVESTIGATION_READ'),('INVESTIGATION_UPDATE')) requested(permission)
 WHERE staff.username='demo.compliance'
   AND staff.email='demo.compliance@tadpoles.test'
   AND approver.username='demo.finance'

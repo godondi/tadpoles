@@ -66,6 +66,8 @@ describe('owned support journey', () => {
     expect(paths.indexOf('app/support/new')).toBeGreaterThan(-1);
     expect(paths.indexOf('app/support/new')).toBeLessThan(paths.indexOf('app/support/:reference'));
     const { fixture: f, http } = await setup('app/support/new');
+    http.expectOne((r) => r.url.endsWith('/intake-policy')).flush({intakeEnabled:false,schemaVersion:1,categories:[]});
+    f.detectChanges();
     http
       .expectOne((r) => r.url.endsWith('/orders/12'))
       .flush({ order: { orderId: 12, ticker: 'TEST', status: 'ACCEPTED' } });
@@ -268,6 +270,34 @@ describe('owned support journey', () => {
     });
     f.detectChanges();
     expect(f.nativeElement.textContent).toContain('trading availability');
+    http.verify();
+  });
+  it('offers server-enabled attention views without sending private selectors to a legacy queue', async () => {
+    const { fixture: f, http, refresh } = await setup('operations/cases');
+    const initial = http.expectOne((r) => r.url.endsWith('/operations/cases'));
+    expect(initial.request.params.has('view')).toBe(false);
+    initial.flush({ items: [], total: 0, page: 0, pageSize: 20, workflowEnabled: true });
+    f.detectChanges();
+    await f.whenStable();
+    const selector = f.nativeElement.querySelector('select[name=queueView]') as HTMLSelectElement;
+    expect(selector.options.length).toBe(7);
+    selector.value = 'AWAITING_REVIEW';
+    selector.dispatchEvent(new Event('change'));
+    f.detectChanges();
+    f.nativeElement.querySelector('form.filters').dispatchEvent(new Event('submit'));
+    const selected = http.expectOne((r) => r.url.endsWith('/operations/cases'));
+    expect(selected.request.params.get('view')).toBe('AWAITING_REVIEW');
+    selected.flush({ items: [], total: 0, page: 0, pageSize: 20, workflowEnabled: true });
+    refresh.next();
+    const refreshed = http.expectOne((r) => r.url.endsWith('/operations/cases'));
+    expect(refreshed.request.params.get('view')).toBe('AWAITING_REVIEW');
+    refreshed.flush({ items: [], total: 0, page: 0, pageSize: 20, workflowEnabled: false });
+    f.detectChanges();
+    expect(f.nativeElement.querySelector('select[name=queueView]')).toBeNull();
+    refresh.next();
+    const legacy = http.expectOne((r) => r.url.endsWith('/operations/cases'));
+    expect(legacy.request.params.has('view')).toBe(false);
+    legacy.flush({ items: [], total: 0, page: 0, pageSize: 20, workflowEnabled: false });
     http.verify();
   });
 });

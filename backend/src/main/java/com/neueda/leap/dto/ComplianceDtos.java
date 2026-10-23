@@ -12,7 +12,11 @@ public final class ComplianceDtos {
     public record AccessPolicy(
             boolean configured, List<String> purposes, String policyVersion, String scopeLabel) {}
 
-    public record ContextRequest(String purposeCode, String caseReference) {}
+    public record ContextRequest(String purposeCode, String caseReference, String referenceType) {
+        public ContextRequest(String purposeCode, String caseReference) {
+            this(purposeCode, caseReference, "EXTERNAL");
+        }
+    }
 
     public record AccessContext(
             UUID contextId,

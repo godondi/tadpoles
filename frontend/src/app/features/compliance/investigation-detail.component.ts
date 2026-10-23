@@ -2,15 +2,25 @@ import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { DatePipe, JsonPipe, KeyValuePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Observable, Subject, takeUntil } from 'rxjs';
 import { ComplianceApi } from './compliance-api.service';
 import { ComplianceContextComponent } from './compliance-context.component';
 import { ComplianceResource } from './compliance-resource';
 import {
   ComplianceEvidenceSection,
   ComplianceInvestigationDetail,
+  ComplianceExportRecord,
 } from './compliance.models';
 import { RequestStateComponent } from '../../shared/workspace/request-state.component';
 import { createIdempotencyKey } from '../../core/idempotency-key';
+import {
+  ExportRecovery,
+  downloadServerArchive,
+  readExportRecovery,
+  saveExportRecovery,
+} from './export-recovery';
+import { restoreSearch, safeSearchQuery } from './search-state';
+import { EvidenceFactsComponent } from '../../shared/workspace/evidence-facts.component';
 
 @Component({
   selector: 'app-compliance-investigation-detail',
@@ -21,6 +31,7 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
     RouterLink,
     RequestStateComponent,
     ComplianceContextComponent,
+    EvidenceFactsComponent,
   ],
   template: `
     <header class="workspace-heading">
@@ -49,14 +60,38 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
             {{ detail.summary.instrument }}
           </p>
           <dl class="details">
-            <div><dt>Safe account reference</dt><dd>{{ detail.accountReference }}</dd></div>
-            <div><dt>Authenticated actor</dt><dd>{{ detail.authenticatedActor }}</dd></div>
-            <div><dt>Record kind</dt><dd>{{ detail.summary.recordKind }}</dd></div>
-            <div><dt>Execution mode</dt><dd>{{ detail.summary.executionMode }}</dd></div>
-            <div><dt>Submitted (UTC)</dt><dd>{{ time(detail.summary.submittedAt) }}</dd></div>
-            <div><dt>Accepted (UTC)</dt><dd>{{ time(detail.summary.acceptedAt) }}</dd></div>
-            <div><dt>Outcome (UTC)</dt><dd>{{ time(detail.summary.outcomeAt) }}</dd></div>
-            <div><dt>Evidence completeness</dt><dd>{{ detail.summary.evidenceCompleteness }}</dd></div>
+            <div>
+              <dt>Safe account reference</dt>
+              <dd>{{ detail.accountReference }}</dd>
+            </div>
+            <div>
+              <dt>Authenticated actor</dt>
+              <dd>{{ detail.authenticatedActor }}</dd>
+            </div>
+            <div>
+              <dt>Record kind</dt>
+              <dd>{{ detail.summary.recordKind }}</dd>
+            </div>
+            <div>
+              <dt>Execution mode</dt>
+              <dd>{{ detail.summary.executionMode }}</dd>
+            </div>
+            <div>
+              <dt>Submitted (UTC)</dt>
+              <dd>{{ time(detail.summary.submittedAt) }}</dd>
+            </div>
+            <div>
+              <dt>Accepted (UTC)</dt>
+              <dd>{{ time(detail.summary.acceptedAt) }}</dd>
+            </div>
+            <div>
+              <dt>Outcome (UTC)</dt>
+              <dd>{{ time(detail.summary.outcomeAt) }}</dd>
+            </div>
+            <div>
+              <dt>Evidence completeness</dt>
+              <dd>{{ detail.summary.evidenceCompleteness }}</dd>
+            </div>
           </dl>
           <p>Snapshot {{ detail.snapshotAt | date: 'medium' : 'UTC' }} UTC.</p>
           @for (finding of detail.findings; track $index) {
@@ -70,26 +105,46 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
         </section>
         <section class="panel">
           <h2>Accepted policy and current controls</h2>
-          <p>Current controls must not be read as the policy that governed the historical decision.</p>
-          <details>
-            <summary>Policy at acceptance</summary>
-            @if (detail.acceptedPolicy) {
+          <p>
+            Current controls must not be read as the policy that governed the historical decision.
+          </p>
+          <h3>Policy at acceptance</h3>
+          @if (detail.acceptedPolicy) {
+            <app-evidence-facts [value]="detail.acceptedPolicy" />
+            <details>
+              <summary>Accepted policy raw JSON</summary>
               <pre class="evidence-json">{{ detail.acceptedPolicy | json }}</pre>
-            } @else {
-              <p>NOT_EVALUATED: accepted policy was not retained.</p>
-            }
-          </details>
-          <details>
-            <summary>Current policy</summary>
-            @if (detail.currentPolicy) {
+            </details>
+          } @else {
+            <p>NOT_EVALUATED: accepted policy was not retained.</p>
+          }
+          <h3>Current policy</h3>
+          @if (detail.currentPolicy) {
+            <app-evidence-facts [value]="detail.currentPolicy" />
+            <details>
+              <summary>Current policy raw JSON</summary>
               <pre class="evidence-json">{{ detail.currentPolicy | json }}</pre>
-            } @else {
-              <p>UNKNOWN: current policy was not supplied.</p>
-            }
-          </details>
+            </details>
+          } @else {
+            <p>UNKNOWN: current policy was not supplied.</p>
+          }
         </section>
+        <nav class="panel" aria-label="Evidence sections">
+          <h2>Evidence section index</h2>
+          <div class="actions">
+            @for (section of detail.sections; track section.name) {
+              <a [attr.href]="'#compliance-evidence-' + section.name"
+                >{{ section.name }} / {{ section.completeness }} / {{ section.total }} records</a
+              >
+            }
+          </div>
+        </nav>
         @for (section of detail.sections; track section.name) {
-          <section class="panel">
+          <section
+            class="panel"
+            [id]="'compliance-evidence-' + section.name"
+            [attr.aria-label]="section.name"
+          >
             <div class="section-heading">
               <h2>{{ section.name }}</h2>
               <span class="evidence-status" [attr.data-status]="section.completeness">
@@ -100,9 +155,18 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
               {{ section.coverage }} · source {{ section.source }} · as of
               {{ section.asOf | date: 'medium' : 'UTC' }} UTC
             </p>
-            <div class="table-wrapper" tabindex="0" [attr.aria-label]="section.name + ', scroll horizontally'">
+            <div
+              class="table-wrapper"
+              tabindex="0"
+              [attr.aria-label]="section.name + ', scroll horizontally'"
+            >
               <table>
-                <caption>{{ section.name }} retained records</caption>
+                <caption>
+                  {{
+                    section.name
+                  }}
+                  retained records
+                </caption>
                 <thead>
                   <tr>
                     <th scope="col">Reference</th>
@@ -122,13 +186,18 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
                       <td>
                         <dl class="details">
                           @for (field of record.values | keyvalue; track field.key) {
-                            <div><dt>{{ label(field.key) }}</dt><dd>{{ field.value ?? 'Not recorded' }}</dd></div>
+                            <div>
+                              <dt>{{ label(field.key) }}</dt>
+                              <dd>{{ field.value ?? 'Not recorded' }}</dd>
+                            </div>
                           }
                         </dl>
                       </td>
                     </tr>
                   } @empty {
-                    <tr><td colspan="5">No retained records in this section.</td></tr>
+                    <tr>
+                      <td colspan="5">No retained records in this section.</td>
+                    </tr>
                   }
                 </tbody>
               </table>
@@ -138,20 +207,20 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
               <button
                 type="button"
                 (click)="page(section, section.page - 1)"
-                [disabled]="section.page === 0 || sectionLoading()"
+                [disabled]="section.page === 0 || sectionLoading(section.name)"
               >
                 Previous
               </button>
               <button
                 type="button"
                 (click)="page(section, section.page + 1)"
-                [disabled]="!section.hasMore || sectionLoading()"
+                [disabled]="!section.hasMore || sectionLoading(section.name)"
               >
                 Next
               </button>
             </div>
-            @if (sectionError()) {
-              <p class="notice" role="alert">{{ sectionError() }}</p>
+            @if (sectionError(section.name)) {
+              <p class="notice" role="alert">{{ sectionError(section.name) }}</p>
             }
           </section>
         }
@@ -162,14 +231,46 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
               Export requests are deliberate, scoped and re-authorized. The server must return a
               receipt and manifest; displayed rows are never converted into a local file.
             </p>
-            <button type="button" (click)="requestExport(detail.summary.orderId)" [disabled]="exporting()">
-              Request authorized export
+            <button
+              type="button"
+              (click)="requestExport(detail.summary.orderId)"
+              [disabled]="exporting() || recoveryBlocked()"
+            >
+              {{ recovery() ? 'Recover original export request' : 'Request authorized export' }}
             </button>
           } @else {
             <p>
               Export is disabled because an approved export entitlement, redaction policy and
               retention contract were not supplied by the server.
             </p>
+          }
+          @if (!receipt() && recovery()?.reference; as reference) {
+            <button type="button" (click)="recoverReceipt(reference)" [disabled]="exporting()">
+              Recover server receipt
+            </button>
+          }
+          @if (receipt(); as receipt) {
+            <p>Export {{ receipt.requestReference }} · {{ receipt.state }}</p>
+            @if (receipt.manifest; as manifest) {
+              <p>
+                Server manifest: {{ manifest.schemaVersion }} · {{ manifest.verification }} · digest
+                {{ manifest.contentDigest }}
+              </p>
+            }
+            @if (receipt.authorizedActions.includes('RECOVER_RECEIPT')) {
+              <button
+                type="button"
+                (click)="recoverReceipt(receipt.requestReference)"
+                [disabled]="exporting()"
+              >
+                Refresh server receipt
+              </button>
+            }
+            @if (receipt.authorizedActions.includes('DOWNLOAD')) {
+              <button type="button" (click)="download(receipt)" [disabled]="exporting()">
+                Download authorized archive
+              </button>
+            }
           }
           @if (exportMessage()) {
             <p class="notice" role="alert">{{ exportMessage() }}</p>
@@ -224,38 +325,57 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
 export class ComplianceInvestigationDetailComponent {
   readonly api = inject(ComplianceApi);
   readonly resource = new ComplianceResource<ComplianceInvestigationDetail>();
-  readonly sectionLoading = signal(false);
-  readonly sectionError = signal('');
+  readonly sectionStates = signal<Record<string, { loading: boolean; error: string }>>({});
   readonly invalidId = signal(false);
   readonly exporting = signal(false);
   readonly exportMessage = signal('');
+  readonly receipt = signal<ComplianceExportRecord | null>(null);
+  readonly recovery = signal<ExportRecovery | null>(null);
+  readonly recoveryBlocked = signal(false);
   private readonly route = inject(ActivatedRoute);
   private readonly destroy = inject(DestroyRef);
   private id = 0;
-  private exportKey = '';
+  private generation = 0;
+  private readonly cancel = new Subject<void>();
   backQuery: Record<string, string> = {};
 
   constructor() {
-    const allowed = ['orderId', 'from', 'to', 'clientReference', 'instrument', 'status'];
-    this.backQuery = Object.fromEntries(
-      this.route.snapshot.queryParamMap.keys
-        .filter((key) => allowed.includes(key))
-        .map((key) => [key, this.route.snapshot.queryParamMap.get(key) ?? '']),
-    );
+    try {
+      this.backQuery = safeSearchQuery(restoreSearch(this.route.snapshot.queryParamMap));
+    } catch {
+      this.backQuery = {};
+    }
+    this.destroy.onDestroy(() => {
+      this.cancel.next();
+      this.cancel.complete();
+    });
     this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       const raw = params.get('id') ?? '';
       this.id = /^[1-9]\d*$/.test(raw) ? Number(raw) : 0;
       this.invalidId.set(!this.id || !Number.isSafeInteger(this.id));
-      this.exportKey = '';
-      this.exportMessage.set('');
       this.load();
     });
     this.api.changed.pipe(takeUntilDestroyed()).subscribe(() => {
-      if (this.api.context() && !this.invalidId()) this.load();
+      this.load();
     });
   }
 
   load() {
+    this.generation++;
+    this.cancel.next();
+    this.sectionStates.set({});
+    this.exporting.set(false);
+    this.exportMessage.set('');
+    this.receipt.set(null);
+    const actor = this.api.actorKey?.();
+    this.recovery.set(null);
+    this.recoveryBlocked.set(false);
+    try {
+      if (actor && this.id > 0) this.recovery.set(readExportRecovery(actor, this.id));
+    } catch (error) {
+      this.recoveryBlocked.set(true);
+      this.exportMessage.set((error as Error).message);
+    }
     if (this.invalidId()) {
       this.resource.clear();
       this.resource.error.set('The investigation reference must be a positive order ID.');
@@ -270,13 +390,19 @@ export class ComplianceInvestigationDetailComponent {
   }
 
   page(section: ComplianceEvidenceSection, page: number) {
-    if (page < 0 || !section.hasMore && page > section.page) return;
-    this.sectionLoading.set(true);
-    this.sectionError.set('');
-    const request = this.api.section(this.id, section.name, page);
-    request.pipe(takeUntilDestroyed(this.destroy)).subscribe({
-      next: (updated) => {
-        this.sectionLoading.set(false);
+    if (
+      !this.api.context() ||
+      !this.resource.data() ||
+      this.sectionLoading(section.name) ||
+      page < 0 ||
+      (!section.hasMore && page > section.page)
+    )
+      return;
+    this.setSection(section.name, true);
+    this.action(
+      this.api.section(this.id, section.name, page),
+      (updated) => {
+        this.setSection(section.name, false);
         const detail = this.resource.data();
         if (detail)
           this.resource.data.set({
@@ -286,38 +412,142 @@ export class ComplianceInvestigationDetailComponent {
             ),
           });
       },
-      error: () => {
-        this.sectionLoading.set(false);
-        this.sectionError.set('Unable to load this evidence section. Try again.');
-      },
-    });
+      () =>
+        this.setSection(section.name, false, 'Unable to load this evidence section. Try again.'),
+    );
   }
 
   requestExport(orderId: number) {
-    if (this.exporting() || !this.exportKey) this.exportKey = createIdempotencyKey() ?? '';
-    if (!this.exportKey) {
+    if (
+      this.exporting() ||
+      this.recoveryBlocked() ||
+      orderId !== this.id ||
+      !this.api.context() ||
+      !this.resource.data()?.exportAllowed
+    )
+      return;
+    const actor = this.api.actorKey?.();
+    const key = this.recovery()?.key ?? createIdempotencyKey();
+    if (!key || !actor) {
       this.exportMessage.set('This browser cannot create a safe export request key.');
+      return;
+    }
+    const recovery: ExportRecovery = this.recovery() ?? {
+      actor,
+      order: orderId,
+      action: 'EXPORT_CREATE',
+      key,
+    };
+    try {
+      saveExportRecovery(recovery);
+      this.recovery.set(recovery);
+    } catch {
+      this.exportMessage.set('Export recovery storage is unavailable. No request was sent.');
       return;
     }
     this.exporting.set(true);
     this.exportMessage.set('');
-    this.api
-      .createExport(orderId, this.exportKey)
-      .pipe(takeUntilDestroyed(this.destroy))
-      .subscribe({
-        next: (receipt) => {
-          this.exporting.set(false);
+    this.action(
+      this.api.createExport(orderId, key),
+      (receipt) => {
+        this.exporting.set(false);
+        this.receipt.set(receipt);
+        const saved = { ...recovery, reference: receipt.requestReference };
+        this.recovery.set(saved);
+        try {
+          saveExportRecovery(saved);
           this.exportMessage.set(`Export ${receipt.requestReference} is ${receipt.state}.`);
-        },
-        error: (error) => {
-          this.exporting.set(false);
+        } catch {
           this.exportMessage.set(
-            error.status === 409
-              ? 'The export request outcome is uncertain. Recover the same request before retrying.'
-              : 'The server did not authorize this export request.',
+            'The server returned a receipt, but its reference could not be saved. The original request key remains available for recovery.',
           );
-        },
-      });
+        }
+      },
+      (error) => this.exportFailure(error),
+    );
+  }
+
+  recoverReceipt(reference: string) {
+    const receipt = this.receipt();
+    if (
+      this.exporting() ||
+      !this.api.context() ||
+      (!(
+        receipt?.requestReference === reference &&
+        receipt.authorizedActions.includes('RECOVER_RECEIPT')
+      ) &&
+        !(this.recovery()?.reference === reference && !receipt))
+    )
+      return;
+    this.exporting.set(true);
+    this.action(
+      this.api.receipt(reference),
+      (receipt) => {
+        this.receipt.set(receipt);
+        this.exporting.set(false);
+        this.exportMessage.set('');
+      },
+      (error) => this.exportFailure(error),
+    );
+  }
+
+  download(receipt: ComplianceExportRecord) {
+    if (
+      this.exporting() ||
+      this.receipt()?.requestReference !== receipt.requestReference ||
+      !receipt.authorizedActions.includes('DOWNLOAD') ||
+      !this.api.context()
+    )
+      return;
+    this.exporting.set(true);
+    this.action(
+      this.api.downloadExport(receipt.requestReference),
+      (blob) => {
+        this.exporting.set(false);
+        downloadServerArchive(blob, receipt.requestReference);
+      },
+      (error) => this.exportFailure(error),
+    );
+  }
+
+  sectionLoading(name: string) {
+    return this.sectionStates()[name]?.loading ?? false;
+  }
+  sectionError(name: string) {
+    return this.sectionStates()[name]?.error ?? '';
+  }
+  private setSection(name: string, loading: boolean, error = '') {
+    this.sectionStates.update((states) => ({ ...states, [name]: { loading, error } }));
+  }
+  private action<T>(request: Observable<T>, next: (value: T) => void, error: (error: any) => void) {
+    const generation = this.generation;
+    request.pipe(takeUntil(this.cancel), takeUntilDestroyed(this.destroy)).subscribe({
+      next: (value) => {
+        if (generation === this.generation) next(value);
+      },
+      error: (failure) => {
+        if (generation === this.generation) error(failure);
+      },
+    });
+  }
+  private exportFailure(error: { status?: number; error?: { code?: string } }) {
+    this.exporting.set(false);
+    const messages: Record<string, string> = {
+      IDEMPOTENCY_CONFLICT:
+        'The original key belongs to a different request. No replacement key was generated.',
+      EVIDENCE_LIMIT: 'Evidence exceeds the export limit. Use independent section pagination.',
+      ARCHIVE_LIMIT: 'The server archive exceeds its size limit. No local archive was created.',
+      EXPORT_EXPIRED: 'The server export has expired and cannot be downloaded.',
+      CONTEXT_INVALID: 'The purpose context is no longer authorized.',
+    };
+    this.exportMessage.set(
+      messages[error.error?.code ?? ''] ??
+        (error.status === 410
+          ? 'The server export has expired and cannot be downloaded.'
+          : [401, 403].includes(error.status ?? 0)
+            ? 'The server did not authorize this export request.'
+            : 'The request outcome is unknown. Recover the original request; do not create a replacement key.'),
+    );
   }
 
   time(value: string | null) {
@@ -327,5 +557,4 @@ export class ComplianceInvestigationDetailComponent {
   label(value: string) {
     return value.replace(/([A-Z])/g, ' $1').replace(/^./, (first) => first.toUpperCase());
   }
-
 }

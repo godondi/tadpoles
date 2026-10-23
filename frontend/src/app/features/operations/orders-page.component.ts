@@ -1,5 +1,5 @@
 import { RequestStateComponent } from '../../shared/workspace/request-state.component';
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -8,6 +8,7 @@ import { OperationsApi, OrderPage } from '../../core/api/operations-api.service'
 import { CatalogRefreshService } from '../../core/api/catalog-refresh.service';
 import { OperationsContextComponent } from './operations-context.component';
 import { OperationsResource } from './operations-resource';
+import { utcFilters } from '../../shared/workspace/utc-filter';
 
 @Component({
   selector: 'app-operations-orders',
@@ -21,6 +22,9 @@ import { OperationsResource } from './operations-resource';
     <app-operations-context />
     @if (api.context()) {
       <section class="panel">
+        @if (validation()) {
+          <p class="notice" role="alert">{{ validation() }}</p>
+        }
         <form class="filters" (ngSubmit)="search()">
           <div class="form-field">
             <label for="order-ref">Exact order reference</label
@@ -217,7 +221,9 @@ export class OperationsOrdersComponent {
   from = '';
   to = '';
   cursor = '';
+  readonly validation = signal('');
   private applied: Record<string, string> = {};
+  private hasApplied = false;
   constructor() {
     const params = this.route.snapshot.queryParamMap;
     for (const key of ['status', 'side', 'recordKind', 'rejectionStage', 'queue'])
@@ -243,12 +249,22 @@ export class OperationsOrdersComponent {
       : ['ACCEPTED', 'EXECUTING', 'FILLED', 'REJECTED'];
   }
   private apply() {
-    this.applied = Object.fromEntries(Object.entries(this.filters).filter(([, v]) => !!v));
-    if (this.from) this.applied['from'] = this.from + ':00Z';
-    if (this.to) this.applied['to'] = this.to + ':00Z';
+    try {
+      const dates = utcFilters(this.from, this.to);
+      this.applied = {
+        ...Object.fromEntries(Object.entries(this.filters).filter(([, v]) => !!v)),
+        ...dates,
+      };
+      this.validation.set('');
+      this.hasApplied = true;
+      return true;
+    } catch (error) {
+      this.validation.set((error as Error).message);
+      return false;
+    }
   }
   search() {
-    this.apply();
+    if (!this.apply()) return;
     const queryParams: Record<string, string> = {};
     for (const key of ['status', 'side', 'recordKind', 'rejectionStage', 'queue'])
       if (this.filters[key]) queryParams[key] = this.filters[key];
@@ -258,7 +274,7 @@ export class OperationsOrdersComponent {
     this.load(true);
   }
   load(reset = false) {
-    if (!this.api.context()) return;
+    if (!this.api.context() || !this.hasApplied) return;
     if (reset) this.cursor = '';
     this.resource.load(
       this.api.orders({ ...this.applied, ...(this.cursor ? { cursor: this.cursor } : {}) }),

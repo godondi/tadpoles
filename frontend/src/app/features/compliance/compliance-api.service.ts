@@ -1,6 +1,6 @@
 import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, Subject, catchError, filter, throwError, tap } from 'rxjs';
+import { Observable, Subject, catchError, defer, filter, takeUntil, throwError, tap } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { buildApiUrl } from '../../core/api/api-url';
 import {
@@ -30,11 +30,12 @@ export class ComplianceApi {
   readonly contextMessage = signal('');
   private readonly http = inject(HttpClient);
   private readonly platform = inject(PLATFORM_ID);
+  private readonly auth = inject(AuthService);
   private generation = 0;
   private expiry?: ReturnType<typeof setTimeout>;
 
   constructor() {
-    inject(AuthService).sessionChanged.subscribe(() => this.clear());
+    this.auth.sessionChanged.subscribe(() => this.clear());
   }
 
   policy(): Observable<ComplianceAccessPolicy> {
@@ -89,7 +90,12 @@ export class ComplianceApi {
     );
   }
 
-  section(id: number, section: string, page: number, pageSize = 25): Observable<ComplianceEvidenceSection> {
+  section(
+    id: number,
+    section: string,
+    page: number,
+    pageSize = 25,
+  ): Observable<ComplianceEvidenceSection> {
     return this.withContext((headers) =>
       this.http.get<ComplianceEvidenceSection>(
         this.url(`/api/compliance/orders/${id}/evidence/${encodeURIComponent(section)}`),
@@ -139,11 +145,30 @@ export class ComplianceApi {
       return throwError(() => new HttpErrorResponse({ status: 403 }));
     }
     return this.withContext((headers) =>
-      this.http.get(this.url(`/api/compliance/evidence/exports/${encodeURIComponent(requestReference)}/download`), {
-        headers,
-        responseType: 'blob',
-      }),
+      this.http.get(
+        this.url(
+          `/api/compliance/evidence/exports/${encodeURIComponent(requestReference)}/download`,
+        ),
+        {
+          headers,
+          responseType: 'blob',
+        },
+      ),
     );
+  }
+
+  receipt(requestReference: string): Observable<ComplianceExportRecord> {
+    return this.withContext((headers) =>
+      this.http.get<ComplianceExportRecord>(
+        this.url(`/api/compliance/evidence/exports/${encodeURIComponent(requestReference)}`),
+        { headers },
+      ),
+    );
+  }
+
+  actorKey(): string | null {
+    const id = this.auth.identity?.()?.userId;
+    return Number.isSafeInteger(id) && id! > 0 ? String(id) : null;
   }
 
   private requiredContext(): ComplianceContext {
@@ -153,31 +178,37 @@ export class ComplianceApi {
     return context;
   }
 
-  private withContext<T>(request: (headers: Record<string, string>) => Observable<T>): Observable<T> {
-    let headers: Record<string, string>;
-    try {
-      headers = {
-        'Cache-Control': 'no-store',
-        'X-Compliance-Context': this.requiredContext().contextId,
-      };
-    } catch (error) {
-      return throwError(() => error);
-    }
-    return this.protected(request(headers));
-  }
-
-  private protected<T>(request: Observable<T>): Observable<T> {
-    return request.pipe(
-      catchError((error: HttpErrorResponse) => {
-        if ([401, 403, 409].includes(error.status))
-          this.clear(
-            error.status === 401
-              ? 'Your session expired. Sign in again before reviewing evidence.'
-              : 'This purpose context is no longer authorized. Start a new context.',
-          );
+  private withContext<T>(
+    request: (headers: Record<string, string>) => Observable<T>,
+  ): Observable<T> {
+    return defer(() => {
+      const generation = this.generation;
+      let context: ComplianceContext;
+      try {
+        context = this.requiredContext();
+      } catch (error) {
         return throwError(() => error);
-      }),
-    );
+      }
+      const current = () =>
+        generation === this.generation && this.context()?.contextId === context.contextId;
+      return request({
+        'Cache-Control': 'no-store',
+        'X-Compliance-Context': context.contextId,
+      }).pipe(
+        filter(current),
+        catchError((error: HttpErrorResponse) => {
+          if (!current()) return new Observable<T>((subscriber) => subscriber.complete());
+          if ([401, 403].includes(error.status) || error.error?.code === 'CONTEXT_INVALID')
+            this.clear(
+              error.status === 401
+                ? 'Your session expired. Sign in again before reviewing evidence.'
+                : 'This purpose context is no longer authorized. Start a new context.',
+            );
+          return throwError(() => error);
+        }),
+        takeUntil(this.changed),
+      );
+    });
   }
 
   private params(filters: ComplianceSearchFilters): Record<string, string | number> {

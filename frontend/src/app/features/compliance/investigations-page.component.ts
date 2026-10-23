@@ -1,13 +1,22 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ComplianceApi } from './compliance-api.service';
 import { ComplianceContextComponent } from './compliance-context.component';
 import { ComplianceResource } from './compliance-resource';
 import { ComplianceSearchFilters, ComplianceSearchPage } from './compliance.models';
 import { RequestStateComponent } from '../../shared/workspace/request-state.component';
+import {
+  ComplianceSearchState,
+  complianceStatuses,
+  emptySearchDraft,
+  restoreSearch,
+  safeSearchQuery,
+  searchDraft,
+  validateSearch,
+} from './search-state';
 
 @Component({
   selector: 'app-compliance-investigations',
@@ -34,7 +43,12 @@ import { RequestStateComponent } from '../../shared/workspace/request-state.comp
           </div>
           <div class="form-field">
             <label for="compliance-from">Submitted from (UTC)</label>
-            <input id="compliance-from" name="from" type="datetime-local" [(ngModel)]="filters.from" />
+            <input
+              id="compliance-from"
+              name="from"
+              type="datetime-local"
+              [(ngModel)]="filters.from"
+            />
           </div>
           <div class="form-field">
             <label for="compliance-to">Submitted before (UTC)</label>
@@ -65,7 +79,9 @@ import { RequestStateComponent } from '../../shared/workspace/request-state.comp
             <select id="compliance-status" name="status" [(ngModel)]="filters.status">
               <option value="">All statuses</option>
               @for (status of statuses; track status) {
-                <option [value]="status">{{ status }}</option>
+                <option [value]="status">
+                  {{ legacyStatus(status) ? status + ' (legacy)' : status }}
+                </option>
               }
             </select>
           </div>
@@ -74,7 +90,8 @@ import { RequestStateComponent } from '../../shared/workspace/request-state.comp
         </form>
         <p>
           Results are scoped before counts and paging. Date filters are UTC and may span at most 31
-          days.
+          days. Only status, instrument, UTC bounds and paging are restored from the URL; order and
+          account filters remain in memory.
         </p>
         @if (validation()) {
           <p class="notice" role="alert">{{ validation() }}</p>
@@ -90,9 +107,15 @@ import { RequestStateComponent } from '../../shared/workspace/request-state.comp
             {{ result.total }} permitted result{{ result.total === 1 ? '' : 's' }} · as of
             {{ result.asOf | date: 'medium' : 'UTC' }} UTC · {{ result.scope }}
           </p>
-          <div class="table-wrapper" tabindex="0" aria-label="Compliance investigations, scroll horizontally">
+          <div
+            class="table-wrapper"
+            tabindex="0"
+            aria-label="Compliance investigations, scroll horizontally"
+          >
             <table>
-              <caption>Permitted investigation results</caption>
+              <caption>
+                Permitted investigation results
+              </caption>
               <thead>
                 <tr>
                   <th scope="col">Order / client reference</th>
@@ -105,7 +128,9 @@ import { RequestStateComponent } from '../../shared/workspace/request-state.comp
               <tbody>
                 @for (item of result.items; track item.orderId) {
                   <tr>
-                    <td>{{ item.orderId }}<small>{{ item.clientReference }}</small></td>
+                    <td>
+                      {{ item.orderId }}<small>{{ item.clientReference }}</small>
+                    </td>
                     <td>
                       {{ item.side }} {{ item.quantity }} {{ item.unit }} · {{ item.instrument }}
                       <small>{{ item.executionMode }} · {{ item.recordKind }}</small>
@@ -128,13 +153,19 @@ import { RequestStateComponent } from '../../shared/workspace/request-state.comp
                     </td>
                   </tr>
                 } @empty {
-                  <tr><td colspan="5">No permitted investigations match these filters.</td></tr>
+                  <tr>
+                    <td colspan="5">No permitted investigations match these filters.</td>
+                  </tr>
                 }
               </tbody>
             </table>
           </div>
           <nav aria-label="Compliance investigation pages" class="pagination">
-            <button type="button" (click)="loadPage(page - 1)" [disabled]="page === 0 || resource.loading()">
+            <button
+              type="button"
+              (click)="loadPage(page - 1)"
+              [disabled]="page === 0 || resource.loading()"
+            >
               Previous
             </button>
             <span>Page {{ page + 1 }} of {{ pages(result) }}</span>
@@ -180,30 +211,51 @@ export class ComplianceInvestigationsPageComponent {
   readonly api = inject(ComplianceApi);
   readonly resource = new ComplianceResource<ComplianceSearchPage>();
   readonly validation = signal('');
-  readonly statuses = ['SUBMITTED', 'ACCEPTED', 'REJECTED', 'FILLED', 'CANCELLED'];
-  readonly filters = {
-    orderId: '',
-    from: '',
-    to: '',
-    clientReference: '',
-    instrument: '',
-    status: '',
-  };
+  readonly statuses = complianceStatuses;
+  readonly filters = emptySearchDraft();
+  private readonly state = inject(ComplianceSearchState);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private applied: ComplianceSearchFilters = { page: 0, pageSize: 25 };
+  private initialContext = !this.api.context();
   page = 0;
 
   constructor() {
+    try {
+      this.applied =
+        (this.api.context() ? this.state.applied : null) ??
+        restoreSearch(this.route.snapshot.queryParamMap);
+      Object.assign(this.filters, searchDraft(this.applied));
+      this.page = this.applied.page;
+    } catch {
+      this.validation.set('Saved search filters were invalid and have been reset.');
+    }
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: this.filterQuery(),
+      replaceUrl: true,
+    });
     this.api.changed.pipe(takeUntilDestroyed()).subscribe(() => {
+      if (this.initialContext) {
+        if (this.api.context()) {
+          this.initialContext = false;
+          this.loadPage(this.applied.page);
+        }
+        return;
+      }
+      this.applied = { page: 0, pageSize: 25 };
+      Object.assign(this.filters, emptySearchDraft());
       if (this.api.context()) this.loadPage(0);
     });
-    if (this.api.context()) this.loadPage(0);
+    if (this.api.context()) this.loadPage(this.page);
   }
 
   search() {
     this.validation.set('');
     const filters = this.buildFilters();
     if (!filters) return;
-    this.page = 0;
-    this.resource.load(this.api.search(filters));
+    this.applied = filters;
+    this.loadPage(0);
   }
 
   reset() {
@@ -217,24 +269,31 @@ export class ComplianceInvestigationsPageComponent {
     });
     this.validation.set('');
     this.page = 0;
-    this.loadPage(0);
+    this.search();
   }
 
   loadPage(page: number) {
-    const filters = this.buildFilters();
-    if (!filters) return;
-    this.page = Math.max(0, page);
-    this.resource.load(this.api.search({ ...filters, page: this.page }));
+    if (!Number.isInteger(page) || page < 0 || page > 1000 || !this.api.context()) return;
+    this.page = page;
+    this.applied = { ...this.applied, page };
+    this.state.applied = { ...this.applied };
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: this.filterQuery(),
+      replaceUrl: true,
+    });
+    this.resource.load(this.api.search({ ...this.applied }));
   }
 
   filterQuery(): Record<string, string> {
-    return Object.fromEntries(
-      Object.entries(this.filters).filter(([, value]) => Boolean(value)),
-    ) as Record<string, string>;
+    return safeSearchQuery(this.applied);
   }
 
   pages(result: ComplianceSearchPage) {
     return Math.max(1, Math.ceil(result.total / result.pageSize));
+  }
+  legacyStatus(status: string) {
+    return ['PENDING', 'APPROVED', 'EXECUTED'].includes(status);
   }
 
   time(value: string | null) {
@@ -242,34 +301,11 @@ export class ComplianceInvestigationsPageComponent {
   }
 
   private buildFilters(): ComplianceSearchFilters | null {
-    const orderId = this.filters.orderId.trim();
-    if (orderId && (!/^[1-9]\d*$/.test(orderId) || Number(orderId) > Number.MAX_SAFE_INTEGER)) {
-      this.validation.set('Order ID must be a positive integer.');
+    try {
+      return validateSearch(this.filters);
+    } catch (error) {
+      this.validation.set((error as Error).message);
       return null;
     }
-    if (this.filters.from && this.filters.to) {
-      const from = Date.parse(this.filters.from);
-      const to = Date.parse(this.filters.to);
-      if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from) {
-        this.validation.set('The UTC end time must be after the start time.');
-        return null;
-      }
-      if (to - from > 31 * 24 * 60 * 60 * 1000) {
-        this.validation.set('The date range cannot exceed 31 days.');
-        return null;
-      }
-    }
-    return {
-      ...(orderId ? { orderId: Number(orderId) } : {}),
-      ...(this.filters.from ? { from: this.filters.from } : {}),
-      ...(this.filters.to ? { to: this.filters.to } : {}),
-      ...(this.filters.clientReference.trim()
-        ? { clientReference: this.filters.clientReference.trim() }
-        : {}),
-      ...(this.filters.instrument.trim() ? { instrument: this.filters.instrument.trim() } : {}),
-      ...(this.filters.status ? { status: this.filters.status } : {}),
-      page: this.page,
-      pageSize: 25,
-    };
   }
 }

@@ -1522,12 +1522,23 @@ paths:
           description: "Access policy is unconfigured or a required dependency/access audit is unavailable."
   /api/compliance/investigations:
     get:
-      summary: Unavailable until approved scope and genuine data source are configured
+      summary: Search retained orders within live independent Compliance grants
+      description: Scope, including a managed review's account and optional order, is applied before count and pagination. UTC from is inclusive, to exclusive; the maximum interval is 31 days. Current states are ACCEPTED, EXECUTING, FILLED, REJECTED; PENDING, APPROVED, EXECUTED are retained legacy states. No-store applies to successes and errors.
       x-required-roles:
         - COMPLIANCE
-      x-implementation-status: availability-boundary-only
-      parameters: []
+      parameters:
+        - $ref: '#/components/parameters/CompliancePurposeContext'
+        - {name: page, in: query, schema: {type: integer, minimum: 0, maximum: 1000, default: 0}}
+        - {name: pageSize, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 25}}
+        - {name: orderId, in: query, schema: {type: integer, minimum: 1}}
+        - {name: clientReference, in: query, schema: {type: string, maxLength: 80}}
+        - {name: instrument, in: query, schema: {type: string, maxLength: 80}}
+        - {name: status, in: query, schema: {type: string, enum: [ACCEPTED, EXECUTING, FILLED, REJECTED, PENDING, APPROVED, EXECUTED]}}
+        - {name: from, in: query, schema: {type: string, format: date-time}}
+        - {name: to, in: query, schema: {type: string, format: date-time}}
       responses:
+        "200":
+          description: Scoped items, page, pageSize, total, scope and asOf; actual database evidence, not synthetic metrics
         "503":
           description: Dependency/policy unavailable; no source queried or empty metrics fabricated
           content:
@@ -1540,17 +1551,21 @@ paths:
           $ref: "#/components/responses/Forbidden"
   /api/compliance/orders/{id}/evidence:
     get:
-      summary: Unavailable until approved scope and genuine data source are configured
+      summary: Read scoped retained order evidence, findings and policy limitations
       x-required-roles:
       - COMPLIANCE
-      x-implementation-status: availability-boundary-only
       parameters:
+      - $ref: '#/components/parameters/CompliancePurposeContext'
       - name: id
         in: path
         required: true
         schema:
           type: integer
       responses:
+        '200':
+          description: Order summary, authenticated actor, safe account reference, accepted/current policies, snapshotAt, eight independently paged sections, findings, exportAllowed and limitations
+        '404':
+          $ref: '#/components/responses/NotFound'
         '503':
           description: Dependency/policy unavailable; no source queried or empty metrics fabricated
           content:
@@ -1563,12 +1578,16 @@ paths:
           $ref: '#/components/responses/Forbidden'
   /api/compliance/evidence:
     get:
-      summary: Unavailable until approved scope and genuine data source are configured
+      summary: Read requester-scoped immutable server export history
       x-required-roles:
       - COMPLIANCE
-      x-implementation-status: availability-boundary-only
-      parameters: []
+      parameters:
+      - $ref: '#/components/parameters/CompliancePurposeContext'
+      - {name: page, in: query, schema: {type: integer, minimum: 0, maximum: 1000, default: 0}}
+      - {name: pageSize, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 25}}
       responses:
+        '200':
+          description: items, page, pageSize, total, scope and asOf. Each record has requestReference, actor, purposeReference, timestamps, state, manifest and server-authorized actions. A managed context restricts history to its review.
         '503':
           description: Dependency/policy unavailable; no source queried or empty metrics fabricated
           content:
@@ -1579,6 +1598,250 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/compliance/access-policy:
+    get:
+      summary: Read configured Compliance purposes and policy version
+      x-required-roles: [COMPLIANCE]
+      responses:
+        '200': {description: 'configured, purposes, policyVersion and scopeLabel; entering a purpose never grants account access'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /api/compliance/access-contexts:
+    post:
+      summary: Issue an expiring actor-bound external or managed Compliance context
+      x-required-roles: [COMPLIANCE]
+      description: Managed references require the independently eligible assigned reviewer. The source account, optional order, reviewer and private review version are bound and rechecked on every use. Historical null scope snapshots are unusable.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [purposeCode, caseReference]
+              properties:
+                purposeCode: {type: string}
+                caseReference: {type: string, minLength: 8, maxLength: 200}
+                referenceType: {type: string, enum: [EXTERNAL, MANAGED], default: EXTERNAL}
+      responses:
+        '201': {description: 'contextId, purposeCode, caseReference, scopeLabel, permissions, expiresAt and policyVersion'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {description: 'Required policy, source or access audit unavailable'}
+  /api/compliance/orders/{id}/evidence/{section}:
+    get:
+      summary: Independently page one authorized retained evidence section
+      x-required-roles: [COMPLIANCE]
+      parameters:
+      - $ref: '#/components/parameters/CompliancePurposeContext'
+      - {name: id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      - {name: section, in: path, required: true, schema: {type: string, enum: [events, decisions, quotes, attempts, reservations, fills, postings, notifications]}}
+      - {name: page, in: query, schema: {type: integer, minimum: 0, maximum: 1000, default: 0}}
+      - {name: pageSize, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 25}}
+      responses:
+        '200': {description: 'name, items, page, pageSize, total, hasMore, coverage, source, asOf and completeness; empty does not establish completeness'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {description: Required source or access audit unavailable}
+  /api/compliance/evidence/exports:
+    post:
+      summary: Retain one bounded server-generated order ZIP under the original request key
+      x-required-roles: [COMPLIANCE]
+      parameters:
+      - $ref: '#/components/parameters/CompliancePurposeContext'
+      - {name: Idempotency-Key, in: header, required: true, schema: {type: string, pattern: '^[A-Za-z0-9._-]{8,80}$'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orderId]
+              properties: {orderId: {type: integer, minimum: 1}}
+      responses:
+        '201': {description: 'Retained export receipt with requestReference, expiry, manifest and authorizedActions; managed exports are immutably associated with the review'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: 'IDEMPOTENCY_CONFLICT, EVIDENCE_LIMIT (over 2000 rows in any section), or ARCHIVE_LIMIT (over 5000000 bytes); these do not revoke an otherwise valid context'}
+        '503': {description: 'Required source, archive or audit unavailable'}
+  /api/compliance/evidence/exports/{requestReference}:
+    get:
+      summary: Recover the server receipt under current requester and evidence authority
+      parameters:
+      - $ref: '#/components/parameters/CompliancePurposeContext'
+      - {name: requestReference, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: Retained receipt including permitted RECOVER_RECEIPT and DOWNLOAD actions}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/compliance/evidence/exports/{requestReference}/download:
+    get:
+      summary: Download exact retained archive bytes after live authorization and digest verification
+      parameters:
+      - $ref: '#/components/parameters/CompliancePurposeContext'
+      - {name: requestReference, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: 'Attachment contains evidence.json, manifest.json and limitations.txt. Consistency digest is not an independent signature or settlement proof.'
+          content: {application/zip: {schema: {type: string, format: binary}}}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '410': {description: EXPORT_EXPIRED}
+        '503': {description: 'Required audit unavailable, retained archive missing or digest verification failed'}
+  /api/support/cases/intake-policy:
+    get:
+      summary: Read authenticated client category-intake rollout policy
+      x-required-roles: [CLIENT]
+      responses:
+        '200': {description: 'intakeEnabled, schemaVersion 1, categories with code and allowed issue reasons'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /api/operations/cases/{reference}/workbench:
+    get:
+      summary: Read the private case workflow and server-authorized actions
+      x-required-roles: [TRADING_OPS]
+      parameters:
+      - $ref: '#/components/parameters/ManagedCaseReference'
+      - {name: page, in: query, schema: {type: integer, minimum: 0, maximum: 100000, default: 0}}
+      responses:
+        '200': {description: 'Public/private versions, original/effective category, immutable intake, owner, priority, next action, dueAt, checklist/revision, definitions, actions, diagnostics permissions, minimal referrals and 20 private history events. Response target is explicitly unconfigured.'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {description: WORKFLOW_DISABLED or required schema/runtime grants unavailable}
+  /api/operations/cases/{reference}/assignees:
+    get:
+      summary: Read at most 100 independently eligible Operations owners for this account
+      parameters: [{$ref: '#/components/parameters/ManagedCaseReference'}]
+      responses:
+        '200': {description: 'items with id and username, limit 100; assignment does not grant access'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/operations/cases/{reference}/reviewers:
+    get:
+      summary: Read independently eligible Compliance reviewers for a permitted case update
+      parameters: [{$ref: '#/components/parameters/ManagedCaseReference'}]
+      responses:
+        '200': {description: 'At most 100 reviewers with live role and independent INVESTIGATION_READ and INVESTIGATION_UPDATE grants on this account'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/operations/cases/{reference}/diagnostics:
+    get:
+      summary: Read bounded allowlisted category diagnostics under separate evidence permissions
+      parameters:
+      - $ref: '#/components/parameters/ManagedCaseReference'
+      - {name: kind, in: query, required: true, schema: {type: string, enum: [account, historical, order, availability]}}
+      - {name: evidence, in: query, schema: {type: string, maxLength: 200}, description: 'Optional owned movement UUID, historical exception ID, order ID or instrument ID. Omission uses immutable owned intake/order references when retained. Historical/order checks otherwise require a source ID. Availability supports account-wide checks without an instrument; invalid or foreign references fail closed.'}
+      - {name: X-Operations-Context, in: header, schema: {type: string, format: uuid}, description: Order diagnostics require a valid managed context for this exact case}
+      responses:
+        '200': {description: 'Allowlisted string-decimal resources/provenance/current controls, source/observation times and explicit limitations. Availability returns null policy with NOT_APPLICABLE policyStatus for account-wide observations, or UNAVAILABLE if an existing instrument has no current policy; quote eligibility remains UNKNOWN without a retained observation. No bank snapshots, profiles, arbitrary historical JSON, test trades or financial writers.'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '403': {description: 'Independent ACCOUNT_DIAGNOSTICS, RECONCILIATION_READ or purpose-gated EVIDENCE_READ unavailable'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/operations/cases/{reference}/workflow/{action}:
+    post:
+      summary: Atomically retain a private command or explicitly publish a checked resolution
+      description: Requires live CASE_READ and CASE_UPDATE before receipt replay. Replay precedes stale-version checks. Private commands never change public time/version/feed. Resolution additionally checks public version, category checklist, eligible owner and mandatory referral dispositions in one transaction.
+      parameters:
+      - $ref: '#/components/parameters/ManagedCaseReference'
+      - $ref: '#/components/parameters/PrivateWorkflowKey'
+      - {name: action, in: path, required: true, schema: {type: string, enum: [assignment, classification, priority, next-action, tasks, resolution]}}
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/PrivateWorkflowCommand'}}}
+      responses:
+        '200': {description: 'Retained reference, action, workflowVersion and publicVersion receipt'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: 'IDEMPOTENCY_CONFLICT, WORKFLOW_CONFLICT, VERSION_CONFLICT or WORKFLOW_INCOMPLETE'}
+        '503': {description: Required runtime policy/schema/audit unavailable; preserve original key on unknown outcome}
+  /api/operations/cases/{reference}/workflow/requests/{key}:
+    get:
+      summary: Recover an actor-scoped private workflow or referral receipt under current update authority
+      parameters:
+      - $ref: '#/components/parameters/ManagedCaseReference'
+      - {name: key, in: path, required: true, schema: {type: string, pattern: '^[A-Za-z0-9_-]{16,128}$'}}
+      responses:
+        '200': {description: Original immutable command receipt}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: No confirmed receipt or no current object scope; not permission to replace an uncertain request key}
+  /api/operations/cases/{reference}/referrals:
+    post:
+      summary: Create one mandatory independently assigned Compliance review without publishing client activity
+      parameters:
+      - $ref: '#/components/parameters/ManagedCaseReference'
+      - $ref: '#/components/parameters/PrivateWorkflowKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [expectedWorkflowVersion, reviewer, reasonCode, summary]
+              properties:
+                expectedWorkflowVersion: {type: integer, minimum: 1}
+                reviewer: {type: integer, minimum: 1}
+                reasonCode: {type: string, enum: [POLICY, INTEGRITY, ELIGIBILITY, PROVENANCE]}
+                summary: {type: string, minLength: 10, maxLength: 2000}
+      responses:
+        '200': {description: 'reference, investigationReference, workflowVersion and QUEUED status; account-only source needs no dummy order'}
+        '409': {description: 'Stale workflow, request-key conflict, missing eligible owner or independently eligible reviewer'}
+  /api/compliance/cases:
+    get:
+      summary: Read independently scoped private review queue; scope precedes count/page
+      x-required-roles: [COMPLIANCE]
+      parameters:
+      - {name: status, in: query, schema: {type: string, enum: [QUEUED, IN_REVIEW, NEEDS_INFORMATION, DECIDED, CLOSED]}}
+      - {name: page, in: query, schema: {type: integer, minimum: 0, maximum: 100000, default: 0}}
+      responses:
+        '200': {description: 'items, total, page, pageSize 20; requires INVESTIGATION_READ, not Operations grants'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {description: Workflow or Compliance policy unavailable}
+  /api/compliance/cases/{reference}:
+    get:
+      summary: Read approved referral summary, private conclusions, eligible reviewers and attributable history
+      parameters:
+      - $ref: '#/components/parameters/ManagedReviewReference'
+      - {name: page, in: query, schema: {type: integer, minimum: 0, maximum: 100000, default: 0}}
+      responses:
+        '200': {description: 'Reference, status, version, reviewer, reasonCode, summary, optional order, dates, disposition/findings/proposal, actions, reviewers and paged history. Does not expose arbitrary Operations notes.'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/compliance/cases/{reference}/actions:
+    post:
+      summary: Retain independently authorized reviewer assignment or lifecycle transition
+      description: 'QUEUED -> IN_REVIEW; IN_REVIEW -> NEEDS_INFORMATION or DECIDED; NEEDS_INFORMATION -> IN_REVIEW; DECIDED -> CLOSED or IN_REVIEW; CLOSED -> IN_REVIEW. Only the assigned eligible reviewer decides. Decisions never publish to the client.'
+      parameters:
+      - $ref: '#/components/parameters/ManagedReviewReference'
+      - $ref: '#/components/parameters/PrivateWorkflowKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [expectedVersion, action, reason]
+              properties:
+                expectedVersion: {type: integer, minimum: 1}
+                action: {type: string, enum: [ASSIGN, TRANSITION]}
+                reviewer: {type: integer, minimum: 1, description: ASSIGN only}
+                status: {type: string, enum: [IN_REVIEW, NEEDS_INFORMATION, DECIDED, CLOSED], description: TRANSITION only}
+                reason: {type: string, minLength: 10, maxLength: 4000}
+                disposition: {type: string, minLength: 3, maxLength: 100, description: Required for DECIDED only}
+                clientSafeExplanation: {type: string, minLength: 10, maxLength: 4000, description: Optional private proposal for DECIDED only}
+      responses:
+        '200': {description: 'Retained reference, version, status and reviewer receipt'}
+        '403': {description: Independent INVESTIGATION_READ/UPDATE or assigned-reviewer authority missing}
+        '409': {description: 'IDEMPOTENCY_CONFLICT, VERSION_CONFLICT or WORKFLOW_CONFLICT'}
+  /api/compliance/cases/{reference}/requests/{key}:
+    get:
+      summary: Recover the original actor-scoped review receipt after current authorization
+      parameters:
+      - $ref: '#/components/parameters/ManagedReviewReference'
+      - {name: key, in: path, required: true, schema: {type: string, pattern: '^[A-Za-z0-9_-]{16,128}$'}}
+      responses:
+        '200': {description: Original immutable review receipt}
+        '404': {description: No confirmed scoped receipt; preserve an uncertain original key}
   /api/analytics/summary:
     get:
       tags:
@@ -3517,11 +3780,16 @@ paths:
     {
       "get":
         {
-          "summary": "List scoped unassigned cases",
+          "summary": "List scoped Operations cases with optional enabled private workflow selectors",
           "x-required-roles": ["TRADING_OPS"],
           "description": "Live session and owned account or explicit case grants required. All responses use no-store. Successful reads and writes require a committed audit. Private notes never enter public projections.",
           "parameters":
             [
+              {"name": "assignee", "in": "query", "schema": {"type": "integer", "minimum": 1}},
+              {"name": "view", "in": "query", "description": "Workflow-only attention view, applied with live account scope before counts/pages. Defaults to ACTIONABLE (unresolved), or ALL when an explicit status is supplied. MINE uses the authenticated actor; UNASSIGNED/MINE exclude resolved cases. AWAITING_REVIEW requires an unresolved case with a linked undecided investigation. Disabled rollout rejects explicit private selectors.", "schema": {"type": "string", "enum": ["ACTIONABLE", "ALL", "UNASSIGNED", "MINE", "AWAITING_CLIENT", "AWAITING_REVIEW", "RESOLVED"]}},
+              {"name": "priority", "in": "query", "schema": {"type": "string", "enum": ["LOW", "NORMAL", "HIGH"]}},
+              {"name": "category", "in": "query", "description": "Effective private category, not immutable original category", "schema": {"type": "string", "enum": ["ORDER_QUESTION", "ACCOUNT_REVIEW", "HISTORICAL_RECORD", "TRADING_AVAILABILITY", "OTHER"]}},
+              {"name": "overdueOnly", "in": "query", "description": "Only unresolved cases with an explicit dueAt strictly before the server clock; no inferred SLA", "schema": {"type": "boolean", "default": false}},
               {
                 "name": "page",
                 "in": "query",
@@ -3570,7 +3838,7 @@ paths:
                       "application/json":
                         {
                           "schema":
-                            { "$ref": "#/components/schemas/SupportCasePage" },
+                            { "$ref": "#/components/schemas/OperationsCasePage" },
                         },
                     },
                 },
@@ -3637,7 +3905,7 @@ paths:
                         {
                           "schema":
                             {
-                              "$ref": "#/components/schemas/SupportCaseDetail",
+                              "$ref": "#/components/schemas/OperationsCaseDetail",
                             },
                         },
                     },
@@ -4088,6 +4356,19 @@ paths:
     }
   "/api/operations/cases/{reference}/exports":
     {
+      "get": {
+        "summary": "Page private immutable Operations export associations; metadata does not itself authorize a download",
+        "x-required-roles": ["TRADING_OPS"],
+        "parameters": [
+          {"$ref": "#/components/parameters/ManagedCaseReference"},
+          {"name": "page", "in": "query", "schema": {"type": "integer", "minimum": 0, "maximum": 100000, "default": 0}}
+        ],
+        "responses": {
+          "200": {"description": "items (exportId, digest, associatedAt, expiresAt, requester), page, hasMore and role-specific authorization note"},
+          "403": {"$ref": "#/components/responses/Forbidden"},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      },
       "post":
         {
           "summary": "Retain an export identity/digest association; recheck requester, matching managed context, both resources, expiry and bytes",
@@ -4336,6 +4617,27 @@ components:
       schema:
         type: integer
         format: int64
+    CompliancePurposeContext:
+      name: X-Compliance-Context
+      in: header
+      required: true
+      schema: {type: string, format: uuid}
+      description: Actor-bound approved purpose; invalid/expired/reassigned context returns CONTEXT_INVALID without weakening account scope
+    ManagedCaseReference:
+      name: reference
+      in: path
+      required: true
+      schema: {type: string, pattern: '^CASE-[0-9a-f-]{36}$'}
+    ManagedReviewReference:
+      name: reference
+      in: path
+      required: true
+      schema: {type: string, pattern: '^REVIEW-[0-9a-f-]{36}$'}
+    PrivateWorkflowKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: {type: string, pattern: '^[A-Za-z0-9_-]{16,128}$'}
     AdvisorId:
       name: advisorId
       in: path
@@ -4454,11 +4756,119 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
   schemas:
+    OperationsCaseDetail:
+      allOf:
+      - $ref: '#/components/schemas/SupportCaseDetail'
+      - type: object
+        description: Staff endpoint only; none of these private authorization fields enter the client projection
+        properties:
+          workflowEnabled: {type: boolean}
+          actions:
+            type: object
+            required: [reply, note, transitions]
+            properties:
+              reply: {type: boolean}
+              note: {type: boolean}
+              transitions:
+                type: array
+                items: {type: string, enum: [IN_REVIEW, AWAITING_CLIENT, RESOLVED]}
+    SupportOrderIntake:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: {type: string, enum: [PENDING, REJECTED, PRICING, DUPLICATE, POSTING, MISSING_ORDER]}
+        relatedOrderId: {type: integer, format: int32, minimum: 1}
+    SupportAccountIntake:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: {type: string, enum: [ELIGIBILITY, CASH_BALANCE, POSITION_AVAILABILITY, SETUP]}
+        movementId: {type: string, format: uuid}
+    SupportHistoricalIntake:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: {type: string, enum: [PROVENANCE, MISSING_FACTS, ACCOUNTING, GENERAL]}
+        exceptionId: {type: integer, format: int64, minimum: 1}
+        recordKind: {type: string, minLength: 1, maxLength: 500}
+    SupportAvailabilityIntake:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: {type: string, enum: [CANNOT_BUY, CANNOT_SELL, ACCOUNT_WIDE, PROVIDER, SESSION]}
+        instrumentId: {type: integer, format: int32, minimum: 1}
+        side: {type: string, enum: [BUY, SELL]}
+        observedAt: {type: string, format: date-time}
+        reportedReason: {type: string, minLength: 1, maxLength: 500}
+    SupportOtherIntake:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: {type: string, enum: [GENERAL, PRODUCT, DUPLICATE, NOT_REPRODUCED]}
+        affectedArea: {type: string, minLength: 1, maxLength: 500}
+        expectedBehavior: {type: string, minLength: 1, maxLength: 2000}
+        actualBehavior: {type: string, minLength: 1, maxLength: 2000}
+        occurredAt: {type: string, format: date-time}
+        steps: {type: string, minLength: 1, maxLength: 2000}
+        duplicateReference: {type: string, pattern: '^CASE-[0-9a-f-]{36}$'}
+    OperationsCasePage:
+      allOf:
+      - $ref: '#/components/schemas/SupportCasePage'
+      - type: object
+        properties:
+          workflowEnabled: {type: boolean, description: Staff-only rollout flag; disabled legacy queue omits private fields and rejects private selectors}
+          items:
+            type: array
+            items:
+              allOf:
+              - $ref: '#/components/schemas/SupportCase'
+              - type: object
+                properties:
+                  effectiveCategory: {type: string}
+                  workflowVersion: {type: integer, minimum: 1}
+                  assignee: {type: integer, nullable: true}
+                  assigneeLabel: {type: string, nullable: true}
+                  priority: {type: string, enum: [LOW, NORMAL, HIGH]}
+                  nextAction: {type: string, nullable: true}
+                  dueAt: {type: string, format: date-time, nullable: true}
+    PrivateWorkflowCommand:
+      type: object
+      additionalProperties: false
+      required: [expectedWorkflowVersion]
+      description: Each action accepts only its own fields; unrelated fields are rejected. Assignment uses assignee (nullable). Classification uses category/reason. Priority uses priority/reason. Next-action uses nextAction/optional future UTC dueAt. Tasks use code/state/reason and optional paired evidence kind/reference plus contextId. Resolution uses category code, public expectedVersion and client-safe body, plus contextId when rechecking order evidence.
+      properties:
+        expectedWorkflowVersion: {type: integer, minimum: 1}
+        assignee: {type: integer, minimum: 1, nullable: true}
+        category: {type: string, enum: [ORDER_QUESTION, ACCOUNT_REVIEW, HISTORICAL_RECORD, TRADING_AVAILABILITY, OTHER]}
+        reason: {type: string, minLength: 10, maxLength: 2000}
+        priority: {type: string, enum: [LOW, NORMAL, HIGH]}
+        nextAction: {type: string, minLength: 10, maxLength: 500}
+        dueAt: {type: string, format: date-time, nullable: true}
+        code: {type: string, maxLength: 80}
+        state: {type: string, enum: [PENDING, COMPLETED, UNAVAILABLE, NOT_APPLICABLE]}
+        evidenceKind: {type: string, enum: [ACCOUNT, MOVEMENT, ORDER, HISTORICAL, POLICY_CHANGE, DUPLICATE_CASE, EXTERNAL_REFERENCE]}
+        evidenceReference: {type: string, minLength: 1, maxLength: 200, description: ACCOUNT accepts this exact authorized CASE reference (or compatible internal numeric ID) and independently requires ACCOUNT_DIAGNOSTICS; it never grants another case's account}
+        contextId: {type: string, format: uuid}
+        expectedVersion: {type: integer, minimum: 1}
+        body: {type: string, minLength: 10, maxLength: 4000}
     "NewSupportCase":
       {
         "type": "object",
         "additionalProperties": false,
         "required": ["category", "subject", "description"],
+        "dependentRequired": {"intake": ["intakeSchemaVersion"], "intakeSchemaVersion": ["intake"]},
+        "allOf": [
+          {"if": {"properties": {"category": {"const": "ORDER_QUESTION"}}}, "then": {"properties": {"intake": {"$ref": "#/components/schemas/SupportOrderIntake"}}}},
+          {"if": {"properties": {"category": {"const": "ACCOUNT_REVIEW"}}}, "then": {"properties": {"intake": {"$ref": "#/components/schemas/SupportAccountIntake"}}}},
+          {"if": {"properties": {"category": {"const": "HISTORICAL_RECORD"}}}, "then": {"properties": {"intake": {"$ref": "#/components/schemas/SupportHistoricalIntake"}}}},
+          {"if": {"properties": {"category": {"const": "TRADING_AVAILABILITY"}}}, "then": {"properties": {"intake": {"$ref": "#/components/schemas/SupportAvailabilityIntake"}}}},
+          {"if": {"properties": {"category": {"const": "OTHER"}}}, "then": {"properties": {"intake": {"$ref": "#/components/schemas/SupportOtherIntake"}}}}
+        ],
         "properties":
           {
             "category":
@@ -4482,6 +4892,12 @@ components:
                 "description": "Trimmed plain text; no ISO controls except newline/tab. Never interpreted as HTML.",
               },
             "orderId": { "type": "integer", "minimum": 1, "nullable": true },
+            "intakeSchemaVersion": {"type": "integer", "enum": [1], "description": "Requires intake and explicitly enabled rollout; omit both for legacy payload compatibility"},
+            "intake": {
+              "type": "object",
+              "description": "At most 12000 bytes of normalized retained JSON. Required reason is category-specific. Only handler-allowlisted fields are accepted; movement/exception/order/duplicate references must be owned. Optional instrument/side/UTC observation and bounded triage fields retain the client's report, not verified financial truth.",
+              "additionalProperties": {"oneOf": [{"type": "string", "maxLength": 2000}, {"type": "integer", "format": "int64", "minimum": 1}]}
+            },
           },
       }
     "SupportWrite":

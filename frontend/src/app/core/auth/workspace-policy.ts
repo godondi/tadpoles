@@ -30,6 +30,7 @@ export const WORKSPACES = [
     label: 'Risk & compliance',
     home: '/compliance/investigations',
     links: [
+      ['Review cases', '/compliance/cases'],
       ['Investigations', '/compliance/investigations'],
       ['Evidence & exports', '/compliance/evidence'],
     ],
@@ -77,6 +78,7 @@ export function routeRole(url: string): WorkspaceRole | null {
   if (/^\/operations\/(orders(?:\/\d+)?|overview|exceptions|reconciliation)$/.test(path))
     return 'TRADING_OPS';
   if (/^\/compliance\/(investigations(?:\/\d+)?|evidence)$/.test(path)) return 'COMPLIANCE';
+  if (/^\/compliance\/cases(?:\/REVIEW-[0-9a-f-]{36})?$/.test(path)) return 'COMPLIANCE';
   if (/^\/analytics\/(overview|trends|instruments)$/.test(path)) return 'ANALYST';
   if (/^\/finance\/(overview|reconciliation)$/.test(path)) return 'FINANCE';
   return null;

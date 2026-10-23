@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, Input, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -13,15 +13,14 @@ import { ComplianceApi } from './compliance-api.service';
       @if (api.context(); as context) {
         <p>
           <strong>{{ context.purposeCode }}</strong> · case {{ context.caseReference }} ·
-          {{ context.scopeLabel }} · expires
-          {{ context.expiresAt | date: 'medium' : 'UTC' }} UTC
+          {{ context.scopeLabel }} · expires {{ context.expiresAt | date: 'medium' : 'UTC' }} UTC
         </p>
         <p>Approved permissions: {{ context.permissions.join(', ') || 'Read-only evidence' }}</p>
         <button type="button" (click)="api.clear()">End context and clear evidence</button>
       } @else {
         <p>
-          Select an approved purpose and provide a case reference. The server must issue an
-          expiring context before protected evidence can be requested.
+          Select an approved purpose and provide a case reference. The server must issue an expiring
+          context before protected evidence can be requested.
         </p>
         <form class="filters" (ngSubmit)="start()">
           <div class="form-field">
@@ -40,6 +39,13 @@ import { ComplianceApi } from './compliance-api.service';
             </select>
           </div>
           <div class="form-field">
+            <label for="compliance-reference-type">Reference type</label>
+            <select id="compliance-reference-type" name="referenceType" [(ngModel)]="referenceType">
+              <option value="EXTERNAL">External operational reference</option>
+              <option value="MANAGED">Managed Compliance review case</option>
+            </select>
+          </div>
+          <div class="form-field">
             <label for="compliance-case">Case reference (8–200 characters)</label>
             <input
               id="compliance-case"
@@ -54,10 +60,7 @@ import { ComplianceApi } from './compliance-api.service';
           <button
             type="submit"
             [disabled]="
-              loading() ||
-              !policy()?.configured ||
-              !purpose ||
-              caseReference.trim().length < 8
+              loading() || !policy()?.configured || !purpose || caseReference.trim().length < 8
             "
           >
             Start authorized context
@@ -69,7 +72,9 @@ import { ComplianceApi } from './compliance-api.service';
             disabled; entering a purpose here does not grant access.
           </p>
         }
-        <p>Do not enter bank details, credentials, client names or evidence in the case reference.</p>
+        <p>
+          Do not enter bank details, credentials, client names or evidence in the case reference.
+        </p>
       }
       @if (policyError()) {
         <p class="notice" role="alert">{{ policyError() }}</p>
@@ -97,6 +102,13 @@ export class ComplianceContextComponent {
   private readonly destroy = inject(DestroyRef);
   purpose = '';
   caseReference = '';
+  referenceType: 'EXTERNAL' | 'MANAGED' = 'EXTERNAL';
+  @Input() set managedReference(value: string) {
+    if (value) {
+      this.caseReference = value;
+      this.referenceType = 'MANAGED';
+    }
+  }
 
   constructor() {
     this.api
@@ -132,7 +144,7 @@ export class ComplianceContextComponent {
     this.loading.set(true);
     this.message.set('');
     this.api
-      .createContext({ purposeCode: purpose, caseReference })
+      .createContext({ purposeCode: purpose, caseReference, referenceType: this.referenceType })
       .pipe(takeUntilDestroyed(this.destroy))
       .subscribe({
         next: () => {
@@ -144,7 +156,7 @@ export class ComplianceContextComponent {
           this.message.set(
             error.status === 503
               ? 'The server cannot authorize this context until Compliance policy is configured.'
-              : error.error?.message ?? 'Unable to start the authorized context.',
+              : (error.error?.message ?? 'Unable to start the authorized context.'),
           );
         },
       });

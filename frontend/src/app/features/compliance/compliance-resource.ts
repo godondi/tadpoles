@@ -48,10 +48,14 @@ export class ComplianceResource<T> {
   }
 
   private message(error: HttpErrorResponse): string {
-    if (error.status === 400) return 'The search filters are invalid. Review the values and try again.';
-    if (error.status === 401) return 'Your session expired. Sign in again before reviewing evidence.';
-    if (error.status === 403 || error.status === 409)
+    if (error.status === 400)
+      return 'The search filters are invalid. Review the values and try again.';
+    if (error.status === 401)
+      return 'Your session expired. Sign in again before reviewing evidence.';
+    if (error.status === 403 || error.error?.code === 'CONTEXT_INVALID')
       return 'Access was denied or the purpose context expired. Start a new context.';
+    if (error.status === 409)
+      return error.error?.message ?? 'This request conflicts with the current server state.';
     if (error.status === 404) return 'This record could not be found in your permitted scope.';
     if (error.status === 429) return 'Too many requests. Wait briefly before trying again.';
     if (error.status === 503)

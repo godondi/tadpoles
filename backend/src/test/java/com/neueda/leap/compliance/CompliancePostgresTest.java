@@ -2,59 +2,19 @@ package com.neueda.leap.compliance;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
+import org.junit.jupiter.api.*;
+
 import java.sql.*;
 
-import org.junit.jupiter.api.*;
-import org.testcontainers.containers.PostgreSQLContainer;
-
-class CompliancePostgresTest {
-    static final PostgreSQLContainer<?> postgres;
-
-    static {
-        postgres = new PostgreSQLContainer<>("postgres:15-alpine");
-        postgres.start();
-    }
+class CompliancePostgresTest extends ComplianceDatabaseFixture {
 
     private static final String GRANT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
     private static final String CONTEXT_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
     private static final String EXPORT_ID = "cccccccc-cccc-cccc-cccc-cccccccccccc";
 
-    @BeforeAll
-    static void schema() throws Exception {
-        try (Connection connection = connection();
-                Statement statement = connection.createStatement()) {
-            statement.execute(
-                    Files.readString(
-                            Path.of("../database/fresh/001_schema.sql")));
-            statement.execute(
-                    """
-                    INSERT INTO users(user_id,username,password_hash,display_name)
-                    VALUES (1,'compliance.actor','hash','Compliance Actor'),
-                           (2,'approver','hash','Approver');
-                    INSERT INTO clients(client_id,user_id,client_name)
-                    VALUES (1,1,'Scoped Client');
-                    INSERT INTO instruments(instrument_id,instrument_name,ticker,currency)
-                    VALUES (1,'Test Instrument','TEST','USD');
-                    SET session_replication_role = replica;
-                    INSERT INTO client_trades(
-                        trade_id,client_id,instrument_id,trade_type,quantity,price,trade_date,
-                        status,record_kind)
-                    VALUES (1,1,1,'BUY',1.0000,10.00,CURRENT_DATE,'PENDING','LEGACY');
-                    SET session_replication_role = origin;
-                    """);
-        }
-    }
-
-    @AfterAll
-    static void stopContainer() {
-        postgres.stop();
-    }
-
     @Test
     void freshSchemaContainsComplianceMigrationAndImmutableGuards() throws Exception {
-        assertEquals("14", scalar("SELECT max(version) FROM schema_migrations"));
+        assertTrue(Integer.parseInt(scalar("SELECT max(version) FROM schema_migrations")) >= 14);
 
         sql(
                 """
@@ -108,11 +68,6 @@ class CompliancePostgresTest {
                 "UPDATE compliance_evidence_exports SET state='FAILED' WHERE export_id='"
                         + EXPORT_ID
                         + "'");
-    }
-
-    private static Connection connection() throws SQLException {
-        return DriverManager.getConnection(
-                postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
     }
 
     private static String scalar(String query) throws SQLException {

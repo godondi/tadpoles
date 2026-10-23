@@ -123,6 +123,23 @@ GRANT UPDATE(last_event) ON support_read_state TO :"runtime_role";
 GRANT SELECT, INSERT ON support_read_state TO :"runtime_role";
 REVOKE DELETE, TRUNCATE ON support_read_state FROM :"runtime_role";
 
+GRANT SELECT, INSERT ON support_case_intake, support_case_workflow, support_case_workflow_events,
+    support_case_workflow_requests, support_case_tasks, support_case_resolutions,
+    support_case_referrals, compliance_investigations, compliance_investigation_events,
+    compliance_investigation_requests, compliance_investigation_exports TO :"runtime_role";
+REVOKE UPDATE, DELETE, TRUNCATE ON support_case_intake, support_case_workflow_events,
+    support_case_workflow_requests, support_case_resolutions, support_case_referrals,
+    compliance_investigation_events, compliance_investigation_requests,
+    compliance_investigation_exports FROM :"runtime_role";
+REVOKE UPDATE, DELETE, TRUNCATE ON support_case_workflow, support_case_tasks, compliance_investigations
+    FROM :"runtime_role";
+GRANT UPDATE(effective_category,assignee,priority,next_action,due_at,version,checklist_revision,updated_at)
+    ON support_case_workflow TO :"runtime_role";
+GRANT UPDATE(state,reason,evidence_kind,evidence_reference,actor,recorded_at)
+    ON support_case_tasks TO :"runtime_role";
+GRANT UPDATE(reviewer,status,version,disposition,findings,client_safe_explanation,updated_at)
+    ON compliance_investigations TO :"runtime_role";
+
 REVOKE TRUNCATE, TRIGGER ON ALL TABLES IN SCHEMA public FROM :"runtime_role";
 
 REVOKE CREATE ON SCHEMA public FROM :"runtime_role";

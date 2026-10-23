@@ -9,8 +9,8 @@ import com.neueda.leap.dto.ComplianceDtos.*;
 import com.neueda.leap.mapper.ComplianceEvidenceMapper;
 import com.neueda.leap.service.ComplianceAccessService.Access;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.dao.DataAccessException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -23,7 +23,14 @@ import java.util.*;
 @Service
 public class ComplianceEvidenceService {
     private static final Set<String> STATUSES =
-            Set.of("SUBMITTED", "ACCEPTED", "REJECTED", "FILLED", "CANCELLED");
+            Set.of(
+                    "ACCEPTED",
+                    "EXECUTING",
+                    "FILLED",
+                    "REJECTED",
+                    "PENDING",
+                    "APPROVED",
+                    "EXECUTED");
     private static final Set<String> POLICY_FIELDS =
             Set.of(
                     "instrumentId",
@@ -141,19 +148,16 @@ public class ComplianceEvidenceService {
             Access readGrant = access.require(context, "EVIDENCE_READ");
             Map<String, Object> source = authorizedOrder(readGrant, id);
             int clientId = integer(source, "clientId");
+            if (!access.has(exportGrant, "EXPORT_CREATE", clientId)) {
+                access.notFound(exportGrant, Integer.toString(id));
+            }
             List<EvidenceSection> sections = new ArrayList<>();
             Instant snapshotAt = clock.instant();
             for (String section : ComplianceEvidenceMapper.SECTIONS) {
                 sections.add(readSection(readGrant, id, section, 0, 2000, snapshotAt));
             }
             Investigation result =
-                    investigation(
-                            source,
-                            sections,
-                            snapshotAt,
-                            readGrant,
-                            clientId,
-                            2000);
+                    investigation(source, sections, snapshotAt, readGrant, clientId, 2000);
             access.success(
                     exportGrant,
                     "EXPORT_SNAPSHOT",
@@ -199,7 +203,8 @@ public class ComplianceEvidenceService {
         List<Finding> findings = findings(source, sections, grant, pageSize);
         List<String> limitations = new ArrayList<>();
         if ("LEGACY".equals(string(source, "recordKind"))) {
-            limitations.add("Historical record is partial; unavailable legacy facts remain unknown.");
+            limitations.add(
+                    "Historical record is partial; unavailable legacy facts remain unknown.");
         }
         if (sections.stream().anyMatch(EvidenceSection::hasMore)) {
             limitations.add("Some evidence sections require independent pagination.");
@@ -251,10 +256,7 @@ public class ComplianceEvidenceService {
                             "UNKNOWN"));
         }
         if (decisions.items().stream()
-                .anyMatch(
-                        item ->
-                                "Not recorded".equals(
-                                        item.values().get("decisionContext")))) {
+                .anyMatch(item -> "Not recorded".equals(item.values().get("decisionContext")))) {
             findings.add(
                     new Finding(
                             "DECISION_CONTEXT_MISSING",
@@ -347,7 +349,7 @@ public class ComplianceEvidenceService {
 
     private Map<String, Object> parameters(Access grant, Map<String, Object> values) {
         Map<String, Object> parameters = new LinkedHashMap<>(values);
-        parameters.put("actor", grant.actor());
+        parameters.putAll(grant.parameters());
         parameters.put("permission", "EVIDENCE_READ");
         parameters.put("now", grant.now());
         return parameters;
@@ -355,14 +357,25 @@ public class ComplianceEvidenceService {
 
     private Map<String, Object> filters(Map<String, String> input, Instant now) {
         Set<String> allowed =
-                Set.of("orderId", "from", "to", "clientReference", "instrument", "status", "page", "pageSize");
+                Set.of(
+                        "orderId",
+                        "from",
+                        "to",
+                        "clientReference",
+                        "instrument",
+                        "status",
+                        "page",
+                        "pageSize");
         if (input == null || !allowed.containsAll(input.keySet())) {
             bad("Unknown investigation filter");
         }
         Map<String, Object> values = new LinkedHashMap<>();
-        values.put("page", integer(input.get("page"), 0, 1000));
-        values.put("pageSize", integer(input.get("pageSize"), 1, 100));
-        if (present(input, "orderId")) values.put("orderId", integer(input.get("orderId"), 1, Integer.MAX_VALUE));
+        values.put("page", integer(input.getOrDefault("page", "0"), 0, 1000));
+        values.put("pageSize", integer(input.getOrDefault("pageSize", "25"), 1, 100));
+        values.put("limit", values.get("pageSize"));
+        values.put("offset", (Integer) values.get("page") * (Integer) values.get("pageSize"));
+        if (present(input, "orderId"))
+            values.put("orderId", integer(input.get("orderId"), 1, Integer.MAX_VALUE));
         if (present(input, "clientReference")) {
             String value = input.get("clientReference");
             if (!value.matches("[A-Za-z0-9][A-Za-z0-9._-]{0,79}")) bad("Invalid client reference");
@@ -380,7 +393,8 @@ public class ComplianceEvidenceService {
         if (present(input, "from") || present(input, "to")) {
             Instant from = parseInstant(input.get("from"), now.minus(31, ChronoUnit.DAYS));
             Instant to = parseInstant(input.get("to"), now);
-            if (!from.isBefore(to) || Duration.between(from, to).compareTo(Duration.ofDays(31)) > 0) {
+            if (!from.isBefore(to)
+                    || Duration.between(from, to).compareTo(Duration.ofDays(31)) > 0) {
                 bad("Choose a UTC time range of at most 31 days");
             }
             values.put("from", from);
@@ -419,7 +433,8 @@ public class ComplianceEvidenceService {
     private EvidenceRecord evidence(Map<String, Object> row) {
         Map<String, Object> values = new LinkedHashMap<>();
         for (Map.Entry<String, Object> entry : row.entrySet()) {
-            if (Set.of("reference", "sequence", "actor", "occurredAt").contains(entry.getKey())) continue;
+            if (Set.of("reference", "sequence", "actor", "occurredAt").contains(entry.getKey()))
+                continue;
             if ("facts".equals(entry.getKey()) || "decisionContext".equals(entry.getKey())) {
                 values.putAll(safeJson(entry.getKey(), entry.getValue()));
             } else {
@@ -451,12 +466,14 @@ public class ComplianceEvidenceService {
                                     "stale",
                                     "usedForFill",
                                     "metadataTime")
-                            : Set.of("schemaVersion", "policyVersion", "quoteReference", "ruleCode");
+                            : Set.of(
+                                    "schemaVersion", "policyVersion", "quoteReference", "ruleCode");
             Map<String, Object> result = new LinkedHashMap<>();
             node.fields()
                     .forEachRemaining(
                             entry -> {
-                                if (allowed.contains(entry.getKey()) && entry.getValue().isValueNode()) {
+                                if (allowed.contains(entry.getKey())
+                                        && entry.getValue().isValueNode()) {
                                     result.put(entry.getKey(), scalar(entry.getValue()));
                                 }
                             });
@@ -481,7 +498,8 @@ public class ComplianceEvidenceService {
             node.fields()
                     .forEachRemaining(
                             entry -> {
-                                if (POLICY_FIELDS.contains(entry.getKey()) && entry.getValue().isValueNode()) {
+                                if (POLICY_FIELDS.contains(entry.getKey())
+                                        && entry.getValue().isValueNode()) {
                                     result.put(entry.getKey(), scalar(entry.getValue()));
                                 }
                             });
@@ -577,7 +595,8 @@ public class ComplianceEvidenceService {
             if (parsed < min || parsed > max) throw new NumberFormatException();
             return parsed;
         } catch (NumberFormatException failure) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination or order ID");
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Invalid pagination or order ID");
         }
     }
 

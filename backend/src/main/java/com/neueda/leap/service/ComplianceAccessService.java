@@ -2,9 +2,10 @@ package com.neueda.leap.service;
 
 import static com.neueda.leap.trading.TradingData.map;
 
-import com.neueda.leap.dto.ComplianceDtos.*;
 import com.neueda.leap.domain.AppUser;
+import com.neueda.leap.dto.ComplianceDtos.*;
 import com.neueda.leap.exception.AppUserNotFoundException;
+import com.neueda.leap.exception.WorkflowException;
 import com.neueda.leap.mapper.ComplianceAccessMapper;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -24,7 +25,38 @@ import java.util.*;
 @Service
 public class ComplianceAccessService {
     public record Access(
-            int actor, UUID context, String permission, String scopeVersion, Instant now) {}
+            int actor,
+            UUID context,
+            String permission,
+            String scopeVersion,
+            Instant now,
+            Integer managedClient,
+            Integer managedOrder,
+            UUID investigation,
+            Long managedVersion) {
+        public Access(
+                int actor, UUID context, String permission, String scopeVersion, Instant now) {
+            this(actor, context, permission, scopeVersion, now, null, null, null, null);
+        }
+
+        public Map<String, Object> parameters() {
+            return map(
+                    "actor",
+                    actor,
+                    "permission",
+                    permission,
+                    "now",
+                    now,
+                    "managedClient",
+                    managedClient,
+                    "managedOrder",
+                    managedOrder,
+                    "investigation",
+                    investigation,
+                    "managedVersion",
+                    managedVersion);
+        }
+    }
 
     private final ComplianceAccessMapper db;
     private final ComplianceAuditService audit;
@@ -119,13 +151,26 @@ public class ComplianceAccessService {
         }
         Instant now = clock.instant();
         try {
+            String type = request.referenceType() == null ? "EXTERNAL" : request.referenceType();
+            if (!Set.of("EXTERNAL", "MANAGED").contains(type))
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Invalid Compliance reference type");
+            Map<String, Object> managed = null;
+            if (type.equals("MANAGED")) {
+                managed = db.managed(request.caseReference().trim(), actor, now);
+                if (managed == null)
+                    notFound(new Access(actor, null, "INVESTIGATION_READ", "CASE", now), null);
+            } else if (request.caseReference().trim().matches("REVIEW-[0-9a-fA-F-]{36}"))
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Use a managed context for a managed review reference");
             List<String> permissions = db.permissions(actor, now);
             if (!permissions.contains("EVIDENCE_READ")) {
                 throw new ResponseStatusException(
                         HttpStatus.FORBIDDEN, "No Compliance account scope is assigned");
             }
             UUID id = UUID.randomUUID();
-            db.createContext(
+            var values =
                     map(
                             "id",
                             id,
@@ -142,7 +187,19 @@ public class ComplianceAccessService {
                             "policy",
                             policyVersion,
                             "scope",
-                            scope(db.allGrantIdentities(actor, now))));
+                            scope(db.allGrantIdentities(actor, now)));
+            if (managed == null) db.createContext(values);
+            else {
+                values.putAll(
+                        map(
+                                "investigation",
+                                managed.get("investigation_id"),
+                                "managedReviewer",
+                                actor,
+                                "managedVersion",
+                                managed.get("version")));
+                db.createManagedContext(values);
+            }
             success(
                     new Access(actor, id, "CONTEXT", scope(permissions), now),
                     "CONTEXT_CREATED",
@@ -172,8 +229,10 @@ public class ComplianceAccessService {
             List<String> grants = db.grants(actor, permission, now);
             String scope = scope(grants);
             Access access = new Access(actor, context, permission, scope, now);
-            Map<String, Object> details = context == null ? null : db.contextDetails(context, actor);
-            String purpose = details == null ? null : Objects.toString(details.get("purpose_code"), null);
+            Map<String, Object> details =
+                    context == null ? null : db.contextDetails(context, actor);
+            String purpose =
+                    details == null ? null : Objects.toString(details.get("purpose_code"), null);
             String contextScope =
                     details == null ? null : Objects.toString(details.get("scope_version"), null);
             if (context == null
@@ -183,8 +242,41 @@ public class ComplianceAccessService {
                     || !db.context(context, actor, purpose, policyVersion, now)
                     || grants.isEmpty()) {
                 deny(access, "ACCESS", null);
-                throw new ResponseStatusException(
-                        HttpStatus.FORBIDDEN, "Purpose context expired or permission unavailable");
+                throw new WorkflowException(
+                        HttpStatus.FORBIDDEN,
+                        "CONTEXT_INVALID",
+                        "Purpose context expired or permission unavailable");
+            }
+            if ("MANAGED".equals(details.get("reference_type"))) {
+                var managed =
+                        db.managed(Objects.toString(details.get("case_reference"), ""), actor, now);
+                if (managed == null
+                        || !Objects.equals(
+                                managed.get("investigation_id"), details.get("investigation_id"))
+                        || !Objects.equals(managed.get("reviewer"), details.get("managed_reviewer"))
+                        || !Objects.equals(
+                                managed.get("version"), details.get("managed_version"))) {
+                    deny(access, "INVESTIGATION", null);
+                    throw new WorkflowException(
+                            HttpStatus.FORBIDDEN,
+                            "CONTEXT_INVALID",
+                            "Managed investigation or reviewer changed");
+                }
+                return new Access(
+                        actor,
+                        context,
+                        permission,
+                        digest(
+                                scope
+                                        + "|"
+                                        + managed.get("investigation_id")
+                                        + "|"
+                                        + managed.get("version")),
+                        now,
+                        ((Number) managed.get("client_id")).intValue(),
+                        (Integer) managed.get("order_id"),
+                        (UUID) managed.get("investigation_id"),
+                        ((Number) managed.get("version")).longValue());
             }
             return access;
         } catch (DataAccessException failure) {
@@ -193,7 +285,8 @@ public class ComplianceAccessService {
     }
 
     public boolean has(Access access, String permission, int client) {
-        return db.has(access.actor(), permission, client, clock.instant());
+        return (access.managedClient() == null || access.managedClient() == client)
+                && db.has(access.actor(), permission, client, clock.instant());
     }
 
     public String accountReference(Access access, int client) {
@@ -201,7 +294,10 @@ public class ComplianceAccessService {
     }
 
     public String scope(Access access) {
-        return scope(db.grants(access.actor(), access.permission(), clock.instant()));
+        String current = scope(db.grants(access.actor(), access.permission(), clock.instant()));
+        return access.investigation() == null
+                ? current
+                : digest(current + "|" + access.investigation() + "|" + access.managedVersion());
     }
 
     public String caseReference(Access access) {

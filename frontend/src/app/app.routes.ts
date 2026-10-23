@@ -85,6 +85,8 @@ export const routes: Routes = [
           { path: 'app/support', data: {}, canActivate: client, loadComponent: () => import('./features/client/support-page.component').then(m => m.SupportPageComponent) },
           { path: 'operations/cases/:reference', data: { staff: true }, loadComponent: () => import('./features/client/support-page.component').then(m => m.SupportPageComponent) },
           { path: 'operations/cases', data: { staff: true }, loadComponent: () => import('./features/client/support-page.component').then(m => m.SupportPageComponent) },
+          { path: 'compliance/cases/:reference', loadComponent: () => import('./features/compliance/review-cases.component').then(m => m.ReviewCasesComponent) },
+          { path: 'compliance/cases', loadComponent: () => import('./features/compliance/review-cases.component').then(m => m.ReviewCasesComponent) },
           {
             path: 'finance/reconciliation',
             loadComponent: () =>

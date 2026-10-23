@@ -226,13 +226,15 @@ describe('Compliance routes', () => {
     const compliance = children.filter((route) => route.path?.startsWith('compliance/'));
 
     expect(compliance.map((route) => route.path)).toEqual([
+      'compliance/cases/:reference',
+      'compliance/cases',
       'compliance/investigations',
       'compliance/investigations/:id',
       'compliance/evidence',
     ]);
-    expect(await compliance[0].loadComponent!()).toBe(ComplianceInvestigationsPageComponent);
-    expect(await compliance[1].loadComponent!()).toBe(ComplianceInvestigationDetailComponent);
-    expect(await compliance[2].loadComponent!()).toBe(ComplianceEvidencePageComponent);
+    expect(await compliance.find(r=>r.path==='compliance/investigations')!.loadComponent!()).toBe(ComplianceInvestigationsPageComponent);
+    expect(await compliance.find(r=>r.path==='compliance/investigations/:id')!.loadComponent!()).toBe(ComplianceInvestigationDetailComponent);
+    expect(await compliance.find(r=>r.path==='compliance/evidence')!.loadComponent!()).toBe(ComplianceEvidencePageComponent);
   });
 
   it.each(['CLIENT', 'ANALYST', 'FINANCE'])(
