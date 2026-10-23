@@ -20,7 +20,14 @@ describe('AnalyticsPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Historical reporting is not connected');
     expect(fixture.nativeElement.textContent).toContain('No figures are shown');
     expect(fixture.nativeElement.querySelector('input[name="from"]')).toBeTruthy();
-    expect(fixture.nativeElement.textContent).not.toContain('0');
+    // Explanatory copy (for example, "Indexed to 100") is not a reported value.
+    expect(fixture.nativeElement.querySelector('[aria-label="Summary metrics"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.metric-tile')).toBeNull();
+    const visualizations = fixture.nativeElement.querySelector('[aria-label="Portfolio visualizations"]');
+    expect(visualizations).not.toBeNull();
+    expect(visualizations.querySelector('canvas, table')).toBeNull();
+    expect(visualizations.textContent).toContain('Performance data is unavailable');
+    expect(visualizations.textContent).toContain('Holdings data is unavailable');
   });
 
   it('exposes all approved benchmark periods without inventing a chart result', () => {
