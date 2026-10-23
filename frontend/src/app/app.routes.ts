@@ -23,6 +23,14 @@ const complianceEvidence = () =>
   import('./features/compliance/evidence-page.component').then(
     (m) => m.ComplianceEvidencePageComponent,
   );
+const financeOverview = () =>
+  import('./features/finance/overview/finance-overview.component').then(
+    (m) => m.FinanceOverviewComponent,
+  );
+const financeReconciliation = () =>
+  import('./features/finance/reconciliation/finance-reconciliation.component').then(
+    (m) => m.FinanceReconciliationComponent,
+  );
 const message = () =>
   import('./shared/workspace/message-page.component').then((m) => m.MessagePageComponent);
 const client = [clientGuard];
@@ -89,10 +97,7 @@ export const routes: Routes = [
           { path: 'compliance/cases', loadComponent: () => import('./features/compliance/review-cases.component').then(m => m.ReviewCasesComponent) },
           {
             path: 'finance/reconciliation',
-            loadComponent: () =>
-              import('./shared/workspace/reconciliation-page.component').then(
-                (m) => m.ReconciliationPageComponent,
-              ),
+            loadComponent: financeReconciliation,
           },
           {
             path: 'operations/overview',
@@ -270,6 +275,48 @@ export const routes: Routes = [
               back: '',
             },
           },
+          ...[
+            [
+              'compliance/investigations',
+              'Investigations',
+              'Risk & compliance',
+              'Find and review order evidence within your approved scope.',
+              'Purpose-controlled access to immutable order evidence and completeness indicators.',
+              '/api/compliance/investigations',
+              '',
+            ],
+            [
+              'compliance/investigations/:id',
+              'Investigation details',
+              'Risk & compliance',
+              'Review the evidence behind an order outcome.',
+              'Original instructions, recorded decisions and audited sensitive access.',
+              '/api/compliance/orders/:id/evidence',
+              '/compliance/investigations',
+            ],
+            [
+              'compliance/evidence',
+              'Evidence & exports',
+              'Risk & compliance',
+              'Review approved evidence requests and access purposes.',
+              'Export history and protected downloads after purpose, redaction and retention policies are approved.',
+              '/api/compliance/evidence',
+              '',
+            ],
+            [
+              'finance/overview',
+              'Finance overview',
+              'Finance',
+              'Review booked movements and accounting evidence.',
+              'Verified fill and cash-movement totals by period and currency.',
+              '/api/finance/summary',
+              '',
+            ],
+          ].map(([path, title, section, description, expectation, endpoint, back]) => ({
+            path,
+            loadComponent: path === 'finance/overview' ? financeOverview : staff,
+            data: { title, section, description, expectation, endpoint, back },
+          })),
         ],
       },
     ],

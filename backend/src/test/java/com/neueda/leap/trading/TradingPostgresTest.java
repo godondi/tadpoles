@@ -1509,6 +1509,83 @@ class TradingPostgresTest {
     }
 
     @Test
+    void financeSummaryUsesSettledMovementsBookedFillsAndUtcDateBoundaries() throws Exception {
+        var bankId = banking.banks(client).get(0).bankId();
+        assertEquals(
+                "SETTLED",
+                banking.move(
+                                client,
+                                actor,
+                                key(),
+                                new com.neueda.leap.dto.BankingDtos.MovementRequest(
+                                        bankId, "DEPOSIT", "125.25"))
+                        .status());
+
+        int buyOrder = id(submit(key(), buy("1")));
+        fill(buyOrder, "50", "51");
+        int sellOrder =
+                id(submit(key(), new Command(instrument, "SELL", "1", "MARKET")));
+        fill(sellOrder, "52", "53");
+
+        assertEquals(
+                "SETTLED",
+                banking.move(
+                                client,
+                                actor,
+                                key(),
+                                new com.neueda.leap.dto.BankingDtos.MovementRequest(
+                                        bankId, "WITHDRAW", "100.00"))
+                        .status());
+        assertEquals(
+                "SETTLED",
+                banking.move(
+                                client,
+                                actor,
+                                key(),
+                                new com.neueda.leap.dto.BankingDtos.MovementRequest(
+                                        bankId, "WITHDRAW", "10000.00"))
+                        .status());
+        assertEquals(
+                "REJECTED",
+                banking.move(
+                                client,
+                                actor,
+                                key(),
+                                new com.neueda.leap.dto.BankingDtos.MovementRequest(
+                                        bankId, "WITHDRAW", "30.00"))
+                        .status());
+
+        String token = login("demo.finance");
+        mvc.perform(
+                        get("/api/finance/summary")
+                                .param("from", "2026-10-14")
+                                .param("to", "2026-10-14")
+                                .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totals.settledDeposits").value("125.25"))
+                .andExpect(jsonPath("$.totals.settledWithdrawals").value("10100.00"))
+                .andExpect(jsonPath("$.totals.grossBuyConsideration").value("51.00"))
+                .andExpect(jsonPath("$.totals.grossSellConsideration").value("52.00"))
+                .andExpect(jsonPath("$.totals.bookedFillCount").value(2))
+                .andExpect(jsonPath("$.totals.fees").doesNotExist())
+                .andExpect(jsonPath("$.clientId").doesNotExist())
+                .andExpect(jsonPath("$.dataAsOf").isString())
+                .andExpect(jsonPath("$.generatedAt").value("2026-10-14T14:00:00Z"));
+
+        mvc.perform(
+                        get("/api/finance/summary")
+                                .param("from", "2026-10-01")
+                                .param("to", "2026-10-01")
+                                .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totals.settledDeposits").value("0.00"))
+                .andExpect(jsonPath("$.totals.settledWithdrawals").value("0.00"))
+                .andExpect(jsonPath("$.totals.grossBuyConsideration").value("0.00"))
+                .andExpect(jsonPath("$.totals.grossSellConsideration").value("0.00"))
+                .andExpect(jsonPath("$.totals.bookedFillCount").value(0));
+    }
+
+    @Test
     void financeReconciliationPersistsRealMismatchReferences() throws Exception {
         String token = login("demo.finance");
         mvc.perform(
