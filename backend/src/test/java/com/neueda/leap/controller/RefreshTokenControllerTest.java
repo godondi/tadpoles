@@ -136,7 +136,7 @@ class RefreshTokenControllerTest {
         refreshToken.setRefreshTokenId(21);
         refreshToken.setUserId(1);
         refreshToken.setTokenHash("seed-token-hash-1");
-        refreshToken.setExpiresAt(LocalDateTime.of(2026, 10, 24, 12, 0));
+        refreshToken.setExpiresAt(LocalDateTime.now().plusDays(1));
         refreshToken.setCreatedAt(LocalDateTime.of(2026, 9, 24, 12, 0));
         return refreshToken;
     }
