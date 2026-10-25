@@ -7,6 +7,21 @@ import { AuthService } from '../../core/auth/auth.service';
 import { OrderStatusService } from '../../core/api/order-status.service';
 import { AccountPageComponent } from './account-page.component';
 describe('independent account resources', () => {
+  it('displays explicit NONE guidance as N/A rather than the wire enum', () => {
+    TestBed.configureTestingModule({
+      imports: [AccountPageComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        { provide: AuthService, useValue: { sessionChanged: new Subject<void>() } },
+        { provide: OrderStatusService, useValue: { watch: () => EMPTY } }],
+    });
+    const fixture = TestBed.createComponent(AccountPageComponent);
+    const http = TestBed.inject(HttpTestingController);
+    http.match(() => true).forEach((request) => request.flush({}));
+    fixture.componentInstance.advisory.data.set({ guidance: [{ instrumentId: 42, status: 'NONE', reasoning: null, authorName: null, updatedAt: '2026-10-22T18:00:00Z' }], recommendations: [], asOf: null, source: 'test' });
+    expect(fixture.componentInstance.guidanceStatus(42)).toBe('N/A');
+    http.verify();
+  });
+
   it('keeps confirmed balances useful when recent orders fail', () => {
     TestBed.configureTestingModule({
       imports: [AccountPageComponent],
@@ -20,6 +35,9 @@ describe('independent account resources', () => {
     });
     const http = TestBed.inject(HttpTestingController);
     const f = TestBed.createComponent(AccountPageComponent);
+    http
+      .expectOne((r) => r.url.endsWith('/api/workspace/client/advisory'))
+      .flush({ guidance: [], recommendations: [], asOf: null, source: 'test' });
     http
       .expectOne((r) => r.url.endsWith('/portfolio/valuation'))
       .flush({
@@ -48,6 +66,44 @@ describe('independent account resources', () => {
     expect(f.nativeElement.textContent).toContain('500');
     expect(f.nativeElement.textContent).toContain('Unable to connect');
     http.verify();
+  });
+
+  it('keeps financial information visible when client advisory data is unavailable', () => {
+    TestBed.configureTestingModule({
+      imports: [AccountPageComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: AuthService, useValue: { sessionChanged: new Subject<void>() } },
+        { provide: OrderStatusService, useValue: { health: () => 'IDLE', lastSuccess: () => null, watch: () => EMPTY } },
+      ],
+    });
+    const http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(AccountPageComponent);
+    http.expectOne((request) => request.url.endsWith('/api/workspace/client/advisory')).flush(
+      { detail: 'Advisory information is unavailable.' },
+      { status: 503, statusText: 'Unavailable' },
+    );
+    http.expectOne((request) => request.url.endsWith('/portfolio')).flush({
+      balances: [{ currency: 'USD', posted: '1000', reserved: '0', available: '1000', updatedAt: '2026-10-22T18:00:00Z' }],
+      currentPositions: [],
+      retrievedAt: '2026-10-22T18:00:00Z',
+    });
+    http.expectOne((request) => request.url.endsWith('/portfolio/valuation')).flush({
+      status: 'COMPLETE',
+      totalValue: '1000',
+      holdingsValue: '0',
+      cashBalance: '1000',
+      unpricedTickers: [],
+      snapshotAt: '2026-10-22T18:00:00Z',
+      quoteAsOf: null,
+    });
+    http.expectOne((request) => request.url.endsWith('/orders')).flush({ items: [], total: 0 });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Settled balance');
+    expect(fixture.nativeElement.textContent).toContain('Advisory information is unavailable');
   });
 });
 
@@ -94,6 +150,9 @@ describe('account background updates', () => {
     };
     http.expectOne((r) => r.url.endsWith('/portfolio')).flush(portfolio);
     http.expectOne((r) => r.url.endsWith('/orders')).flush({ items: [], total: 0 });
+    http
+      .expectOne((r) => r.url.endsWith('/api/workspace/client/advisory'))
+      .flush({ guidance: [], recommendations: [], asOf: null, source: 'test' });
     fixture.detectChanges();
 
     const positions = fixture.nativeElement.querySelector('.table-wrapper');
@@ -122,6 +181,9 @@ describe('account background updates', () => {
         cashBalance: '1000',
         unpricedTickers: [],
       });
+    http
+      .expectOne((r) => r.url.endsWith('/api/workspace/client/advisory'))
+      .flush({ guidance: [], recommendations: [], asOf: null, source: 'test' });
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.table-wrapper')).toBe(positions);
     expect(fixture.nativeElement.querySelector('select')).toBe(select);
@@ -150,6 +212,9 @@ describe('account background updates', () => {
       .expectOne((r) => r.url.endsWith('/portfolio'))
       .flush({ ...portfolio, currentPositions: [] });
     http.expectOne((r) => r.url.endsWith('/orders')).flush({ items: [], total: 0 });
+    http
+      .expectOne((r) => r.url.endsWith('/api/workspace/client/advisory'))
+      .flush({ guidance: [], recommendations: [], asOf: null, source: 'test' });
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).not.toContain('AAPL');
     expect(fixture.nativeElement.textContent).toContain('Your first investment starts here');
@@ -184,6 +249,9 @@ describe('account summary metrics', () => {
         currentPositions: [],
       });
     http.expectOne((r) => r.url.endsWith('/orders')).flush({ items: [], total: 0 });
+    http
+      .expectOne((r) => r.url.endsWith('/api/workspace/client/advisory'))
+      .flush({ guidance: [], recommendations: [], asOf: null, source: 'test' });
     fixture.detectChanges();
     const panels = fixture.nativeElement.querySelectorAll('.account-balances > *');
     expect(panels.length).toBe(3);
@@ -234,6 +302,9 @@ describe('Investing estimates', () => {
         quoteAsOf: '2026-10-16T19:59:50Z',
         unpricedTickers: [],
       });
+    http
+      .expectOne((r) => r.url.endsWith('/api/workspace/client/advisory'))
+      .flush({ guidance: [], recommendations: [], asOf: null, source: 'test' });
     fixture.detectChanges();
     const panel = fixture.nativeElement.querySelector('[aria-labelledby="investing-heading"]');
     expect(panel.textContent).toContain('9007199254740993.02');

@@ -1,6 +1,9 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { UserService } from './user.service';
+import { ClientAdvisoryApi } from './features/client/advisory/client-advisory-api.service';
+import { ClientAssignment } from './features/client/advisory/client-advisory-models';
+import { PageResource } from './shared/workspace/page-resource';
 
 @Component({
   selector: 'app-profile',
@@ -25,6 +28,26 @@ import { UserService } from './user.service';
         @if (errorMessage()) {
           <div class="error-message" role="alert">{{ errorMessage() }}</div>
         }
+
+        <div class="profile-card" aria-labelledby="assigned-advisor-heading">
+          <h2 id="assigned-advisor-heading">Assigned advisor</h2>
+          @if (assignment.loading() && !assignment.data()) {
+            <p class="status-card">Loading advisor assignment…</p>
+          } @else if (assignment.error()) {
+            <p class="error-message" role="alert">Assignment unavailable.</p>
+            <button type="button" (click)="loadAssignment()">Retry assignment</button>
+          } @else if (assignment.data(); as assigned) {
+            @if (assigned.advisor; as advisor) {
+              <p>{{ advisor.name }}</p>
+              @if (assigned.assignedAt) {
+                <p class="subtle-text">Assigned {{ assigned.assignedAt | date: 'medium' : 'UTC' }} UTC</p>
+              }
+            } @else {
+              <p>Assignment pending</p>
+              <p class="subtle-text">An advisor will be assigned by the server when one is eligible.</p>
+            }
+          }
+        </div>
 
         <div class="profile-content">
           <div class="profile-card">
@@ -300,15 +323,18 @@ import { UserService } from './user.service';
 })
 export class ProfileComponent implements OnInit {
   private readonly userService = inject(UserService);
+  private readonly advisoryApi = inject(ClientAdvisoryApi);
 
   readonly profile = this.userService.getProfile();
   readonly errorMessage = signal('');
   readonly isLoading = signal(false);
+  readonly assignment = new PageResource<ClientAssignment>();
 
   readonly initials = signal('CP');
 
   async ngOnInit(): Promise<void> {
     this.setInitials();
+    this.loadAssignment();
     if (this.profile().onboardingComplete && this.profile().email) {
       return;
     }
@@ -322,6 +348,10 @@ export class ProfileComponent implements OnInit {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  loadAssignment(): void {
+    this.assignment.load(this.advisoryApi.assignment());
   }
 
   private setInitials(): void {
