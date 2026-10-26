@@ -672,7 +672,7 @@ See `AUTHORIZATION_REFACTOR_SUMMARY.md` for complete list.
 
 - `AUTHENTICATION_GUIDE.md` - Detailed authentication setup guide
 - `AUTHORIZATION_REFACTOR_SUMMARY.md` - Complete list of refactored endpoints
-- `backend/pom.xml` - Dependencies (JJWT, Spring Security OAuth2)
+- `../../backend/pom.xml` - Dependencies (JJWT, Spring Security OAuth2)
 - Spring Security Documentation: https://spring.io/projects/spring-security
 - JWT (JSON Web Tokens): https://www.rfc-editor.org/rfc/rfc7519
 

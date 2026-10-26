@@ -20,7 +20,7 @@ This separate plan is created before drafting the requested refactor document. T
 
 ## Parallel development contract for subsequent implementation
 
-Parallel work is a property of the proposed task breakdown; no implementation agents are being dispatched for this documentation-only request. Define one owner for shared contracts, migrations, `docs/api.yaml`, routing, shared CSS, and common tests. Feature branches start after the contracts they consume are merged. Each task must specify inputs, owned files, prohibited overlapping edits, dependencies, observable outcomes, and relevant tests. Migration numbers must be reserved centrally before parallel database work.
+Parallel work is a property of the proposed task breakdown; no implementation agents are being dispatched for this documentation-only request. Define one owner for shared contracts, migrations, `../../../docs/api.yaml`, routing, shared CSS, and common tests. Feature branches start after the contracts they consume are merged. Each task must specify inputs, owned files, prohibited overlapping edits, dependencies, observable outcomes, and relevant tests. Migration numbers must be reserved centrally before parallel database work.
 
 ## Change analysis ledger
 

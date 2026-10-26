@@ -33,7 +33,7 @@ Read these sources in full before implementation, following their relevant refer
 1. `impDocs/HailMary.md`, especially its source/proposal distinction, BR-01–BR-18, role matrix, trading invariants, D-01–D-24, and release criteria. The user's HailMary link refers to this local file, not an external website.
 2. **Every Markdown file** under `impDocs/Frontend/ClientPageImplementation/`, including `ClientPageCrashCourse.MD`, `Implementation.MD`, and `RolesCredentials.MD`; also review `Verification.txt` and relevant screenshots.
 3. **Every Markdown file** under `impDocs/Frontend/SeparatePageImplementation/`, including `SeparatePages.MD` and `RolesCredentials.MD`.
-4. `ClientAndBuySell.MD`, `HoldingsAndTradesIMP.md`, `TEST_AUTHORIZATION_CONTEXT.md`, `AUTH_QUICK_START.md`, the root/frontend/auth-stub READMEs, and relevant frontend/backend documents throughout `impDocs/`.
+4. `ClientAndBuySell.MD`, `HoldingsAndTradesIMP.md`, `../TEST_AUTHORIZATION_CONTEXT.md`, `../AUTH_QUICK_START.md`, the root/frontend/auth-stub READMEs, and relevant frontend/backend documents throughout `impDocs/`.
 5. `impDocs/Fauxnance/Quotes.md`, `impDocs/Fauxnance/DailyCandles.md`, `docs/api.yaml`, available provider contracts, and the actual provider adapters/tests. Some old documents reference files no longer at their original paths; locate their replacements and record missing sources rather than inventing their contents.
 6. The ERD/UML, role-support, local-deployment and Docker guides in `docs/`; all SQL under `database/` and `schema/`; Compose files, `.env.template`, Jenkins configuration, test harnesses, and review/recovery scripts. Do not print `.env`, API keys, tokens, or real account data into logs or documentation.
 

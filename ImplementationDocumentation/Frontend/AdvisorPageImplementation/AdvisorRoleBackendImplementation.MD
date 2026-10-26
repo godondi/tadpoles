@@ -3,7 +3,7 @@
 Date: 2026-10-22
 Status: initial Advisor backend slice implemented/deployed; automatic onboarding assignment remains deferred
 
-Follow-up 2026-10-22: the user separately authorized demo seed provisioning. `database/demo/role_workspaces.sql` now creates the hashed `demo.advisor` identity, ADVISOR role and linked advisor, assigns only unassigned `demo.client` and rejects a conflicting assignment. The checked-in seed was applied and login/role verified through nginx; disposable PostgreSQL tests pass in `scripts/test-advisor-seed.py`. Demo credential provisioning is therefore complete for this stack. The APIs, persistence/history, server ownership enforcement and production automatic assignment described below remain pending; no Spring implementation was added.
+Follow-up 2026-10-22: the user separately authorized demo seed provisioning. `../../../database/demo/role_workspaces.sql` now creates the hashed `demo.advisor` identity, ADVISOR role and linked advisor, assigns only unassigned `demo.client` and rejects a conflicting assignment. The checked-in seed was applied and login/role verified through nginx; disposable PostgreSQL tests pass in `scripts/test-advisor-seed.py`. Demo credential provisioning is therefore complete for this stack. The APIs, persistence/history, server ownership enforcement and production automatic assignment described below remain pending; no Spring implementation was added.
 
 This is a standalone TDD task for the Spring/PostgreSQL owner. It is intentionally separate from the Angular implementation to minimize merge conflicts and to prevent the frontend from claiming authorization or persistence that does not exist.
 
@@ -13,14 +13,14 @@ The user confirmed **Advisor backend**, explicitly authorizing the role-owned AP
 
 Production sources:
 
-- `backend/src/main/java/com/neueda/leap/controller/AdvisorWorkspaceController.java`
-- `backend/src/main/java/com/neueda/leap/controller/ClientAdvisoryController.java`
-- `backend/src/main/java/com/neueda/leap/controller/AdvisorWorkspaceExceptionHandler.java`
-- `backend/src/main/java/com/neueda/leap/dto/AdvisorWorkspaceDtos.java`
-- `backend/src/main/java/com/neueda/leap/mapper/AdvisorWorkspaceMapper.java`
-- `backend/src/main/java/com/neueda/leap/service/AdvisorWorkspaceService.java`
-- `backend/src/main/java/com/neueda/leap/service/impl/AdvisorWorkspaceServiceImpl.java`
-- `database/migrations/018_advisor_workspace.sql`, with matching fresh DDL/reference marker and targeted runtime-grant updates.
+- `../../../backend/src/main/java/com/neueda/leap/controller/AdvisorWorkspaceController.java`
+- `../../../backend/src/main/java/com/neueda/leap/controller/ClientAdvisoryController.java`
+- `../../../backend/src/main/java/com/neueda/leap/controller/AdvisorWorkspaceExceptionHandler.java`
+- `../../../backend/src/main/java/com/neueda/leap/dto/AdvisorWorkspaceDtos.java`
+- `../../../backend/src/main/java/com/neueda/leap/mapper/AdvisorWorkspaceMapper.java`
+- `../../../backend/src/main/java/com/neueda/leap/service/AdvisorWorkspaceService.java`
+- `../../../backend/src/main/java/com/neueda/leap/service/impl/AdvisorWorkspaceServiceImpl.java`
+- `../../../database/migrations/018_advisor_workspace.sql`, with matching fresh DDL/reference marker and targeted runtime-grant updates.
 
 Identity derives from verified JWT -> persisted user -> advisor link and ADVISOR role. Every mapper scope rechecks enabled/role/assignment, and client-facing reads derive ownership from user identity rather than any requested client ID. No legacy ownership bypass, global auth refactor, widened CLIENT catalog guard or financial-service dependency was added. Grouped reads use repeatable read; writes lock the scoped client first, then recheck exact posted ownership and compare-and-set versions. Projection triggers atomically append attributed immutable history; runtime cannot insert or alter history directly. Acquisition filters active reads, not stored records/history; archive is allowed even after acquisition/deactivation.
 
@@ -315,7 +315,7 @@ Add a repeatable optional seed for:
 
 Resolve IDs by username. Do not replace existing passwords, balances or assignments. Keep `demo.client2` unassigned to the demo advisor. If a conflicting assignment already exists, fail clearly or preserve it according to the approved policy; do not silently overwrite it.
 
-Coordinate any edits to `database/demo/role_workspaces.sql`, `database/demo/seed-role-workspaces.sh` or Compose mounts. Hardened deployments do not receive demo credentials automatically. New advisory tables require review in `database/runtime-grants.sql`.
+Coordinate any edits to `../../../database/demo/role_workspaces.sql`, `database/demo/seed-role-workspaces.sh` or Compose mounts. Hardened deployments do not receive demo credentials automatically. New advisory tables require review in `database/runtime-grants.sql`.
 
 ## Migration and fresh/upgrade parity
 
@@ -328,7 +328,7 @@ Migration 018 is implemented for this slice; 019 is the next candidate. Future a
 - indexes, constraints and grants;
 - no edits to already-recorded migrations.
 
-Update `database/fresh/001_schema.sql` and `database/fresh/002_reference.sql` to match the final schema. Add fresh-versus-upgrade tests and PostgreSQL tests for constraints, active uniqueness, version conflicts, archive history and decimal eligibility. Review runtime grants for all new tables and sequences.
+Update `../../../database/fresh/001_schema.sql` and `database/fresh/002_reference.sql` to match the final schema. Add fresh-versus-upgrade tests and PostgreSQL tests for constraints, active uniqueness, version conflicts, archive history and decimal eligibility. Review runtime grants for all new tables and sequences.
 
 Do not create an ad hoc browser or SQL workaround against a retained volume.
 
@@ -375,13 +375,13 @@ Do not change `WorkspaceClientController`, financial calculations or the meaning
 
 Frontend consumers implemented in this repository are:
 
-- `frontend/src/app/features/advisor/advisor-api.service.ts`
-- `frontend/src/app/features/advisor/advisor-clients-page.component.ts`
-- `frontend/src/app/features/advisor/advisor-client-detail-page.component.ts`
-- `frontend/src/app/features/client/advisory/client-advisory-api.service.ts`
-- `frontend/src/app/features/client/advisory/client-recommendations.component.ts`
-- `frontend/src/app/features/client/account-page.component.ts`
-- `frontend/src/app/profile.ts`
+- `../../../frontend/src/app/features/advisor/advisor-api.service.ts`
+- `../../../frontend/src/app/features/advisor/advisor-clients-page.component.ts`
+- `../../../frontend/src/app/features/advisor/advisor-client-detail-page.component.ts`
+- `../../../frontend/src/app/features/client/advisory/client-advisory-api.service.ts`
+- `../../../frontend/src/app/features/client/advisory/client-recommendations.component.ts`
+- `../../../frontend/src/app/features/client/account-page.component.ts`
+- `../../../frontend/src/app/profile.ts`
 
 The frontend currently treats these endpoints as proposed and will display unavailable/error states when they are absent. It does not provide a permissive fake-data fallback.
 

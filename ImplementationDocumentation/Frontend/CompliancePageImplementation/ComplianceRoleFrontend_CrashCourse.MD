@@ -3,7 +3,7 @@
 ## What is implemented
 
 The Compliance role now has dedicated standalone Angular screens in
-`frontend/src/app/features/compliance/`:
+`../../../frontend/src/app/features/compliance`:
 
 - `ComplianceInvestigationsPageComponent` at `/compliance/investigations`
 - `ComplianceInvestigationDetailComponent` at
@@ -147,9 +147,9 @@ There is no fallback to Operations APIs and no broad client-order fetch.
 The deterministic populated, empty/partial, rejection, missing quote, manifest, and
 unavailable states are defined in:
 
-- `frontend/src/app/features/compliance/compliance-api.service.spec.ts`
-- `frontend/src/app/features/compliance/compliance-screens.spec.ts`
-- `frontend/src/app/features/compliance/compliance-feature.spec.ts`
+- `../../../frontend/src/app/features/compliance/compliance-api.service.spec.ts`
+- `../../../frontend/src/app/features/compliance/compliance-screens.spec.ts`
+- `../../../frontend/src/app/features/compliance/compliance-feature.spec.ts`
 
 The fixtures contain safe synthetic references only. They do not contain credentials,
 bank details, identity data, or browser-persisted evidence.

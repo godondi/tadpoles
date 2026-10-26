@@ -23,7 +23,7 @@ The user subsequently authorized the optional demo seed change. `demo.advisor` /
 
 Real login and `/api/users/me` were verified through nginx. Open `http://localhost:8087/login` using VM port forwarding or an approved host, sign in and open `/advisor/clients`. A request with Host localhost returns HTTP 200 for the browser route; literal 127.0.0.1 is rejected by existing SSR host policy. Authenticated visual rendering was not browser-verified. If running a frontend image built before the Advisor changes, rebuild that image separately.
 
-The new workspace backend endpoints are still absent, so the assigned-client page displays unavailable/error state rather than populated client data. Historical credential-blocked statements below describe the earlier recovery snapshot; the backend API/persistence/assignment blockers still apply. Isolated seed tests are in `scripts/test-advisor-seed.py` and passed against the actual fresh PostgreSQL schema.
+The new workspace backend endpoints are still absent, so the assigned-client page displays unavailable/error state rather than populated client data. Historical credential-blocked statements below describe the earlier recovery snapshot; the backend API/persistence/assignment blockers still apply. Isolated seed tests are in `../../../scripts/test-advisor-seed.py` and passed against the actual fresh PostgreSQL schema.
 
 ## What exists
 
@@ -38,7 +38,7 @@ Implemented browser routes:
 
 ## Feature files
 
-Advisor-owned implementation is under `frontend/src/app/features/advisor/`:
+Advisor-owned implementation is under `../../../frontend/src/app/features/advisor`:
 
 - `advisor-models.ts` contains proposed wire contracts.
 - `advisor-api.service.ts` contains proposed API calls and error normalization.
@@ -46,7 +46,7 @@ Advisor-owned implementation is under `frontend/src/app/features/advisor/`:
 - `advisor-client-detail-page.component.ts` renders holdings, guidance and recommendation controls.
 - `advisor-utils.ts` contains decimal-safe positive ownership and rationale validation helpers.
 
-Client presentation is under `frontend/src/app/features/client/advisory/`:
+Client presentation is under `../../../frontend/src/app/features/client/advisory`:
 
 - `client-advisory-api.service.ts` calls session-owned client endpoints.
 - `client-advisory-models.ts` contains client read-only contracts.
@@ -165,7 +165,7 @@ The implemented focused tests cover:
 - Client advisory/account/profile/policy includes: **40 passed, 5 files**; combined focused coverage **90 passing tests**.
 - Full frontend suite, once: **243 passed, 1 failed**. Untouched analytics spec incorrectly rejects any `0` in the entire page, while static copy includes “Indexed to 100”. No analytics fix was made.
 - Style check, once: **passed**.
-- Normal production build, once: compilation/bundles completed, then **EACCES** unlinking the existing root-owned `frontend/dist/pole/3rdpartylicenses.txt`. The output directories are also root-owned. No successful artifact build is claimed; VM owner must correct output permissions. Existing analytics CSS budget warning also remains.
+- Normal production build, once: compilation/bundles completed, then **EACCES** unlinking the existing root-owned `../../../frontend/dist/pole/3rdpartylicenses.txt`. The output directories are also root-owned. No successful artifact build is claimed; VM owner must correct output permissions. Existing analytics CSS budget warning also remains.
 - `git diff --check`: passed. Angular focused compilation and checked account/profile editor diagnostics reported no relevant errors.
 
 No backend tests/migrations, real browser visual walkthrough or live Docker Advisor login were run. Backend persistence, automatic assignment, server ownership enforcement, `demo.advisor` provisioning and live API data remain **pending independently**. Only `demo.client` may be assigned in the optional future seed; `demo.client2` remains a negative fixture. No credential/auth bypass or runtime fixture fallback was added.

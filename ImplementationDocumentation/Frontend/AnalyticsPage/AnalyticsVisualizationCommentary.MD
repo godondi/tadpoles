@@ -27,13 +27,13 @@ No notebook values, hard-coded portfolio values, Spring transactional reads, or 
 
 ### What was already implemented
 
-- `frontend/src/app/features/analytics/analytics-page.component.ts` provided the analytics shell, URL-backed filters, route tabs, freshness messaging, and explicit unavailable/no-activity states.
-- `frontend/src/app/core/api/analytics-api.service.ts` provided typed clients for summary, trends, instruments, and freshness.
-- `analytics-service/app/auth.py` independently checked bearer tokens and required `ANALYST`.
-- `analytics-service/app/api.py` exposes bounded read-only reporting routes; local demo mode serves reporting fixtures while authoritative mode fails closed.
-- `analytics-service/app/schemas.py` described the original aggregate-report response shapes.
-- `backend/src/main/java/com/neueda/leap/controller/WorkspaceClientController.java` exposed `/api/workspace/client/portfolio` and `/api/orders` for client workflows. These remain Spring-owned and are not valid sources for internal aggregate analytics.
-- The existing dashboard charts in `frontend/src/app/dashboard.ts` use placeholder values. They are client-facing prototype content and were not copied into the analytics page.
+- `../../../frontend/src/app/features/analytics/analytics-page.component.ts` provided the analytics shell, URL-backed filters, route tabs, freshness messaging, and explicit unavailable/no-activity states.
+- `../../../frontend/src/app/core/api/analytics-api.service.ts` provided typed clients for summary, trends, instruments, and freshness.
+- `../../../analytics-service/app/auth.py` independently checked bearer tokens and required `ANALYST`.
+- `../../../analytics-service/app/api.py` exposes bounded read-only reporting routes; local demo mode serves reporting fixtures while authoritative mode fails closed.
+- `../../../analytics-service/app/schemas.py` described the original aggregate-report response shapes.
+- `../../../backend/src/main/java/com/neueda/leap/controller/WorkspaceClientController.java` exposed `/api/workspace/client/portfolio` and `/api/orders` for client workflows. These remain Spring-owned and are not valid sources for internal aggregate analytics.
+- The existing dashboard charts in `../../../frontend/src/app/dashboard.ts` use placeholder values. They are client-facing prototype content and were not copied into the analytics page.
 
 ### What was missing
 
@@ -129,7 +129,7 @@ The separation is required by BR-16. The analytics API must read a separate repo
 
 ### Angular API test
 
-`frontend/src/app/core/api/analytics-api.service.spec.ts` now checks:
+`../../../frontend/src/app/core/api/analytics-api.service.spec.ts` now checks:
 
 - The performance request uses the analytics origin.
 - The selected period is sent as `period=12m`.
@@ -138,7 +138,7 @@ The separation is required by BR-16. The analytics API must read a separate repo
 
 ### Angular component test
 
-`frontend/src/app/features/analytics/analytics-page.component.spec.ts` now checks:
+`../../../frontend/src/app/features/analytics/analytics-page.component.spec.ts` now checks:
 
 - The unavailable state keeps filters visible and shows no invented figures.
 - All three approved period buttons are present.
@@ -146,7 +146,7 @@ The separation is required by BR-16. The analytics API must read a separate repo
 
 ### FastAPI test
 
-`analytics-service/tests/test_api.py` now checks that both visualization routes require the existing authenticated analyst boundary and return `503` while the reporting source is absent.
+`../../../analytics-service/tests/test_api.py` now checks that both visualization routes require the existing authenticated analyst boundary and return `503` while the reporting source is absent.
 
 ## Remaining Authoritative Work
 
@@ -159,6 +159,6 @@ The UI and contracts are ready for source integration, but the feature must not 
 5. Implement repository queries with bounded date ranges, freshness metadata, and correction handling.
 6. Replace the FastAPI `unavailable()` calls with approved reporting queries.
 7. Add reconciliation and concurrent-load evidence for BR-16.
-8. Update `docs/api.yaml` with the two new successful response contracts and their `401`, `403`, `422`, `429`, and `503` responses.
+8. Update `../../../docs/api.yaml` with the two new successful response contracts and their `401`, `403`, `422`, `429`, and `503` responses.
 
 Until those steps are complete, the correct visible behavior is the labelled unavailable state.

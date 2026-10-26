@@ -11,14 +11,14 @@ Source: `AdvisorRoleImplementationInstruction.MD`
 
 ### Changed files in the backend follow-up
 
-New role-owned production files under `backend/src/main/java/com/neueda/leap/`:
+New role-owned production files under `../../../backend/src/main/java/com/neueda/leap`:
 
 - `controller/AdvisorWorkspaceController.java`, `controller/ClientAdvisoryController.java`, `controller/AdvisorWorkspaceExceptionHandler.java`
 - `dto/AdvisorWorkspaceDtos.java`
 - `mapper/AdvisorWorkspaceMapper.java`
 - `service/AdvisorWorkspaceService.java`, `service/impl/AdvisorWorkspaceServiceImpl.java`
 
-New tests under `backend/src/test/java/com/neueda/leap/`:
+New tests under `../../../backend/src/test/java/com/neueda/leap`:
 
 - `controller/AdvisorWorkspaceControllerTest.java`
 - `service/impl/AdvisorWorkspaceServiceImplTest.java`
@@ -27,11 +27,11 @@ New tests under `backend/src/test/java/com/neueda/leap/`:
 
 Additive database/deployment seams:
 
-- New `database/migrations/018_advisor_workspace.sql`.
-- Matching Advisor DDL appended to `database/fresh/001_schema.sql`; marker 13 in `database/fresh/002_reference.sql`.
-- Targeted `database/runtime-grants.sql` additions: projection SELECT/INSERT/UPDATE, no delete/truncate; history SELECT only, direct writes/helper execution revoked. Trusted security-definer snapshot trigger appends history with fixed search path.
-- Narrow migration-list/count update in `testing/src/test/java/com/neueda/leap/db/FreshTradingSchemaTest.java`.
-- New `scripts/smoke-advisor-workspace.py`, read-only by default, with explicit optional demo mutation verification.
+- New `../../../database/migrations/018_advisor_workspace.sql`.
+- Matching Advisor DDL appended to `../../../database/fresh/001_schema.sql`; marker 13 in `database/fresh/002_reference.sql`.
+- Targeted `../../../database/runtime-grants.sql` additions: projection SELECT/INSERT/UPDATE, no delete/truncate; history SELECT only, direct writes/helper execution revoked. Trusted security-definer snapshot trigger appends history with fixed search path.
+- Narrow migration-list/count update in `../../../testing/src/test/java/com/neueda/leap/db/FreshTradingSchemaTest.java`.
+- New `../../../scripts/smoke-advisor-workspace.py`, read-only by default, with explicit optional demo mutation verification.
 - Updated database guide and the three Advisor handoff/proposal documents.
 
 No existing Java service/controller/mapper, auth configuration/helper, onboarding, trading code, financial DTO, frontend, seed, nginx or Compose definition was edited in this backend follow-up. No files were staged/committed by the agent; pre-existing untracked documentation was retained.
@@ -71,7 +71,7 @@ Final execution:
 
 ### Deployment, history and remaining handoff
 
-Runtime owner must apply/reapply `database/runtime-grants.sql` in hardened deployments before using the new APIs. Local Compose uses its existing database identity; no credentials/grants were changed live by ad hoc SQL. Source history is never physically deleted; no client/advisor history-browsing endpoint is exposed. Rollback should disable/revert the API release while retaining new tables/history and existing assignments; do not remove volumes or drop evidence. Any future schema change uses a new coordinated migration (next candidate 014).
+Runtime owner must apply/reapply `../../../database/runtime-grants.sql` in hardened deployments before using the new APIs. Local Compose uses its existing database identity; no credentials/grants were changed live by ad hoc SQL. Source history is never physically deleted; no client/advisor history-browsing endpoint is exposed. Rollback should disable/revert the API release while retaining new tables/history and existing assignments; do not remove volumes or drop evidence. Any future schema change uses a new coordinated migration (next candidate 014).
 
 Automatic assignment remains a separate product/integrator decision. Legacy advisor-ID and trade-suggestion routes are unchanged: the new workspace's assignment guarantees must not be claimed for those older APIs, and broader legacy hardening remains a production security review item. No new rate limiter was introduced. Frontend catalog is bounded to its existing first page.
 
@@ -109,9 +109,9 @@ Detailed broader assignment exceptions remain in SharedChangeProposal/README.MD.
 
 The user separately authorized adding the demo Advisor seed after the frontend recovery. This supersedes the historical credential-pending statements below **only for demo provisioning**, not the backend workspace APIs or automatic assignment policy.
 
-- Updated `database/demo/role_workspaces.sql`: `demo.advisor`, neutral `Demo Advisor`, ADVISOR role and linked advisor row. New user password is hashed using the existing public `RoleDemo2026!` convention; reruns preserve existing passwords and balances.
+- Updated `../../../database/demo/role_workspaces.sql`: `demo.advisor`, neutral `Demo Advisor`, ADVISOR role and linked advisor row. New user password is hashed using the existing public `RoleDemo2026!` convention; reruns preserve existing passwords and balances.
 - Only unassigned `demo.client` is linked to this advisor. A conflicting pre-existing assignment aborts the transaction clearly; `demo.client2` and unrelated clients remain untouched.
-- Added `scripts/test-advisor-seed.py`: disposable PostgreSQL tests using the real fresh schema; red phase failed with “Advisor demo identity or assignment missing”, then passed creation/role/link, scoped assignment, repeatability, preserved password/cash and conflicting-assignment rejection. No retained volume is used by these tests.
+- Added `../../../scripts/test-advisor-seed.py`: disposable PostgreSQL tests using the real fresh schema; red phase failed with “Advisor demo identity or assignment missing”, then passed creation/role/link, scoped assignment, repeatability, preserved password/cash and conflicting-assignment rejection. No retained volume is used by these tests.
 - Applied successfully through the existing Compose demo-seed service using its checked-in SQL, not ad hoc provisioning. No Compose, Spring or nginx edits.
 - Live `/auth/login` and `/api/users/me` verified `demo.advisor` and ADVISOR through nginx on port 8087. Tokens were not logged. `/advisor/clients` returns HTTP 200 with Host localhost; Host 127.0.0.1 is rejected with HTTP 400 by the existing SSR host policy. Use `http://localhost:8087` through the VM's forwarded port, or an already approved hostname.
 - `docker-compose config --quiet` and `git diff --check` passed. This VM has standalone `docker-compose`, not the `docker compose` plugin.
@@ -129,14 +129,14 @@ The browser can preview the feature with injected HTTP fixtures in tests. It can
 
 ## Repository findings
 
-- `frontend/src/app/core/auth/workspace-policy.ts` was the controlling frontend role boundary. It recognized no `ADVISOR`, so Advisor roles were discarded and Advisor routes were denied.
-- `frontend/src/app/app.routes.ts` contains lazy routes below `AuthenticatedShellComponent`. Advisor routes now reuse that shell.
-- `frontend/src/app/features/client/account-page.component.ts` is the real `/app/overview` surface. Its portfolio, valuation, and orders resources remain independent from the new advisory resource.
-- `frontend/src/app/profile.ts` used cached profile completion to skip profile loading. Assignment is now a separate request and does not depend on that cache.
+- `../../../frontend/src/app/core/auth/workspace-policy.ts` was the controlling frontend role boundary. It recognized no `ADVISOR`, so Advisor roles were discarded and Advisor routes were denied.
+- `../../../frontend/src/app/app.routes.ts` contains lazy routes below `AuthenticatedShellComponent`. Advisor routes now reuse that shell.
+- `../../../frontend/src/app/features/client/account-page.component.ts` is the real `/app/overview` surface. Its portfolio, valuation, and orders resources remain independent from the new advisory resource.
+- `../../../frontend/src/app/profile.ts` used cached profile completion to skip profile loading. Assignment is now a separate request and does not depend on that cache.
 - Existing Spring `AdvisorController` and `TradeSuggestionController` are not the new workspace API. They accept path IDs and/or preserve BUY/SELL quantity semantics.
 - `SecurityRoleSupport.requireClientOwnership()` allows non-client Advisor access and is not used as proof of assigned-client scope.
-- `nginx/nginx.conf` already sends `/api/` to `backend:8080` and all other paths to `frontend:4000`. No Advisor-specific nginx location is needed.
-- `docker-compose.yml` has no `demo.advisor`; live Docker walkthrough remains blocked until seed/provisioning work is coordinated.
+- `../../../nginx/nginx.conf` already sends `/api/` to `backend:8080` and all other paths to `frontend:4000`. No Advisor-specific nginx location is needed.
+- `../../../docker-compose.yml` has no `demo.advisor`; live Docker walkthrough remains blocked until seed/provisioning work is coordinated.
 
 ## Requirement matrix
 
@@ -155,32 +155,32 @@ The browser can preview the feature with injected HTTP fixtures in tests. It can
 | Server identity/object ownership | Backend prerequisite | Proposed workspace services/controllers | Must test Advisor A vs B, guessed IDs, and client session ownership before live integration |
 | Persistence/history/versioning | Backend prerequisite | New migration and dedicated tables | Must provide active uniqueness, append-only history, archive and optimistic versions |
 | Automatic assignment | Backend prerequisite | `ClientOnboardingServiceImpl` candidate seam | Must be transactional/idempotent and preserve existing assignment |
-| `demo.advisor` login | Backend prerequisite | `database/demo/role_workspaces.sql` or approved overlay | Must map only `demo.client`; `demo.client2` remains negative fixture |
-| Docker/nginx routing | Existing infrastructure | `nginx/nginx.conf`, Compose | No routing edit expected; verify through nginx after backend is available |
+| `demo.advisor` login | Backend prerequisite | `../../../database/demo/role_workspaces.sql` or approved overlay | Must map only `demo.client`; `demo.client2` remains negative fixture |
+| Docker/nginx routing | Existing infrastructure | `../../../nginx/nginx.conf`, Compose | No routing edit expected; verify through nginx after backend is available |
 | Analytics and other roles | Deferred | Separate analytics/service areas | No changes made |
 
 ## Implemented frontend files
 
-- `frontend/src/app/core/auth/workspace-policy.ts`
-- `frontend/src/app/core/auth/workspace-policy.spec.ts`
-- `frontend/src/app/app.routes.ts`
-- `frontend/src/app/features/advisor/advisor-models.ts`
-- `frontend/src/app/features/advisor/advisor-api.service.ts`
-- `frontend/src/app/features/advisor/advisor-api.service.spec.ts`
-- `frontend/src/app/features/advisor/advisor-utils.ts`
-- `frontend/src/app/features/advisor/advisor-utils.spec.ts`
-- `frontend/src/app/features/advisor/advisor-clients-page.component.ts`
-- `frontend/src/app/features/advisor/advisor-clients-page.component.spec.ts`
-- `frontend/src/app/features/advisor/advisor-client-detail-page.component.ts`
-- `frontend/src/app/features/advisor/advisor-client-detail-page.component.spec.ts`
-- `frontend/src/app/features/client/advisory/client-advisory-models.ts`
-- `frontend/src/app/features/client/advisory/client-advisory-api.service.ts`
-- `frontend/src/app/features/client/advisory/client-advisory-api.service.spec.ts`
-- `frontend/src/app/features/client/advisory/client-recommendations.component.ts`
-- `frontend/src/app/features/client/account-page.component.ts`
-- `frontend/src/app/features/client/account-page.component.spec.ts`
-- `frontend/src/app/profile.ts`
-- `frontend/src/app/profile.spec.ts`
+- `../../../frontend/src/app/core/auth/workspace-policy.ts`
+- `../../../frontend/src/app/core/auth/workspace-policy.spec.ts`
+- `../../../frontend/src/app/app.routes.ts`
+- `../../../frontend/src/app/features/advisor/advisor-models.ts`
+- `../../../frontend/src/app/features/advisor/advisor-api.service.ts`
+- `../../../frontend/src/app/features/advisor/advisor-api.service.spec.ts`
+- `../../../frontend/src/app/features/advisor/advisor-utils.ts`
+- `../../../frontend/src/app/features/advisor/advisor-utils.spec.ts`
+- `../../../frontend/src/app/features/advisor/advisor-clients-page.component.ts`
+- `../../../frontend/src/app/features/advisor/advisor-clients-page.component.spec.ts`
+- `../../../frontend/src/app/features/advisor/advisor-client-detail-page.component.ts`
+- `../../../frontend/src/app/features/advisor/advisor-client-detail-page.component.spec.ts`
+- `../../../frontend/src/app/features/client/advisory/client-advisory-models.ts`
+- `../../../frontend/src/app/features/client/advisory/client-advisory-api.service.ts`
+- `../../../frontend/src/app/features/client/advisory/client-advisory-api.service.spec.ts`
+- `../../../frontend/src/app/features/client/advisory/client-recommendations.component.ts`
+- `../../../frontend/src/app/features/client/account-page.component.ts`
+- `../../../frontend/src/app/features/client/account-page.component.spec.ts`
+- `../../../frontend/src/app/profile.ts`
+- `../../../frontend/src/app/profile.spec.ts`
 
 ## Proposed API contract
 
@@ -237,7 +237,7 @@ An asynchronous durable assignment job is an alternative, but it adds eventual c
 
 The current seed creates six demo accounts and no Advisor. Additive seed work is required for `demo.advisor`, role `ADVISOR`, a linked `advisors` row and only the `demo.client` assignment. Resolve IDs by username, hash `RoleDemo2026!`, preserve all existing passwords/balances/assignments, and keep `demo.client2` unassigned.
 
-Do not overwrite a contributor-owned seed or Compose mount without coordination. If the seed path cannot be changed safely, create `SharedChangeProposal/README.MD` before editing it.
+Do not overwrite a contributor-owned seed or Compose mount without coordination. If the seed path cannot be changed safely, create `../../../SharedChangeProposal/README.MD` before editing it.
 
 ## Docker and nginx plan
 
@@ -276,16 +276,16 @@ The prior implementation had the main surfaces but only 14 passing Advisor tests
 2. **Missing frontend, now implemented:** add behavioral regressions before fixes for draft/session isolation, permission loss, client-switch cancellation, unsafe IDs, fail-closed eligibility, repeated saves, metadata, acquired instruments and archive focus. Capture actual red assertions, then patch only role-owned files and the allowed account seam.
 3. **Missing frontend, now implemented:** preserve drafts through failures/conflicts, explicitly rebase against the refreshed version, use confirmed save results, lock in-flight editors, provide independent guidance/catalog retry, and distinguish NONE/N/A from unavailable.
 4. **Existing/proposed contract:** keep the session-scoped adapter without a fixture fallback; specify exact JSON, decimal strings, zero-based pages, DELETE body and clear/tombstone semantics in the backend handoff. No legacy endpoint substitution.
-5. **Backend prerequisite/policy decision:** leave persistence, server ownership, assignment, eligible-advisor policy and seed provisioning to the backend owner. Shared onboarding/seed exceptions are analyzed in `SharedChangeProposal/README.MD`; no exception is implemented here.
+5. **Backend prerequisite/policy decision:** leave persistence, server ownership, assignment, eligible-advisor policy and seed provisioning to the backend owner. Shared onboarding/seed exceptions are analyzed in `../../../SharedChangeProposal/README.MD`; no exception is implemented here.
 6. **Verification:** run Advisor specs first, client/profile/policy specs second, then full tests/style/build once. Record unrelated or environment failures rather than widening scope.
 
 ### Additional and revised files on recovery
 
 Revised Advisor detail implementation/spec, Advisor API implementation/spec, client list implementation/spec, advisory model comments, client recommendations component, client account component/spec, and all three handoffs/plan. Added:
 
-- `frontend/src/app/features/advisor/advisor-routing.spec.ts`
-- `frontend/src/app/features/client/advisory/client-recommendations.component.spec.ts`
-- `SharedChangeProposal/README.MD`
+- `../../../frontend/src/app/features/advisor/advisor-routing.spec.ts`
+- `../../../frontend/src/app/features/client/advisory/client-recommendations.component.spec.ts`
+- `../../../SharedChangeProposal/README.MD`
 
 No backend/source schema, shared auth/session/resource, global style, shell, financial calculation, polling, seed or nginx edits were made. Existing role registration patches remain preserved.
 
@@ -313,9 +313,9 @@ Environment: Node v24.22.0, npm 11.19.1. `npm test -- --help` confirmed Angular 
 - TDD red evidence: missing author rendered, mutation not cancelled on session change, protected client remained after 403, duplicate saves, fail-open eligibility and missing archive focus produced assertion failures. Later client regressions specifically showed `NONE` instead of N/A and an acquired recommendation still rendered. A fixture type mismatch was corrected before treating the client run as a behavioral red phase. Follow-up safety tests failed for unsafe IDs, uncleared search and generic HTTP defaults, then passed after scoped fixes.
 - Final Advisor command: `npm test -- --watch=false --include='src/app/features/advisor/**/*.spec.ts'`: **50/50 passed, 5 files**.
 - Final client/advisory/profile/policy command (repeated includes for those specs plus account): **40/40 passed, 5 files**. Combined focused slice: **90 passing tests**.
-- Full `npm test -- --watch=false`, run once after final changes: **243 passed, 1 failed, 244 total; 38 files passed, 1 failed**. Only failure: unchanged `frontend/src/app/features/analytics/analytics-page.component.spec.ts`, test “keeps filters visible and labels an unavailable report without invented values”. It asserts the whole text excludes `0`, but the unchanged page includes “Indexed to 100”. Analytics implementation/spec have no working-tree diff. No out-of-scope fix was made.
+- Full `npm test -- --watch=false`, run once after final changes: **243 passed, 1 failed, 244 total; 38 files passed, 1 failed**. Only failure: unchanged `../../../frontend/src/app/features/analytics/analytics-page.component.spec.ts`, test “keeps filters visible and labels an unavailable report without invented values”. It asserts the whole text excludes `0`, but the unchanged page includes “Indexed to 100”. Analytics implementation/spec have no working-tree diff. No out-of-scope fix was made.
 - `npm run test:qof-styles`, run once: **passed**.
-- `npm run build`, run once: browser/server compilation and bundle generation completed, then artifact cleanup failed **EACCES unlink frontend/dist/pole/3rdpartylicenses.txt**. `frontend/dist`, `frontend/dist/pole` and the file are root-owned (directories 755; file 644), while the agent is uid 1000 `ec2-user`. Terminal reported build exit 127. The build also warned about the untouched analytics component's 4.37 kB stylesheet exceeding a 4 kB budget by 372 bytes. This is **not a successful production artifact build**. Output ownership must be corrected by the VM owner before rerunning; no sudo, deletion or ownership changes were attempted.
+- `npm run build`, run once: browser/server compilation and bundle generation completed, then artifact cleanup failed **EACCES unlink frontend/dist/pole/3rdpartylicenses.txt**. `../../../frontend/dist`, `frontend/dist/pole` and the file are root-owned (directories 755; file 644), while the agent is uid 1000 `ec2-user`. Terminal reported build exit 127. The build also warned about the untouched analytics component's 4.37 kB stylesheet exceeding a 4 kB budget by 372 bytes. This is **not a successful production artifact build**. Output ownership must be corrected by the VM owner before rerunning; no sudo, deletion or ownership changes were attempted.
 - `git diff --check`: **passed**. Editor diagnostics: no errors in checked touched account/profile files; focused compilation validates the role-owned files.
 
 Not run: backend tests/migrations, live Docker/nginx Advisor login, live persistence or automatic assignment. No live credential or secure workspace API exists yet. Component/router HTTP fixtures are a test-harness preview only; no visual browser walkthrough or interactive login was claimed.
@@ -324,7 +324,7 @@ Not run: backend tests/migrations, live Docker/nginx Advisor login, live persist
 
 - Backend standalone task and complete proposed DTO/API contract: `AdvisorRoleBackendImplementation.MD`.
 - Frontend architecture, fixtures, walkthrough and limitations: `AdvisorRoleFrontend_CrashCourse.MD`.
-- Shared onboarding/provisioning impact analysis and approval gate: `SharedChangeProposal/README.MD`.
+- Shared onboarding/provisioning impact analysis and approval gate: `../../../SharedChangeProposal/README.MD`.
 - VM owner: correct root-owned build output permissions, then rerun the normal production build.
 - Analytics owner: narrow the unrelated zero-value assertion to report values rather than static explanatory copy.
 - Backend owner/integrator: approve wire semantics and allocation policy, implement session-scoped ownership and persistence/history, coordinate migration/grants and optional seed, provision only `demo.client` for `demo.advisor`, then run the Docker/nginx positive/negative walkthrough.

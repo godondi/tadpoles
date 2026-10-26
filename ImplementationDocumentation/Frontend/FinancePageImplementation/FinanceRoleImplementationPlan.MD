@@ -2,7 +2,7 @@
 
 **Plan status:** Approved to proceed within the frontend-only scope stated in `FinanceRoleImplementationInstruction.MD`.
 **Baseline checked:** 22 October 2026, branch `feature/finance_page`.
-**Implementation status at plan creation:** No application code or tests changed/run. The plan and instruction are untracked user-provided workspace context; preserve them. `.vscode/` is also pre-existing untracked content and must remain untouched.
+**Implementation status at plan creation:** No application code or tests changed/run. The plan and instruction are untracked user-provided workspace context; preserve them. `../../../.vscode` is also pre-existing untracked content and must remain untouched.
 
 ## 1. Goal and completion boundary
 
@@ -11,7 +11,7 @@ Deliver two dedicated Finance pages using the existing Angular workspace shell:
 - `/finance/overview`: persistent UTC date scope, honest source/status context, typed summary rendering only when the approved summary response is valid, and independently loaded reconciliation status.
 - `/finance/reconciliation`: latest persisted report, explicit single-flight run action, locally searchable current exceptions, separate historical exception count, precise scope and non-repair/external-settlement limitations.
 
-Keep this assignment frontend-only. Do not change Java, SQL, migrations, grants, authentication, shared state classes, shared API clients, global CSS, shell/navigation policy, Operations, or root/container files. The two Finance loaders in `frontend/src/app/app.routes.ts` are the only application integration edits allowed; Finance-specific route acceptance cases may be added to the existing routing test. Preserve `shared/workspace/reconciliation-page.component.ts` and its test for any other consumers.
+Keep this assignment frontend-only. Do not change Java, SQL, migrations, grants, authentication, shared state classes, shared API clients, global CSS, shell/navigation policy, Operations, or root/container files. The two Finance loaders in `../../../frontend/src/app/app.routes.ts` are the only application integration edits allowed; Finance-specific route acceptance cases may be added to the existing routing test. Preserve `shared/workspace/reconciliation-page.component.ts` and its test for any other consumers.
 
 A successful result means **Finance frontend complete against the current contracts**, not backend reporting complete. Summary remains unavailable because the real endpoint deliberately returns 503. Fill/movement/posting detail APIs and export are proposed only. Do not invent or locally calculate ledger totals, turn failures into zero, fabricate fixtures in production, or make an unaudited download.
 
@@ -21,34 +21,34 @@ The earlier exploratory result claiming Finance files were absent was contradict
 
 ### Angular route, identity, and state
 
-- `frontend/src/app/core/auth/workspace-policy.ts`: registers `FINANCE`, the existing `/finance/reconciliation` home, Overview and Reconciliation links, and role resolution for both Finance paths.
-- `frontend/src/app/core/auth/auth.guard.ts`: `workspaceGuard` gates paths based on resolved identity. It does not explicitly block a mixed `CLIENT`+`FINANCE` identity from Finance paths; do not change this shared guard under this assignment. Backend requests remain authoritative and deny mixed roles.
-- `frontend/src/app/layout/authenticated-shell.component.ts` and `frontend/src/app/shared/top-nav/`: role-filtered navigation and shared shell. Reuse; no shell or navigation redesign.
-- `frontend/src/app/app.routes.ts`: `/finance/reconciliation` currently lazy-loads the shared reconciliation placeholder. `/finance/overview` is in a staff-route data array and currently lazy-loads `StaffPageComponent`. Replace only those two loaders.
-- `frontend/src/app/core/api/workspace-api.service.ts`: shared `WorkspaceApi`, including a generic staff-availability method. Do not widen or modify it; implement a Finance-local API adapter.
-- `frontend/src/app/shared/workspace/page-resource.ts`: one cancellable request and protected data clear on session changes; error text reads `message`, not FastAPI `detail`.
-- `frontend/src/app/shared/workspace/request-state.component.ts`: loading/error/retry UI. It labels 503 unavailable and provides retry; normalize errors in Finance adapter, not in this shared component.
-- `frontend/src/app/shared/workspace/reconciliation-page.component.ts` and `.spec.ts`: existing exact reconciliation paths and basic report view. Keep this shared consumer intact; replace its Finance route with a Finance-owned page.
-- `frontend/src/app/core/auth/workspace-policy.spec.ts`, `workspace-router.spec.ts`, and `frontend/src/app/app.spec.ts`: existing role/home/deep-link and shell route tests. Add only Finance-specific integration assertions where necessary; avoid unrelated edits.
-- `frontend/src/styles.css`: existing workspace classes, semantic table overflow, focus treatment, colors and square-corner conventions. Reuse class names/variables and keep new CSS local to the Finance feature.
-- `frontend/package.json`: Angular 22 standalone app, Vitest via `ng test`, `npm run test:qof-styles`, and `npm run build`. `frontend/package-lock.json` exists; `frontend/node_modules` is absent. Do not edit the lockfile. Use `npm ci` only if needed for actual validation.
+- `../../../frontend/src/app/core/auth/workspace-policy.ts`: registers `FINANCE`, the existing `/finance/reconciliation` home, Overview and Reconciliation links, and role resolution for both Finance paths.
+- `../../../frontend/src/app/core/auth/auth.guard.ts`: `workspaceGuard` gates paths based on resolved identity. It does not explicitly block a mixed `CLIENT`+`FINANCE` identity from Finance paths; do not change this shared guard under this assignment. Backend requests remain authoritative and deny mixed roles.
+- `../../../frontend/src/app/layout/authenticated-shell.component.ts` and `frontend/src/app/shared/top-nav/`: role-filtered navigation and shared shell. Reuse; no shell or navigation redesign.
+- `../../../frontend/src/app/app.routes.ts`: `/finance/reconciliation` currently lazy-loads the shared reconciliation placeholder. `/finance/overview` is in a staff-route data array and currently lazy-loads `StaffPageComponent`. Replace only those two loaders.
+- `../../../frontend/src/app/core/api/workspace-api.service.ts`: shared `WorkspaceApi`, including a generic staff-availability method. Do not widen or modify it; implement a Finance-local API adapter.
+- `../../../frontend/src/app/shared/workspace/page-resource.ts`: one cancellable request and protected data clear on session changes; error text reads `message`, not FastAPI `detail`.
+- `../../../frontend/src/app/shared/workspace/request-state.component.ts`: loading/error/retry UI. It labels 503 unavailable and provides retry; normalize errors in Finance adapter, not in this shared component.
+- `../../../frontend/src/app/shared/workspace/reconciliation-page.component.ts` and `.spec.ts`: existing exact reconciliation paths and basic report view. Keep this shared consumer intact; replace its Finance route with a Finance-owned page.
+- `../../../frontend/src/app/core/auth/workspace-policy.spec.ts`, `workspace-router.spec.ts`, and `frontend/src/app/app.spec.ts`: existing role/home/deep-link and shell route tests. Add only Finance-specific integration assertions where necessary; avoid unrelated edits.
+- `../../../frontend/src/styles.css`: existing workspace classes, semantic table overflow, focus treatment, colors and square-corner conventions. Reuse class names/variables and keep new CSS local to the Finance feature.
+- `../../../frontend/package.json`: Angular 22 standalone app, Vitest via `ng test`, `npm run test:qof-styles`, and `npm run build`. `frontend/package-lock.json` exists; `frontend/node_modules` is absent. Do not edit the lockfile. Use `npm ci` only if needed for actual validation.
 
 ### Existing backend contracts (read-only)
 
-- `backend/src/main/java/com/neueda/leap/controller/StaffWorkspaceController.java`: authenticated FINANCE `GET /api/finance/summary` deliberately returns HTTP 503 with a message explaining period reporting is not available and operational reconciliation is available. It is not a valid empty/zero summary.
-- `backend/src/main/java/com/neueda/leap/controller/TradingOperationsController.java`: exact existing `GET /api/finance/reconciliations` for latest and `POST /api/finance/reconciliations` for a new run. Both require `FINANCE` and explicitly exclude `CLIENT`.
-- `backend/src/main/java/com/neueda/leap/service/impl/ReconciliationService.java`: POST runs under `REPEATABLE_READ`, reads current exceptions, persists a `reconciliation_runs` report, records findings, and returns it; GET returns that latest report or `{runId:null,message:...}`. It does not repair books.
-- `backend/src/main/java/com/neueda/leap/mapper/ReconciliationMapper.java`: current matcher checks cash and position journal totals, active holds, order-processing/fill relationships, exact fill postings, movement postings/outbox and order event/outbox consistency. Current exceptions are stable ordered by `kind,reference`. Historical migration exceptions are counted separately.
-- `backend/src/test/java/com/neueda/leap/controller/StaffWorkspaceControllerTest.java`: summary 503 and unauthorized-role behavior.
-- `backend/src/test/java/com/neueda/leap/controller/WorkspaceAuthorizationTest.java`: staff roles cannot use legacy client financial reads/writes; mixed CLIENT+FINANCE retains client ownership boundaries.
-- `backend/src/test/java/com/neueda/leap/trading/TradingPostgresTest.java`: Finance HTTP/PostgreSQL coverage includes persisted real mismatch references, reports, and Finance-vs-Operations reconciliation authority. No backend test edits are authorized here.
+- `../../../backend/src/main/java/com/neueda/leap/controller/StaffWorkspaceController.java`: authenticated FINANCE `GET /api/finance/summary` deliberately returns HTTP 503 with a message explaining period reporting is not available and operational reconciliation is available. It is not a valid empty/zero summary.
+- `../../../backend/src/main/java/com/neueda/leap/controller/TradingOperationsController.java`: exact existing `GET /api/finance/reconciliations` for latest and `POST /api/finance/reconciliations` for a new run. Both require `FINANCE` and explicitly exclude `CLIENT`.
+- `../../../backend/src/main/java/com/neueda/leap/service/impl/ReconciliationService.java`: POST runs under `REPEATABLE_READ`, reads current exceptions, persists a `reconciliation_runs` report, records findings, and returns it; GET returns that latest report or `{runId:null,message:...}`. It does not repair books.
+- `../../../backend/src/main/java/com/neueda/leap/mapper/ReconciliationMapper.java`: current matcher checks cash and position journal totals, active holds, order-processing/fill relationships, exact fill postings, movement postings/outbox and order event/outbox consistency. Current exceptions are stable ordered by `kind,reference`. Historical migration exceptions are counted separately.
+- `../../../backend/src/test/java/com/neueda/leap/controller/StaffWorkspaceControllerTest.java`: summary 503 and unauthorized-role behavior.
+- `../../../backend/src/test/java/com/neueda/leap/controller/WorkspaceAuthorizationTest.java`: staff roles cannot use legacy client financial reads/writes; mixed CLIENT+FINANCE retains client ownership boundaries.
+- `../../../backend/src/test/java/com/neueda/leap/trading/TradingPostgresTest.java`: Finance HTTP/PostgreSQL coverage includes persisted real mismatch references, reports, and Finance-vs-Operations reconciliation authority. No backend test edits are authorized here.
 
 ### Database and operational context
 
-- `database/README.md` and `database/fresh/001_schema.sql` were read. The current model includes USD cash/position projections, append-only cash/position journals, settled/rejected `cash_movements`, immutable `order_fills`, immutable `reconciliation_runs`, and `financial_migration_exceptions`.
-- The retained migration sequence is documented through `database/migrations/012_managed_support.sql`; the Database guide explains 003–012 roles and behavior, fresh/upgrade parity, runtime grants, immutable evidence and migration policy. Never change this sequence in the frontend task.
-- `docs/operations-runbook.md`, `ImplementationDocumentation/Frontend/ClientPageImplementation/ClientRefactorCrashCourse.MD`, and `ImplementationDocumentation/Frontend/OperationsPageImplementation/OperationsRefactorCrashCourse.MD` were read for accounting, settlement, evidence, scope, and operational limitations. In particular, a booked fill is internal booking, not exchange/custody proof; cash movements are internal and synchronous; journals are not a full general ledger; Operations cannot run or repair reconciliation.
-- The `impDocs/Frontend/*` paths found during the first audit are not present in this branch. The governing instruction’s named `ImplementationDocumentation/...` docs and `docs/operations-runbook.md` are present and read.
+- `../../../database/README.md` and `database/fresh/001_schema.sql` were read. The current model includes USD cash/position projections, append-only cash/position journals, settled/rejected `cash_movements`, immutable `order_fills`, immutable `reconciliation_runs`, and `financial_migration_exceptions`.
+- The retained migration sequence is documented through `../../../database/migrations/012_managed_support.sql`; the Database guide explains 003–012 roles and behavior, fresh/upgrade parity, runtime grants, immutable evidence and migration policy. Never change this sequence in the frontend task.
+- `../../../docs/operations-runbook.md`, `ImplementationDocumentation/Frontend/ClientPageImplementation/ClientRefactorCrashCourse.MD`, and `ImplementationDocumentation/Frontend/OperationsPageImplementation/OperationsRefactorCrashCourse.MD` were read for accounting, settlement, evidence, scope, and operational limitations. In particular, a booked fill is internal booking, not exchange/custody proof; cash movements are internal and synchronous; journals are not a full general ledger; Operations cannot run or repair reconciliation.
+- The `impDocs/Frontend/*` paths found during the first audit are not present in this branch. The governing instruction’s named `ImplementationDocumentation/...` docs and `../../../docs/operations-runbook.md` are present and read.
 
 ### Finance facts that constrain UI copy
 
@@ -85,7 +85,7 @@ State labels mean: **existing** = verified in current checkout; **missing fronte
 
 ### Feature-local boundaries
 
-Create a Finance-only feature under `frontend/src/app/features/finance/`, with separate `api/`, `overview/`, and `reconciliation/` ownership areas. Keep models next to the adapter and components. Do not add methods or types to shared `WorkspaceApi`.
+Create a Finance-only feature under `../../../frontend/src/app/features/finance`, with separate `api/`, `overview/`, and `reconciliation/` ownership areas. Keep models next to the adapter and components. Do not add methods or types to shared `WorkspaceApi`.
 
 - `FinanceApi` uses Angular `HttpClient`, dependency injection, `buildApiUrl()` and RxJS teardown. It exposes only `summary(scope)`, `latestReconciliation()`, and `runReconciliation()` for current frontend work.
 - Current paths are exact: GET `/api/finance/summary`; GET `/api/finance/reconciliations`; POST `/api/finance/reconciliations` with `{}` to preserve the existing client contract. Current reconciliation GET/POST accept no query filters. Summary date filters are proposed and must be labeled unsupported until backend implementation. Keep the URL state; do not claim current server applies it.
@@ -109,13 +109,13 @@ Complete each test-first phase in order. The `node_modules` directory is absent,
 
 ### Phase 0 — Preserve and establish baseline
 
-1. Recheck `git status --short`; preserve the pre-existing untracked `.vscode/` and `FinanceRoleImplementationInstruction.MD` and branch `feature/finance_page`.
+1. Recheck `git status --short`; preserve the pre-existing untracked `../../../.vscode` and `FinanceRoleImplementationInstruction.MD` and branch `feature/finance_page`.
 2. `npm ci` only if needed for test/build verification; do not change the lockfile or environment/compose volumes.
 3. Record current role landing, exact GET/POST contracts and the current summary 503 in focused tests/fixtures; do not add a test claiming the backend summary is populated.
 
 ### Phase 1 — API/model contract, TDD
 
-Owner: Finance API contributor/integrator. Files exclusively under `frontend/src/app/features/finance/api/`.
+Owner: Finance API contributor/integrator. Files exclusively under `../../../frontend/src/app/features/finance/api`.
 
 1. Write failing adapter tests for endpoint methods, body `{}` on POST, `buildApiUrl()` resolution, date parameter serialization for the proposed summary request (only if adapter sends it), normalizing `message`/`detail`, status preservation, cancellation and no request to any other API.
 2. Implement typed response/request models and the narrow adapter.
@@ -123,7 +123,7 @@ Owner: Finance API contributor/integrator. Files exclusively under `frontend/src
 
 ### Phase 2 — Overview, TDD
 
-Owner: Overview contributor. Files exclusively under `frontend/src/app/features/finance/overview/`; consume Phase 1 public API/model exports.
+Owner: Overview contributor. Files exclusively under `../../../frontend/src/app/features/finance/overview`; consume Phase 1 public API/model exports.
 
 1. Add a failing component behavior for summary HTTP 503 while latest reconciliation succeeds; expect explicit unavailable state and usable report.
 2. Add failing behaviors for valid populated, valid-empty, malformed response, delayed response, offline, 401, 403, 404, 409, validation and 429 as applicable; assert no unsupported/failure state paints numeric zero.
@@ -133,7 +133,7 @@ Owner: Overview contributor. Files exclusively under `frontend/src/app/features/
 
 ### Phase 3 — Reconciliation, TDD
 
-Owner: Reconciliation contributor. Files exclusively under `frontend/src/app/features/finance/reconciliation/`; consume Phase 1 API/model exports.
+Owner: Reconciliation contributor. Files exclusively under `../../../frontend/src/app/features/finance/reconciliation`; consume Phase 1 API/model exports.
 
 1. Add failing behaviors for no run, matched, current mismatch, historical exceptions distinct from current findings, precise scope/checked-at, empty local search, and GET unavailable/401/403/404/409/429/offline states.
 2. Add a failing rapid-double-click test that expects one POST; add timeout/unknown POST test proving no automatic retry and independent GET/run feedback.
@@ -142,7 +142,7 @@ Owner: Reconciliation contributor. Files exclusively under `frontend/src/app/fea
 
 ### Phase 4 — Serialized route integration
 
-Owner: Integrator only, after both feature components compile. Files limited to `frontend/src/app/app.routes.ts` and Finance-specific additions to existing route test(s), most likely `frontend/src/app/app.spec.ts`.
+Owner: Integrator only, after both feature components compile. Files limited to `../../../frontend/src/app/app.routes.ts` and Finance-specific additions to existing route test(s), most likely `frontend/src/app/app.spec.ts`.
 
 1. Replace only the `/finance/reconciliation` `loadComponent` and the `/finance/overview` loader currently generated by the staff-route map. Do not change path, metadata, shell, route guards, any other staff/role route or existing `StaffPageComponent`.
 2. Test finance role home/menu, both direct links and refresh resolution, unknown query preservation where relevant, unauthorized CLIENT/ANALYST/ADVISOR/COMPLIANCE behavior and 403 from backend for mixed role. Do not weaken `@PreAuthorize` or change workspace guards.
@@ -169,7 +169,7 @@ This is designed for parallel contributors while keeping shared seams serialized
 | D — Route integrator | `app.routes.ts`, Finance-only route assertions | All other route/guard/policy/nav paths and feature source | Runs after B/C component exports stabilize; one serialized owner. |
 | E — Handoffs | root `FinanceRoleBackendInstruction.MD`, `FinanceRoleFrontend_CrashCourse.MD`, final plan updates | Application source before review freeze | Runs after A–D and actual checks so examples and statuses match reality. |
 
-If another contributor is already editing any serialized file, do not overwrite or reformat it; provide an exact proposed patch and wait for its integration. Avoid changes to `workspace-policy.ts`, `auth.guard.ts`, `WorkspaceApi`, `PageResource`, `RequestStateComponent`, global CSS, `StaffPageComponent`, Operations, Java, SQL and infrastructure. If an implementation need crosses those boundaries, stop code edits and create `SharedChangeProposal/README.MD` at the instruction directory with the exact impact/evidence/alternatives/order/security/tests/deployment/rollback/ownership/decisions before requesting approval. No such broader change is currently needed for the scoped frontend pages and docs.
+If another contributor is already editing any serialized file, do not overwrite or reformat it; provide an exact proposed patch and wait for its integration. Avoid changes to `workspace-policy.ts`, `auth.guard.ts`, `WorkspaceApi`, `PageResource`, `RequestStateComponent`, global CSS, `StaffPageComponent`, Operations, Java, SQL and infrastructure. If an implementation need crosses those boundaries, stop code edits and create `../../../SharedChangeProposal/README.MD` at the instruction directory with the exact impact/evidence/alternatives/order/security/tests/deployment/rollback/ownership/decisions before requesting approval. No such broader change is currently needed for the scoped frontend pages and docs.
 
 ## 7. Backend handoff prerequisites and policy gates
 

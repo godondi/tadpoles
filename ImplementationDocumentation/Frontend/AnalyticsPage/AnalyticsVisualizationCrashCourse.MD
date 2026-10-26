@@ -236,7 +236,7 @@ Create deterministic PostgreSQL fixtures for:
 
 ### Step 6: Update API documentation
 
-Add the two new paths to `docs/api.yaml` with successful response examples and `401`, `403`, `422`, `429`, and `503` responses. Keep the examples clearly marked as contract examples, not production data.
+Add the two new paths to `../../../docs/api.yaml` with successful response examples and `401`, `403`, `422`, `429`, and `503` responses. Keep the examples clearly marked as contract examples, not production data.
 
 ## 8. Test strategy
 
@@ -287,13 +287,13 @@ The frontend does not intentionally replace missing values with zero. Inspect th
 
 ## 10. Files changed by this refactor
 
-- `frontend/src/app/core/api/analytics-api.service.ts`
-- `frontend/src/app/core/api/analytics-api.service.spec.ts`
-- `frontend/src/app/features/analytics/analytics-page.component.ts`
-- `frontend/src/app/features/analytics/analytics-page.component.spec.ts`
-- `analytics-service/app/schemas.py`
-- `analytics-service/app/api.py`
-- `analytics-service/tests/test_api.py`
+- `../../../frontend/src/app/core/api/analytics-api.service.ts`
+- `../../../frontend/src/app/core/api/analytics-api.service.spec.ts`
+- `../../../frontend/src/app/features/analytics/analytics-page.component.ts`
+- `../../../frontend/src/app/features/analytics/analytics-page.component.spec.ts`
+- `../../../analytics-service/app/schemas.py`
+- `../../../analytics-service/app/api.py`
+- `../../../analytics-service/tests/test_api.py`
 - `AnalyticsVisualizationCommentary.MD`
 - `AnalyticsVisualizationCrashCourse.MD`
 

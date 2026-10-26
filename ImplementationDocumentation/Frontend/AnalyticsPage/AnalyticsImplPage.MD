@@ -33,7 +33,7 @@ The browser route and the API route are different concerns:
 - Browser routes remain `/analytics/overview`, `/analytics/trends`, and `/analytics/instruments`.
 - The analytics API owns `/api/analytics/summary`, `/api/analytics/trends`, `/api/analytics/instruments`, and `/api/analytics/freshness`.
 - In development the browser may call the FastAPI container directly on its host port.
-- In production a reverse proxy may route `/api/analytics/*` to FastAPI on the same public origin. The existing `nginx/Dockerfile` is only a placeholder, so a proxy must be explicitly configured before relying on this mode.
+- In production a reverse proxy may route `/api/analytics/*` to FastAPI on the same public origin. The existing `../../../nginx/Dockerfile` is only a placeholder, so a proxy must be explicitly configured before relying on this mode.
 
 ## 2. Verified repository baseline
 
@@ -47,17 +47,17 @@ The Angular application already has the analyst workspace policy and lazy routes
 | `/analytics/trends` | Activity trends | `GET /api/analytics/trends` | Generic `StaffPageComponent` |
 | `/analytics/instruments` | Instrument analysis | `GET /api/analytics/instruments` | Generic `StaffPageComponent` |
 
-The route policy in `frontend/src/app/core/auth/workspace-policy.ts` maps those paths to `ANALYST`. The parent `workspaceGuard` therefore controls navigation, but this is only a user-interface boundary. The API must enforce the role again.
+The route policy in `../../../frontend/src/app/core/auth/workspace-policy.ts` maps those paths to `ANALYST`. The parent `workspaceGuard` therefore controls navigation, but this is only a user-interface boundary. The API must enforce the role again.
 
-`frontend/src/app/shared/workspace/staff-page.component.ts` currently renders a generic read-only unavailable page and calls `WorkspaceApi.staffAvailability()`. There is no analytics-specific Angular service, response model, filter state, chart model, or analytics component test.
+`../../../frontend/src/app/shared/workspace/staff-page.component.ts` currently renders a generic read-only unavailable page and calls `WorkspaceApi.staffAvailability()`. There is no analytics-specific Angular service, response model, filter state, chart model, or analytics component test.
 
-`frontend/src/app/core/api/api-url.ts` currently targets the Spring backend on port `8082`. `AuthInterceptor` adds the bearer token only for that backend origin. A separate FastAPI origin therefore requires an explicit analytics URL and an interceptor trust update; otherwise a valid analyst token will not reach FastAPI.
+`../../../frontend/src/app/core/api/api-url.ts` currently targets the Spring backend on port `8082`. `AuthInterceptor` adds the bearer token only for that backend origin. A separate FastAPI origin therefore requires an explicit analytics URL and an interceptor trust update; otherwise a valid analyst token will not reach FastAPI.
 
-Chart.js is already listed in `frontend/package.json`, so the page may use the existing dependency. Exact table values must remain available beside any chart.
+Chart.js is already listed in `../../../frontend/package.json`, so the page may use the existing dependency. Exact table values must remain available beside any chart.
 
 ### 2.2 Spring backend
 
-`backend/src/main/java/com/neueda/leap/controller/StaffWorkspaceController.java` currently declares:
+`../../../backend/src/main/java/com/neueda/leap/controller/StaffWorkspaceController.java` currently declares:
 
 ```text
 GET /api/analytics/summary
@@ -98,7 +98,7 @@ The transaction schema currently includes `client_trades`, `instruments`, `clien
 
 The existing `client_trades` table has `PENDING`, `APPROVED`, `REJECTED`, and `EXECUTED` statuses, a trade date, quantity, recorded price, and optional execution time. An `EXECUTED` trade row is not automatically a booked fill event. Do not report it as `fills_booked` without an approved semantic mapping and durable fill evidence.
 
-`analytics/analytics.ipynb` is successfully executed exploratory work. It installs pandas, NumPy, Faker, seaborn, and matplotlib; generates fake clients, instruments, holdings, trades, and benchmark returns; and leaves database queries commented out. It contains no FastAPI application, SQLAlchemy model, authentication, reporting database, or deployment entry point. Its charts can inform a UI discussion only. Its random values, fake names, and benchmark results must never be loaded into an authoritative report.
+`../../../analytics/analytics.ipynb` is successfully executed exploratory work. It installs pandas, NumPy, Faker, seaborn, and matplotlib; generates fake clients, instruments, holdings, trades, and benchmark returns; and leaves database queries commented out. It contains no FastAPI application, SQLAlchemy model, authentication, reporting database, or deployment entry point. Its charts can inform a UI discussion only. Its random values, fake names, and benchmark results must never be loaded into an authoritative report.
 
 ## 3. Proposed service boundary
 
@@ -403,7 +403,7 @@ The justified Spring-side change is source publication if the current transactio
 3. Publish or replicate the outbox to the reporting loader after commit.
 4. Keep the transactional database authoritative for order, cash, holding, and fill state.
 
-After FastAPI is serving the frontend and its security/contract tests pass, remove or deprecate the old Spring analytics placeholder routes. Update `StaffWorkspaceControllerTest` and `docs/api.yaml` at the same time. Do not silently leave two services owning the same public path with different data.
+After FastAPI is serving the frontend and its security/contract tests pass, remove or deprecate the old Spring analytics placeholder routes. Update `StaffWorkspaceControllerTest` and `../../../docs/api.yaml` at the same time. Do not silently leave two services owning the same public path with different data.
 
 The current transaction schema also needs an approved fill-event model before `fills_booked`, `orders_filled`, or traded notional can be called authoritative. A status-only row is not enough for BR-09, BR-14, BR-15, or BR-17 evidence.
 
@@ -482,6 +482,6 @@ Until these decisions are approved, the page must remain explicitly provisional 
 
 ## 12. Implementation status for this change
 
-The first provisional implementation slice is now present. `analytics-service/` provides the FastAPI boundary, independent analyst JWT validation, typed route contract, health checks, and explicit unavailable responses. The separate reporting migration and Compose services establish the intended database isolation. Angular now loads an analytics-specific workspace with URL-backed filters, route tabs, freshness metadata, and honest unavailable/no-value states. Spring no longer owns the analytics placeholder paths.
+The first provisional implementation slice is now present. `../../../analytics-service` provides the FastAPI boundary, independent analyst JWT validation, typed route contract, health checks, and explicit unavailable responses. The separate reporting migration and Compose services establish the intended database isolation. Angular now loads an analytics-specific workspace with URL-backed filters, route tabs, freshness metadata, and honest unavailable/no-value states. Spring no longer owns the analytics placeholder paths.
 
 The implementation is not authoritative yet. The committed source event publication, idempotent loader, approved metric definitions, segment policy, reporting fixtures, populated query repository, and full integration/performance evidence remain future steps. The UI assessment and rationale are recorded in `impDocs/Frontend/AnalyticsPage/ImpResult.MD`.
