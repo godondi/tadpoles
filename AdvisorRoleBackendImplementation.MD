@@ -20,7 +20,7 @@ Production sources:
 - `backend/src/main/java/com/neueda/leap/mapper/AdvisorWorkspaceMapper.java`
 - `backend/src/main/java/com/neueda/leap/service/AdvisorWorkspaceService.java`
 - `backend/src/main/java/com/neueda/leap/service/impl/AdvisorWorkspaceServiceImpl.java`
-- `database/migrations/013_advisor_workspace.sql`, with matching fresh DDL/reference marker and targeted runtime-grant updates.
+- `database/migrations/018_advisor_workspace.sql`, with matching fresh DDL/reference marker and targeted runtime-grant updates.
 
 Identity derives from verified JWT -> persisted user -> advisor link and ADVISOR role. Every mapper scope rechecks enabled/role/assignment, and client-facing reads derive ownership from user identity rather than any requested client ID. No legacy ownership bypass, global auth refactor, widened CLIENT catalog guard or financial-service dependency was added. Grouped reads use repeatable read; writes lock the scoped client first, then recheck exact posted ownership and compare-and-set versions. Projection triggers atomically append attributed immutable history; runtime cannot insert or alter history directly. Acquisition filters active reads, not stored records/history; archive is allowed even after acquisition/deactivation.
 
@@ -319,7 +319,7 @@ Coordinate any edits to `database/demo/role_workspaces.sql`, `database/demo/seed
 
 ## Migration and fresh/upgrade parity
 
-Migration 013 is implemented for this slice; 014 is the next candidate, subject to branch coordination. Future assignment work still needs a new approved numbered migration with:
+Migration 018 is implemented for this slice; 019 is the next candidate. Future assignment work still needs a new approved numbered migration with:
 
 - preconditions;
 - transaction boundaries;

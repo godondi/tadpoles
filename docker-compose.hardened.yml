@@ -5,6 +5,8 @@ services:
     depends_on: !override
       database-migrate:
         condition: service_completed_successfully
+      database-catalog-seed:
+        condition: service_completed_successfully
     # Do not inherit the development .env containing database-owner credentials.
     env_file: !reset []
     environment:

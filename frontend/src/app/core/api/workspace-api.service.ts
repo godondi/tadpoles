@@ -15,6 +15,7 @@ export interface Instrument {
   currency: string;
   assetClass: string | null;
   securityType: string | null;
+  exchange: string | null;
   isActive: boolean;
 }
 export interface Position {

@@ -5776,6 +5776,8 @@ components:
           type: string
         securityType:
           type: string
+        exchange:
+          type: string
         isActive:
           type: boolean
     InstrumentListResponse:

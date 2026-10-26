@@ -94,6 +94,9 @@ services:
     volumes:
       - tadpole-db-data:/var/lib/postgresql/data
       - ./database/fresh:/docker-entrypoint-initdb.d:ro
+      - ./us-v1.json:/catalog/us-v1.json:ro
+      - ./crypto-v1.json:/catalog/crypto-v1.json:ro
+      - ./fx-v1.json:/catalog/fx-v1.json:ro
     healthcheck:
       test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
       interval: 5s
@@ -117,6 +120,23 @@ services:
       database:
         condition: service_healthy
 
+  database-catalog-seed:
+    image: postgres:15
+    env_file:
+      - "${COMPOSE_ENV_FILE:-.env}"
+    environment:
+      PGHOST: database
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+    volumes:
+      - ./database/catalog/seed.sql:/seed.sql:ro
+    command:
+      ["sh", "-c", "psql -v ON_ERROR_STOP=1 --username \"$$PGUSER\" --dbname \"$$PGDATABASE\" --file /seed.sql"]
+    depends_on:
+      database-migrate:
+        condition: service_completed_successfully
+
   database-demo-seed:
     image: postgres:15
     env_file:
@@ -137,7 +157,7 @@ services:
       - ./database/demo/seed-role-workspaces.sh:/seed-role-workspaces.sh:ro
     command: ["sh", "/seed-role-workspaces.sh"]
     depends_on:
-      database-migrate:
+      database-catalog-seed:
         condition: service_completed_successfully
 
   analytics-database:

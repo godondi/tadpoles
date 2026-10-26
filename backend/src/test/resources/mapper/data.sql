@@ -60,12 +60,11 @@ VALUES (
 	CURRENT_TIMESTAMP
 );
 
-INSERT INTO instruments (instrument_id, instrument_name, ticker, currency, asset_class, security_type, is_active)
-VALUES (11, 'Apple Inc', 'AAPL', 'USD', 'Equity', 'Stock', TRUE);
+INSERT INTO instruments (instrument_id, instrument_name, ticker, currency, asset_class, security_type, exchange, is_active)
+VALUES (11, 'Apple Inc', 'AAPL', 'USD', 'Equity', 'Stock', 'Nasdaq Global Select Market', TRUE);
 
 INSERT INTO client_trades (trade_id, client_id, instrument_id, submitted_by_user_id, approved_by_user_id, trade_type, quantity, price, trade_date, status, executed_at, reason)
 VALUES (21, 7, 11, 1, 1, 'BUY', 2.500000, 110.25, DATE '2026-09-24', 'APPROVED', TIMESTAMP '2026-09-24 10:15:00', 'Add position');
 
 INSERT INTO client_holdings (holding_id, client_id, instrument_id, quantity, as_of_date)
 VALUES (13, 7, 11, 9.500000, DATE '2026-09-24');
-

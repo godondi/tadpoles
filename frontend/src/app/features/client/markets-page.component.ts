@@ -70,6 +70,7 @@ import { RequestStateComponent } from '../../shared/workspace/request-state.comp
                   <th scope="col">Instrument</th>
                   <th scope="col">Asset class</th>
                   <th scope="col">Currency</th>
+                  <th scope="col">Exchange</th>
                   <th scope="col">Trading availability</th>
                 </tr>
               </thead>
@@ -84,6 +85,7 @@ import { RequestStateComponent } from '../../shared/workspace/request-state.comp
                     </td>
                     <td>{{ item.assetClass || 'Not recorded' }}</td>
                     <td>{{ item.currency }}</td>
+                    <td>{{ item.exchange || 'Not recorded' }}</td>
                     <td>
                       {{ item.trading?.enabled ? 'Review trading rules' : 'Browsing only' }}
                       <small>

@@ -180,5 +180,5 @@ REVOKE ALL ON FUNCTION append_advisor_history() FROM PUBLIC;
 REVOKE ALL ON FUNCTION guard_advisor_projection() FROM PUBLIC;
 REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON advisor_guidance_history, advisor_recommendation_history FROM PUBLIC;
 
-INSERT INTO schema_migrations(version) VALUES(13);
+INSERT INTO schema_migrations(version) VALUES(18);
 COMMIT;

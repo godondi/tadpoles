@@ -22,6 +22,7 @@ class InstrumentMapperTest {
 
         assertNotNull(instrument);
         assertEquals("AAPL", instrument.getTicker());
+        assertEquals("Nasdaq Global Select Market", instrument.getExchange());
     }
 
     @Test
@@ -63,4 +64,3 @@ class InstrumentMapperTest {
         assertEquals(false, stored.getIsActive());
     }
 }
-

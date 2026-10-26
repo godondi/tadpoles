@@ -5,7 +5,7 @@ Status: frontend connected to the implemented Advisor backend; automatic onboard
 
 ## Live backend integration follow-up (2026-10-22)
 
-The user authorized the Advisor backend and all eleven frontend API paths now exist. Migration 013, dedicated guidance/recommendation storage and append-only attributed history are installed. Only the backend container was rebuilt/recreated; Angular adapters, shell, nginx and Compose definitions were not changed. Earlier “proposed/unavailable-only” statements below describe the initial frontend snapshot and are superseded by this section for the current workspace APIs.
+The user authorized the Advisor backend and all eleven frontend API paths now exist. Migration 018, dedicated guidance/recommendation storage and append-only attributed history are installed. Only the backend container was rebuilt/recreated; Angular adapters, shell, nginx and Compose definitions were not changed. Earlier “proposed/unavailable-only” statements below describe the initial frontend snapshot and are superseded by this section for the current workspace APIs.
 
 Open `http://localhost:8087/login`, sign in as `demo.advisor` with the existing public demo password and open Assigned clients. **Demo Client now appears from live PostgreSQL.** View holdings opens current ledger positions and the authorized catalog. The running demo.client currently has no holdings: the empty state is genuine, not a fixture. No live HOLD/SELL action was demonstrated on nonexistent holdings.
 

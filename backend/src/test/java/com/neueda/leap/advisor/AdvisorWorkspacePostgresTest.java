@@ -22,13 +22,22 @@ import org.testcontainers.containers.PostgreSQLContainer;
         "trading.local-demo-setup=false"})
 class AdvisorWorkspacePostgresTest {
     static final PostgreSQLContainer<?> DB = new PostgreSQLContainer<>("postgres:15-alpine");
-    static { DB.start(); }
+    static final String EXTERNAL_URL = System.getenv("ISOLATED_TEST_DB_URL");
+    static {
+        if (EXTERNAL_URL == null) {
+            DB.start();
+        } else if (!EXTERNAL_URL.matches(
+                "jdbc:postgresql://[a-zA-Z0-9.-]+:5432/tadpoles_isolated_test")) {
+            throw new IllegalArgumentException(
+                    "Use the isolated test database only");
+        }
+    }
 
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry r) {
-        r.add("spring.datasource.url", DB::getJdbcUrl);
-        r.add("spring.datasource.username", DB::getUsername);
-        r.add("spring.datasource.password", DB::getPassword);
+        r.add("spring.datasource.url", () -> EXTERNAL_URL == null ? DB.getJdbcUrl() : EXTERNAL_URL);
+        r.add("spring.datasource.username", () -> EXTERNAL_URL == null ? DB.getUsername() : "test");
+        r.add("spring.datasource.password", () -> EXTERNAL_URL == null ? DB.getPassword() : "test");
         r.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
     }
 
@@ -36,7 +45,10 @@ class AdvisorWorkspacePostgresTest {
     int advisor, clientUser, otherClientUser, client, otherClient, held, eligible;
 
     Connection connection() throws SQLException {
-        return DriverManager.getConnection(DB.getJdbcUrl(), DB.getUsername(), DB.getPassword());
+        return DriverManager.getConnection(
+                EXTERNAL_URL == null ? DB.getJdbcUrl() : EXTERNAL_URL,
+                EXTERNAL_URL == null ? DB.getUsername() : "test",
+                EXTERNAL_URL == null ? DB.getPassword() : "test");
     }
 
     void sql(String statement) throws Exception {

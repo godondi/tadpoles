@@ -30,10 +30,10 @@ VALUES
     (5, 'Growth', 'Growth portfolio', TRUE, 1, TIMESTAMP '2026-09-24 09:00:00'),
     (6, 'Income', 'Income portfolio', TRUE, 1, TIMESTAMP '2026-09-24 09:05:00');
 
-INSERT INTO instruments (instrument_id, instrument_name, ticker, currency, asset_class, security_type, is_active)
+INSERT INTO instruments (instrument_id, instrument_name, ticker, currency, asset_class, security_type, exchange, is_active)
 VALUES
-    (11, 'Apple Inc', 'AAPL', 'USD', 'Equity', 'Stock', TRUE),
-    (12, 'Microsoft Corp', 'MSFT', 'USD', 'Equity', 'Stock', TRUE);
+    (11, 'Apple Inc', 'AAPL', 'USD', 'Equity', 'Stock', 'Nasdaq Global Select Market', TRUE),
+    (12, 'Microsoft Corp', 'MSFT', 'USD', 'Equity', 'Stock', 'Nasdaq Global Select Market', TRUE);
 
 INSERT INTO clients (client_id, user_id, client_name, advisor_id, model_portfolio_id, created_by_user_id, created_at, cash_balance)
 VALUES (7, 14, 'Alice Investor', 3, 5, 1, TIMESTAMP '2026-09-24 10:00:00', 1200.50);

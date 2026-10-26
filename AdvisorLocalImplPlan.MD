@@ -27,7 +27,7 @@ New tests under `backend/src/test/java/com/neueda/leap/`:
 
 Additive database/deployment seams:
 
-- New `database/migrations/013_advisor_workspace.sql`.
+- New `database/migrations/018_advisor_workspace.sql`.
 - Matching Advisor DDL appended to `database/fresh/001_schema.sql`; marker 13 in `database/fresh/002_reference.sql`.
 - Targeted `database/runtime-grants.sql` additions: projection SELECT/INSERT/UPDATE, no delete/truncate; history SELECT only, direct writes/helper execution revoked. Trusted security-definer snapshot trigger appends history with fixed search path.
 - Narrow migration-list/count update in `testing/src/test/java/com/neueda/leap/db/FreshTradingSchemaTest.java`.

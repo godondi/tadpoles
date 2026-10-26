@@ -19,6 +19,7 @@ public interface InstrumentMapper {
                    currency AS currency,
                    asset_class AS assetClass,
                    security_type AS securityType,
+                   exchange AS exchange,
                    is_active AS isActive
             FROM instruments
             WHERE instrument_id = #{id}
@@ -32,6 +33,7 @@ public interface InstrumentMapper {
                    currency AS currency,
                    asset_class AS assetClass,
                    security_type AS securityType,
+                   exchange AS exchange,
                    is_active AS isActive
             FROM instruments
             ORDER BY instrument_id

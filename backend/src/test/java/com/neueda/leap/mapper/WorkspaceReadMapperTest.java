@@ -31,5 +31,19 @@ class WorkspaceReadMapperTest {
         assertEquals(1,mapper.instrumentCount("%aapl%",null));
         assertEquals("AAPL",mapper.instruments("%aapl%",null,1,0).get(0).getTicker());
         assertEquals(0,mapper.instruments("%aapl%",null,1,1).size());
+        assertEquals(
+                "Nasdaq Global Select Market",
+                mapper.instruments("%aapl%", null, 1, 0).get(0).getExchange());
+        jdbc.update(
+                "INSERT INTO instruments(instrument_name,ticker,currency,asset_class,security_type,exchange) VALUES (?,?,?,?,?,?)",
+                "Euro / British Pound",
+                "FX:EURGBP",
+                "GBP",
+                "Foreign Exchange",
+                "FX_PAIR",
+                "OTC");
+        var fx = mapper.instruments("%fx:eurgbp%", null, 20, 0).get(0);
+        assertEquals("GBP", fx.getCurrency());
+        assertEquals("OTC", fx.getExchange());
     }
 }

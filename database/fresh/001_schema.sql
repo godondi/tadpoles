@@ -1,4 +1,4 @@
--- Current empty-database snapshot, including migrations 003 through 010.
+-- Current empty-database snapshot, including migrations 003 through 019.
 -- Load before 002_reference.sql. Never run this DDL over existing tables.
 -- Derived from the ordered legacy upgrade chain; FreshTradingSchemaTest checks parity.
 -- Sections below follow pg_dump dependency order: functions, tables/sequences,
@@ -653,8 +653,12 @@ CREATE TABLE public.instruments (
     currency text NOT NULL,
     asset_class text,
     security_type text,
+    exchange text,
     is_active boolean DEFAULT true NOT NULL
 );
+
+COMMENT ON COLUMN public.instruments.exchange IS
+    'Listing venue from the instrument catalog; OTC identifies crypto and forex reference instruments.';
 
 --
 -- Name: instruments_instrument_id_seq; Type: SEQUENCE; Schema: public; Owner: -
@@ -2852,3 +2856,5 @@ CREATE TRIGGER immutable_projection_truncate BEFORE TRUNCATE ON advisor_recommen
 REVOKE ALL ON FUNCTION append_advisor_history() FROM PUBLIC;
 REVOKE ALL ON FUNCTION guard_advisor_projection() FROM PUBLIC;
 REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON advisor_guidance_history, advisor_recommendation_history FROM PUBLIC;
+INSERT INTO schema_migrations(version) VALUES (18);
+INSERT INTO schema_migrations(version) VALUES (19);

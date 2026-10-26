@@ -90,6 +90,7 @@ describe('market catalog background refresh', () => {
       ticker: 'SPY',
       instrumentName: 'SPDR S&P 500 ETF Trust',
       currency: 'USD',
+      exchange: 'NYSE Arca',
     };
     http
       .expectOne((r) => r.url.endsWith('/instruments'))
@@ -111,6 +112,7 @@ describe('market catalog background refresh', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('table')).toBe(table);
     expect(fixture.nativeElement.textContent).toContain('Updated fund name');
+    expect(fixture.nativeElement.textContent).toContain('NYSE Arca');
     fixture.destroy();
     http.verify();
   });

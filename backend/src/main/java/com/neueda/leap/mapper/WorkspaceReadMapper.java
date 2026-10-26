@@ -105,7 +105,7 @@ public interface WorkspaceReadMapper {
 
     String CATALOG_FILTER =
             """
-            WHERE is_active AND currency='USD' AND ticker NOT LIKE 'SIM-%'
+            WHERE is_active AND ticker NOT LIKE 'SIM-%'
                 AND ticker NOT IN ('CASH','USD','GBP','INR','EUR')
                 AND (LOWER(ticker) LIKE #{search} OR LOWER(instrument_name) LIKE #{search})
             <if test="assetClass != null">AND asset_class=#{assetClass}</if>
@@ -113,7 +113,7 @@ public interface WorkspaceReadMapper {
 
     @Select(
             "<script>SELECT instrument_id, instrument_name, ticker, currency, asset_class,"
-                    + " security_type, is_active FROM instruments "
+                    + " security_type, exchange, is_active FROM instruments "
                     + CATALOG_FILTER
                     + " ORDER BY ticker, instrument_id LIMIT #{limit} OFFSET #{offset}</script>")
     List<Instrument> instruments(
