@@ -12,9 +12,10 @@
 }
 
 .nav-container {
-  max-width: 1600px;
-  margin: 0 auto;
-  padding: 0.7rem 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
+  /* Match the sidebar label inset: 16px sidebar padding + 12px group inset. */
+  padding: 0.7rem 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -185,7 +186,7 @@
   }
 
   .nav-container {
-    padding: 1rem;
+    padding: 1rem 28px;
     flex-direction: column;
     align-items: stretch;
   }
