@@ -115,4 +115,91 @@ ON CONFLICT (ticker) DO UPDATE
     SET exchange = EXCLUDED.exchange
     WHERE instruments.exchange IS DISTINCT FROM EXCLUDED.exchange;
 
+-- Provision policy for explicitly declared USD catalog instruments without spending
+-- provider requests during startup. Every order still requires a fresh validated quote.
+WITH seeded_policies AS (
+    INSERT INTO instrument_trading_policies (
+        instrument_id,
+        policy_version,
+        venue,
+        quantity_unit,
+        price_unit,
+        currency,
+        quantity_step,
+        currency_scale,
+        max_quantity,
+        max_notional,
+        quote_max_age_seconds,
+        future_skew_seconds,
+        retry_seconds,
+        max_attempts,
+        session,
+        enabled,
+        raw_price_unit,
+        price_multiplier,
+        provider_symbol,
+        buy_allowed,
+        sell_allowed,
+        validated_at,
+        revision
+    )
+    SELECT
+        i.instrument_id,
+        'manifest-provider-v1',
+        s.exchange,
+        'shares',
+        'USD',
+        'USD',
+        1,
+        2,
+        10000,
+        1000000,
+        1200,
+        2,
+        120,
+        3,
+        'PROVIDER_OPEN',
+        true,
+        'USD',
+        1,
+        i.ticker,
+        true,
+        true,
+        NULL,
+        1
+    FROM catalog_symbols s
+    JOIN instruments i ON i.ticker = s.ticker
+    WHERE s.currency = 'USD'
+    ON CONFLICT (instrument_id) DO NOTHING
+    RETURNING instrument_id, policy_version, venue, provider_symbol
+)
+INSERT INTO instrument_policy_audit (
+    audit_id,
+    instrument_id,
+    actor,
+    actor_type,
+    reason,
+    before_values,
+    after_values,
+    recorded_at
+)
+SELECT
+    gen_random_uuid(),
+    instrument_id,
+    NULL,
+    'SYSTEM',
+    'Provisioned from the local catalog manifest; each order requires a fresh provider quote.',
+    NULL,
+    jsonb_build_object(
+        'policyVersion', policy_version,
+        'venue', venue,
+        'providerSymbol', provider_symbol,
+        'enabled', true,
+        'buyAllowed', true,
+        'sellAllowed', true,
+        'validatedAt', NULL
+    ),
+    clock_timestamp()
+FROM seeded_policies;
+
 COMMIT;
