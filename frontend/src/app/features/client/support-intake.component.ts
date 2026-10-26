@@ -52,7 +52,8 @@ const fields: Record<
     }
     @if (policy()?.intakeEnabled) {
       <fieldset [disabled]="disabled">
-        <legend>Category details - {{ category }}</legend>
+        <legend class="sr-only">Category details - {{ category }}</legend>
+        <h3 class="intake-heading" aria-hidden="true">Category details - {{ category }}</h3>
         <label
           >Issue reason<select
             name="intakeReason"
@@ -67,7 +68,7 @@ const fields: Record<
           </select></label
         >
         @for (field of categoryFields(); track field.code) {
-          <label
+          <label [class.intake-wide]="field.type === 'textarea' || field.code === 'reportedReason'"
             >{{ field.label }}
             @if (field.type === 'textarea') {
               <textarea

@@ -64,7 +64,7 @@ interface SignupForm {
     :host {
       display: block;
       min-height: 100vh;
-      background: #006044;
+      background: var(--action-bg);
       padding: 2rem 1rem;
     }
 
@@ -76,7 +76,7 @@ interface SignupForm {
 
     .auth-card {
       width: min(100%, 34rem);
-      background: rgba(255, 255, 255, 0.98);
+      background: var(--surface);
       border-radius: 0;
       padding: 2rem;
       box-shadow: 0 24px 48px rgba(0, 0, 0, 0.18);
@@ -84,13 +84,13 @@ interface SignupForm {
 
     .auth-copy h1 {
       margin: 0 0 0.5rem;
-      color: #006044;
+      color: var(--dark-green);
     }
 
     .auth-copy p,
     .auth-footer,
     .password-help {
-      color: #51606f;
+      color: var(--text-secondary);
     }
 
     .auth-form {
@@ -102,12 +102,14 @@ interface SignupForm {
     label {
       display: grid;
       gap: 0.45rem;
-      color: #1f2937;
+      color: var(--text-primary);
       font-weight: 600;
     }
 
     input {
-      border: 1px solid #d5dde5;
+      background: var(--surface);
+      color: var(--text-primary);
+      border: 1px solid var(--border-gray);
       border-radius: 0;
       padding: 0.85rem 1rem;
       font: inherit;
@@ -122,7 +124,7 @@ interface SignupForm {
       border: none;
       border-radius: 0;
       padding: 0.9rem 1rem;
-      background: #006044;
+      background: var(--action-bg);
       color: white;
       font: inherit;
       font-weight: 700;
@@ -141,8 +143,8 @@ interface SignupForm {
     }
 
     .message.error {
-      background: #fdecec;
-      color: #b42318;
+      background: var(--error-bg);
+      color: var(--error-text);
     }
 
     .auth-footer {
@@ -151,7 +153,7 @@ interface SignupForm {
     }
 
     a {
-      color: #006044;
+      color: var(--dark-green);
       font-weight: 700;
       text-decoration: none;
     }

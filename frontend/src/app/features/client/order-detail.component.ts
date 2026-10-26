@@ -1,3 +1,4 @@
+import { TwoDecimalsPipe } from '../../shared/two-decimals.pipe';
 import { OrderUpdateHealthComponent } from '../../shared/workspace/order-update-health.component';
 import { takeWhile } from 'rxjs';
 import { Component, inject } from '@angular/core';
@@ -11,7 +12,7 @@ import { RequestStateComponent } from '../../shared/workspace/request-state.comp
 
 @Component({
   selector: 'app-order-detail',
-  imports: [OrderUpdateHealthComponent, DatePipe, DecimalPipe, RouterLink, RequestStateComponent],
+  imports: [TwoDecimalsPipe, OrderUpdateHealthComponent, DatePipe, DecimalPipe, RouterLink, RequestStateComponent],
   template: `<a routerLink="/app/orders">← All orders</a>
     <header class="workspace-heading">
       <p class="eyebrow">ORDER RECEIPT</p>
@@ -34,7 +35,7 @@ import { RequestStateComponent } from '../../shared/workspace/request-state.comp
           }}
         </p>
         <h2>
-          {{ data.order.side }} {{ data.order.exactQuantity ?? data.order.quantity }}
+          {{ data.order.side }} {{ (data.order.exactQuantity ?? data.order.quantity) | twoDecimals }}
           {{ data.order.ticker }}
         </h2>
         <p class="status-label">{{ data.order.status }}</p>
@@ -83,7 +84,7 @@ import { RequestStateComponent } from '../../shared/workspace/request-state.comp
               <dd>
                 {{
                   data.reservation
-                    ? data.reservation.amount +
+                    ? (data.reservation.amount | twoDecimals) +
                       ' ' +
                       data.reservation.resource +
                       ' · ' +
@@ -114,15 +115,15 @@ import { RequestStateComponent } from '../../shared/workspace/request-state.comp
           <dl class="details">
             <div>
               <dt>Execution price</dt>
-              <dd>{{ fill.price }} {{ fill.currency }}</dd>
+              <dd>{{ fill.price | twoDecimals }} {{ fill.currency }}</dd>
             </div>
             <div>
               <dt>{{ data.order.side === 'BUY' ? 'Cash debited' : 'Cash credited' }}</dt>
-              <dd>{{ fill.gross }} {{ fill.currency }}</dd>
+              <dd>{{ fill.gross | twoDecimals }} {{ fill.currency }}</dd>
             </div>
             <div>
               <dt>Position {{ data.order.side === 'BUY' ? 'added' : 'removed' }}</dt>
-              <dd>{{ fill.quantity }} units</dd>
+              <dd>{{ fill.quantity | twoDecimals }} units</dd>
             </div>
             <div>
               <dt>Booked</dt>
@@ -183,7 +184,7 @@ import { RequestStateComponent } from '../../shared/workspace/request-state.comp
             <article>
               <h3>{{ quote.stage }} · {{ quote.applicableSide }}</h3>
               <p>
-                {{ quote.price ?? 'Price unavailable' }} {{ quote.currency }} ·
+                {{ quote.price !== null ? (quote.price | twoDecimals) : 'Price unavailable' }} {{ quote.currency }} ·
                 {{ quote.source ?? 'Source not retained' }}
               </p>
               <p>

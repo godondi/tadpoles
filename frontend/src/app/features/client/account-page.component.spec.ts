@@ -195,7 +195,7 @@ describe('account background updates', () => {
     http.expectOne((r) => r.url.endsWith('/orders')).flush({ items: [], total: 0 });
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.table-wrapper')).toBe(positions);
-    expect(fixture.nativeElement.textContent).toContain('400 GBP');
+    expect(fixture.nativeElement.textContent).toContain('400.00 GBP');
     expect(fixture.nativeElement.textContent).toContain('Unable to connect');
 
     changes.next(true);

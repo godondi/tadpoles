@@ -1,4 +1,5 @@
 import { Component, Input } from '@angular/core';
+import { displayFact } from '../two-decimals.pipe';
 
 @Component({
   selector: 'app-evidence-facts',
@@ -23,7 +24,7 @@ export class EvidenceFactsComponent {
         result.push({
           path,
           value:
-            value === null || value === undefined ? 'Unavailable / not recorded' : String(value),
+            value === null || value === undefined ? 'Unavailable / not recorded' : String(displayFact(value, path)),
         });
     };
     visit(this.value, '', 0);

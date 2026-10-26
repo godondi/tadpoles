@@ -1,3 +1,4 @@
+import { TwoDecimalsPipe } from '../../../shared/two-decimals.pipe';
 import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -10,7 +11,7 @@ import { RequestStateComponent } from '../../../shared/workspace/request-state.c
 
 @Component({
   selector: 'app-finance-overview',
-  imports: [DatePipe, RouterLink, RequestStateComponent],
+  imports: [TwoDecimalsPipe, DatePipe, RouterLink, RequestStateComponent],
   template: `
     <header class="workspace-heading">
       <p class="eyebrow">FINANCE · READ-ONLY</p>
@@ -59,13 +60,13 @@ import { RequestStateComponent } from '../../../shared/workspace/request-state.c
         </div>
         @if (!hasActivity(report)) { <p class="notice" role="status">No activity was returned for this scope by the reporting source.</p> }
         <div class="metrics-grid" aria-label="Reported activity totals">
-          <article class="metric-card"><h3>Settled internal deposits</h3><p>{{ report.totals.settledDeposits }} {{ report.currency }}</p></article>
-          <article class="metric-card"><h3>Settled internal withdrawals</h3><p>{{ report.totals.settledWithdrawals }} {{ report.currency }}</p></article>
-          <article class="metric-card"><h3>Gross booked buy consideration</h3><p>{{ report.totals.grossBuyConsideration }} {{ report.currency }}</p></article>
-          <article class="metric-card"><h3>Gross booked sell consideration</h3><p>{{ report.totals.grossSellConsideration }} {{ report.currency }}</p></article>
+          <article class="metric-card"><h3>Settled internal deposits</h3><p>{{ report.totals.settledDeposits | twoDecimals }} {{ report.currency }}</p></article>
+          <article class="metric-card"><h3>Settled internal withdrawals</h3><p>{{ report.totals.settledWithdrawals | twoDecimals }} {{ report.currency }}</p></article>
+          <article class="metric-card"><h3>Gross booked buy consideration</h3><p>{{ report.totals.grossBuyConsideration | twoDecimals }} {{ report.currency }}</p></article>
+          <article class="metric-card"><h3>Gross booked sell consideration</h3><p>{{ report.totals.grossSellConsideration | twoDecimals }} {{ report.currency }}</p></article>
           <article class="metric-card"><h3>Booked fills</h3><p>{{ report.totals.bookedFillCount }}</p></article>
           @if (report.totals.fees; as fees) {
-            <article class="metric-card"><h3>Fees · {{ fees.definition }}</h3><p>{{ fees.amount }} {{ report.currency }}</p></article>
+            <article class="metric-card"><h3>Fees · {{ fees.definition }}</h3><p>{{ fees.amount | twoDecimals }} {{ report.currency }}</p></article>
           } @else {
             <article class="metric-card"><h3>Fees</h3><p>Not reported</p></article>
           }
@@ -109,7 +110,7 @@ import { RequestStateComponent } from '../../../shared/workspace/request-state.c
     label, .currency-label { color:var(--text-secondary); font-weight:700; }
     input { min-height:42px; border:1px solid var(--border-gray); padding:8px; color:var(--text-primary); background:var(--surface); }
     .scope-actions { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-top:16px; color:var(--text-secondary); font-size:.9rem; }
-    .primary-button, .secondary-button { padding:10px 14px; border:1px solid var(--dark-green); background:var(--dark-green); color:white; font-weight:700; cursor:pointer; }
+    .primary-button, .secondary-button { padding:10px 14px; border:1px solid var(--dark-green); background:var(--action-bg); color:var(--action-text); font-weight:700; cursor:pointer; }
     .secondary-button { background:var(--surface); color:var(--dark-green); }
     .metadata-grid, .report-facts { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; }
     .metadata-grid p, .report-facts div { display:grid; gap:5px; margin:0; padding:12px; background:var(--surface-muted); overflow-wrap:anywhere; }

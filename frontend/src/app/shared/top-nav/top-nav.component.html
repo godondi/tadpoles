@@ -52,6 +52,9 @@
                 Trade History
               </button>
             }
+            <button class="menu-item" type="button" role="menuitem" (click)="toggleTheme()">
+              {{ darkMode() ? 'Disable Dark Mode' : 'Enable Dark Mode' }}
+            </button>
             <button
               class="menu-item menu-item--logout"
               type="button"

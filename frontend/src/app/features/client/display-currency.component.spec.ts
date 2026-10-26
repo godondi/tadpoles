@@ -79,7 +79,7 @@ describe('display currency estimates', () => {
         source: 'ECB',
       });
     f.detectChanges();
-    expect(f.nativeElement.textContent).toContain('8 GBP');
+    expect(f.nativeElement.textContent).toContain('8.00 GBP');
     http.verify();
   });
 });

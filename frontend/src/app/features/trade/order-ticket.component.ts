@@ -1,3 +1,4 @@
+import { TwoDecimalsPipe } from '../../shared/two-decimals.pipe';
 import { Component, DestroyRef, ElementRef, OnChanges, inject, input, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -15,7 +16,7 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
 
 @Component({
   selector: 'app-order-ticket',
-  imports: [FormsModule, DatePipe, RouterLink],
+  imports: [TwoDecimalsPipe, FormsModule, DatePipe, RouterLink],
   template: ` <section class="panel order-ticket" aria-labelledby="ticket-heading">
     <p class="eyebrow">INTERNAL BOOKING · ZERO PROJECT FEES</p>
     <h2 id="ticket-heading">{{ side === 'BUY' ? 'Buy' : 'Sell' }} {{ ticker() }}</h2>
@@ -39,7 +40,7 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
         <h3>Checking whether your order was received</h3>
         <p>Your instruction is saved in this tab. Keep this request until its outcome is known.</p>
         <p>
-          {{ pending()!.command.side }} {{ pending()!.command.quantity }} units · instrument #{{
+          {{ pending()!.command.side }} {{ pending()!.command.quantity | twoDecimals }} units · instrument #{{
             pending()!.command.instrumentId
           }}
         </p>
@@ -55,6 +56,7 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
         </p>
       </section>
     } @else if (!receipt()) {
+      <div class="ticket-workspace">
       <form (ngSubmit)="review()">
         <fieldset [disabled]="busy()">
           <legend>1. Choose your instruction</legend>
@@ -106,40 +108,40 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
           <h3 id="review-heading" tabindex="-1">2. Review your {{ side.toLowerCase() }}</h3>
           @if (side === 'SELL' && hasUnits(p.availableQuantity)) {
             <button type="button" data-sell-all (click)="sellAll(p.availableQuantity)">
-              Sell all available ({{ p.availableQuantity }} units)
+              Sell all available ({{ p.availableQuantity | twoDecimals }} units)
             </button>
           }
           @if (!p.eligible) {
             <p role="alert">{{ p.reason }}</p>
           } @else {
-            <p>{{ quantity }} {{ p.quantityUnit }} · {{ p.venue }}</p>
+            <p>{{ quantity | twoDecimals }} {{ p.quantityUnit }} · {{ p.venue }}</p>
             <dl class="details">
               <div>
                 <dt>Estimated {{ side === 'BUY' ? 'cost' : 'proceeds' }}</dt>
-                <dd class="mono-value">{{ p.gross }} {{ p.currency }}</dd>
+                <dd class="mono-value">{{ p.gross | twoDecimals }} {{ p.currency }}</dd>
               </div>
               <div>
                 <dt>{{ side === 'BUY' ? 'Ask' : 'Bid' }} per unit</dt>
-                <dd>{{ p.price }} {{ p.currency }}</dd>
+                <dd>{{ p.price | twoDecimals }} {{ p.currency }}</dd>
               </div>
               <div>
                 <dt>Available cash</dt>
-                <dd>{{ p.availableCash }} {{ p.currency }}</dd>
+                <dd>{{ p.availableCash | twoDecimals }} {{ p.currency }}</dd>
               </div>
               <div>
                 <dt>Available to sell</dt>
-                <dd>{{ p.availableQuantity }} {{ p.quantityUnit }}</dd>
+                <dd>{{ p.availableQuantity | twoDecimals }} {{ p.quantityUnit }}</dd>
               </div>
               <div>
                 <dt>Estimated cash after fill</dt>
-                <dd>{{ p.projectedCash }} {{ p.currency }}</dd>
+                <dd>{{ p.projectedCash | twoDecimals }} {{ p.currency }}</dd>
               </div>
               <div>
                 <dt>Estimated units after fill</dt>
-                <dd>{{ p.projectedQuantity }} {{ p.quantityUnit }}</dd>
+                <dd>{{ p.projectedQuantity | twoDecimals }} {{ p.quantityUnit }}</dd>
               </div>
             </dl>
-            <p>Project fee: {{ p.fee }} {{ p.currency }}</p>
+            <p>Project fee: {{ p.fee | twoDecimals }} {{ p.currency }}</p>
             <p class="as-of">Provider quote {{ p.quoteTime | date: 'medium' : 'UTC' }} UTC</p>
             <p class="notice">
               Execution price may change. This estimate is not a maximum-spend limit. Your order may
@@ -153,7 +155,10 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
             </button>
           }
         </section>
+      } @else {
+        <section class="order-review muted"><h3>2. Review and confirm</h3><p>Enter your quantity to check the estimated price, cash and units before confirming.</p></section>
       }
+      </div>
     }
     @if (receipt(); as r) {
       <section class="notice" aria-live="polite">

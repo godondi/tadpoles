@@ -78,7 +78,8 @@ interface LoginForm {
         display: block;
         width: 100%;
         min-height: 100vh;
-        background: #006044;
+        background: var(--surface-strong);
+        color: var(--text-primary);
         font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
         margin: 0;
         padding: 0;
@@ -90,18 +91,18 @@ interface LoginForm {
         justify-content: center;
         align-items: center;
         width: 100%;
-        height: 100%;
-        padding: 0;
+        min-height: 100dvh;
+        padding: 24px 16px;
       }
 
       .login-box {
-        background: rgba(255, 255, 255, 0.98);
+        background: var(--surface);
         border-radius: 0;
         box-shadow: 0 24px 50px rgba(0, 0, 0, 0.18);
         width: 100%;
         max-width: 420px;
-        padding: 2.5rem;
-        margin: 0 1rem;
+        padding: 28px;
+        margin: 0;
       }
 
       .login-header {
@@ -112,31 +113,32 @@ interface LoginForm {
       .login-title {
         font-size: 2rem;
         font-weight: 700;
-        color: #006044;
+        color: var(--dark-green);
         margin: 0 0 0.5rem 0;
         letter-spacing: 0.01em;
       }
 
       .login-subtitle {
         font-size: 0.95rem;
-        color: #51606f;
+        color: var(--text-secondary);
         margin: 0;
       }
 
       .login-form {
         display: flex;
         flex-direction: column;
-        gap: 1.5rem;
+        gap: 18px;
       }
 
       .form-group {
+        margin: 0;
         display: flex;
         flex-direction: column;
       }
 
       .form-group label {
         font-weight: 600;
-        color: #333;
+        color: var(--text-primary);
         margin-bottom: 0.5rem;
         font-size: 0.95rem;
       }
@@ -144,7 +146,9 @@ interface LoginForm {
       .form-group input[type='text'],
       .form-group input[type='password'] {
         padding: 0.75rem;
-        border: 2px solid #e0e0e0;
+        background: var(--surface);
+        color: var(--text-primary);
+        border: 2px solid var(--border-gray);
         border-radius: 0;
         font-size: 0.95rem;
         transition: all 0.3s;
@@ -153,7 +157,7 @@ interface LoginForm {
       .form-group input[type='text']:focus,
       .form-group input[type='password']:focus {
         outline: none;
-        border-color: #006044;
+        border-color: var(--dark-green);
         box-shadow: 0 0 0 3px rgba(118, 169, 35, 0.1);
       }
 
@@ -169,7 +173,7 @@ interface LoginForm {
         gap: 0.5rem;
         margin: 0;
         font-weight: 500;
-        color: #333;
+        color: var(--text-primary);
         cursor: pointer;
       }
 
@@ -177,7 +181,7 @@ interface LoginForm {
         width: auto;
         margin: 0;
         cursor: pointer;
-        accent-color: #006044;
+        accent-color: var(--dark-green);
       }
 
       .forgot-password {
@@ -194,16 +198,16 @@ interface LoginForm {
 
       .error-message {
         padding: 0.75rem;
-        background-color: #ffebee;
-        color: #c62828;
+        background-color: var(--error-bg);
+        color: var(--error-text);
         border-radius: 0;
         font-size: 0.9rem;
-        border-left: 4px solid #c62828;
+        border-left: 4px solid var(--error-text);
       }
 
       .login-btn {
         padding: 0.85rem;
-        background-color: #006044;
+        background-color: var(--action-bg);
         color: white;
         border: none;
         border-radius: 0;
@@ -215,7 +219,7 @@ interface LoginForm {
       }
 
       .login-btn:hover {
-        background-color: #0d4b39;
+        background-color: var(--action-hover);
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(118, 169, 35, 0.3);
       }
@@ -240,13 +244,13 @@ interface LoginForm {
         text-align: center;
         margin-top: 1.5rem;
         padding-top: 1.5rem;
-        border-top: 1px solid #e0e0e0;
-        color: #666;
+        border-top: 1px solid var(--border-gray);
+        color: var(--text-secondary);
         font-size: 0.9rem;
       }
 
       .signup-link {
-        color: #006044;
+        color: var(--dark-green);
         text-decoration: none;
         font-weight: 600;
         transition: color 0.3s;

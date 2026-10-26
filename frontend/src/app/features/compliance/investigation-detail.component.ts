@@ -1,3 +1,4 @@
+import { DisplayFactPipe, TwoDecimalsPipe } from '../../shared/two-decimals.pipe';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { DatePipe, JsonPipe, KeyValuePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -24,7 +25,7 @@ import { EvidenceFactsComponent } from '../../shared/workspace/evidence-facts.co
 
 @Component({
   selector: 'app-compliance-investigation-detail',
-  imports: [
+  imports: [DisplayFactPipe, TwoDecimalsPipe,
     DatePipe,
     JsonPipe,
     KeyValuePipe,
@@ -56,7 +57,7 @@ import { EvidenceFactsComponent } from '../../shared/workspace/evidence-facts.co
         <section class="panel">
           <h2>Order {{ detail.summary.orderId }} · {{ detail.summary.status }}</h2>
           <p>
-            {{ detail.summary.side }} {{ detail.summary.quantity }} {{ detail.summary.unit }} ·
+            {{ detail.summary.side }} {{ detail.summary.quantity | twoDecimals }} {{ detail.summary.unit }} ·
             {{ detail.summary.instrument }}
           </p>
           <dl class="details">
@@ -188,7 +189,7 @@ import { EvidenceFactsComponent } from '../../shared/workspace/evidence-facts.co
                           @for (field of record.values | keyvalue; track field.key) {
                             <div>
                               <dt>{{ label(field.key) }}</dt>
-                              <dd>{{ field.value ?? 'Not recorded' }}</dd>
+                              <dd>{{ (field.value | displayFact: field.key) ?? 'Not recorded' }}</dd>
                             </div>
                           }
                         </dl>

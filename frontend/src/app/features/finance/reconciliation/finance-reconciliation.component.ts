@@ -79,7 +79,7 @@ import { RequestStateComponent } from '../../../shared/workspace/request-state.c
     .controls-panel, .report-panel, .exceptions-panel, .scope-panel, .no-run-panel { margin-bottom:20px; }
     .controls-panel { display:flex; align-items:center; flex-wrap:wrap; gap:12px; }
     .controls-panel .notice { flex-basis:100%; margin-bottom:0; }
-    .primary-button, .secondary-button { padding:10px 14px; border:1px solid var(--dark-green); background:var(--dark-green); color:white; font-weight:700; cursor:pointer; }
+    .primary-button, .secondary-button { padding:10px 14px; border:1px solid var(--dark-green); background:var(--action-bg); color:var(--action-text); font-weight:700; cursor:pointer; }
     .secondary-button { background:var(--surface); color:var(--dark-green); }
     button:disabled { cursor:not-allowed; opacity:.65; }
     .report-panel h2, .scope-panel h2, .no-run-panel h2 { margin:6px 0 16px; }

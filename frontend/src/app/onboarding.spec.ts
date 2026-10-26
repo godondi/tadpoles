@@ -11,7 +11,7 @@ const choices = {
   employmentStatus: ['Unemployed', 'Intern', 'Student', 'Employed (Part-Time)', 'Employed (Full-Time)', 'Retired'],
   investmentObjective: ['Preservation', 'Income', 'Growth', 'Speculation'],
   preferredContactMethod: ['Email', 'Phone'],
-  netWorth: ['$0 - $24,999', '$25,000 - $49,999', '$50,000 - $99,999', '$100,000 - $249,999', '$250,000 - $499,999', '$500,000 - $999,999', '$1,000,000+'],
+  netWorth: ['$0.00 - $24,999.00', '$25,000.00 - $49,999.00', '$50,000.00 - $99,999.00', '$100,000.00 - $249,999.00', '$250,000.00 - $499,999.00', '$500,000.00 - $999,999.00', '$1,000,000.00+'],
 };
 
 describe('Onboarding dropdowns', () => {

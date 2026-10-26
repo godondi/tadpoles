@@ -130,7 +130,7 @@ import { PageResource } from './shared/workspace/page-resource';
               </div>
               <div class="info-item">
                 <label>Net worth</label>
-                <p>{{ profile().netWorth !== null ? (profile().netWorth | number:'1.0-2') : 'Not provided' }}</p>
+                <p>{{ profile().netWorth !== null ? (profile().netWorth | number:'1.2-2') : 'Not provided' }}</p>
               </div>
               <div class="info-item">
                 <label>Risk tolerance</label>
@@ -151,7 +151,7 @@ import { PageResource } from './shared/workspace/page-resource';
       display: block;
       width: 100%;
       min-height: 100vh;
-      background: #f8f9fa;
+      background: var(--page-bg);
     }
 
     .profile-container {
@@ -169,7 +169,7 @@ import { PageResource } from './shared/workspace/page-resource';
     }
 
     .profile-header {
-      background: white;
+      background: var(--surface);
       padding: 2rem;
       border-radius: 0;
       margin-bottom: 2rem;
@@ -191,13 +191,13 @@ import { PageResource } from './shared/workspace/page-resource';
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #006044;
+      background: var(--action-bg);
       border-radius: 0;
       color: white;
     }
 
     .header-text h1 {
-      color: #006044;
+      color: var(--dark-green);
       margin: 0;
       font-size: 1.75rem;
        font-weight: 700;
@@ -205,7 +205,7 @@ import { PageResource } from './shared/workspace/page-resource';
 
     .email-text,
     .subtle-text {
-      color: #666;
+      color: var(--text-secondary);
       margin: 0.5rem 0 0 0;
       font-size: 1rem;
     }
@@ -221,14 +221,14 @@ import { PageResource } from './shared/workspace/page-resource';
     }
 
     .profile-card {
-      background: white;
+      background: var(--surface);
       padding: 1.5rem;
       border-radius: 0;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     .profile-card h2 {
-      color: #006044;
+      color: var(--dark-green);
       margin: 0 0 1.5rem 0;
       font-size: 1.25rem;
       border-bottom: 2px solid #76A923;
@@ -251,7 +251,7 @@ import { PageResource } from './shared/workspace/page-resource';
     }
 
     .info-item label {
-      color: #999;
+      color: var(--text-secondary);
       font-weight: 600;
       font-size: 0.75rem;
       margin-bottom: 0.5rem;
@@ -260,7 +260,7 @@ import { PageResource } from './shared/workspace/page-resource';
     }
 
     .info-item p {
-      color: #006044;
+      color: var(--dark-green);
       font-size: 1rem;
       margin: 0;
         font-weight: 500;
@@ -273,23 +273,23 @@ import { PageResource } from './shared/workspace/page-resource';
       border-radius: 0;
       font-size: 0.875rem;
       font-weight: 600;
-      background-color: #76A923;
-      color: white;
+      background-color: var(--success-bg);
+      color: var(--success-text);
     }
 
     .error-message {
       padding: 1rem;
-      background-color: #f8d7da;
-      color: #721c24;
-      border: 1px solid #f5c6cb;
+      background-color: var(--error-bg);
+      color: var(--error-text);
+      border: 1px solid var(--border-gray);
       border-radius: 0;
       font-size: 0.95rem;
     }
 
     .status-card {
       padding: 1rem;
-      background-color: #eef7ef;
-      color: #006044;
+      background-color: var(--success-bg);
+      color: var(--dark-green);
       border-radius: 0;
       margin-bottom: 1rem;
     }

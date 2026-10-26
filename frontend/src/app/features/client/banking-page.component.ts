@@ -1,3 +1,4 @@
+import { TwoDecimalsPipe } from '../../shared/two-decimals.pipe';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -20,7 +21,7 @@ interface PendingMovement {
 }
 @Component({
   selector: 'app-banking-page',
-  imports: [FormsModule, DatePipe, RouterLink],
+  imports: [TwoDecimalsPipe, FormsModule, DatePipe, RouterLink],
   template: `
     <header class="workspace-heading">
       <p class="eyebrow">MY ACCOUNT</p>
@@ -35,8 +36,8 @@ interface PendingMovement {
     }}</a>
     <p role="status" aria-live="polite">{{ message() }}</p>
     <section class="panel">
-      <h2>Available USD: {{ available() }}</h2>
-      <p>Posted: {{ posted() }} · Reserved for orders: {{ reserved() }}</p>
+      <h2>Available USD: {{ available() | twoDecimals }}</h2>
+      <p>Posted: {{ posted() | twoDecimals }} · Reserved for orders: {{ reserved() | twoDecimals }}</p>
       <p>A completed sale credits this account. Withdrawal is a separate action.</p>
       <button type="button" (click)="load()" [disabled]="busy()">
         Refresh balances and accounts
@@ -144,13 +145,13 @@ interface PendingMovement {
     <section class="panel">
       <h2>Deposit or withdraw</h2>
       <p>
-        USD 10,000 maximum per movement. Deposits are limited to USD 10,000 total per UTC day.
+        USD 10,000.00 maximum per movement. Deposits are limited to USD 10,000.00 total per UTC day.
         Withdrawals use settled, available cash.
       </p>
       @if (pending(); as p) {
         <section class="notice">
           <h3>Checking your saved request</h3>
-          <p>{{ p.command.direction }} {{ p.command.amount }} USD · Reference {{ p.key }}</p>
+          <p>{{ p.command.direction }} {{ p.command.amount | twoDecimals }} USD · Reference {{ p.key }}</p>
           <p>
             A missing response does not mean failure. Keep this reference until the outcome is
             known.
@@ -204,11 +205,11 @@ interface PendingMovement {
           <section class="notice">
             <h3>2. Review and confirm</h3>
             <p>
-              {{ r.direction === 'DEPOSIT' ? 'Add' : 'Withdraw' }} {{ r.amount }} USD using
+              {{ r.direction === 'DEPOSIT' ? 'Add' : 'Withdraw' }} {{ r.amount | twoDecimals }} USD using
               {{ bankLabel(r.bankId) }}.
             </p>
             @if (projectedAvailable(r); as estimate) {
-              <p>Estimated available after movement: {{ estimate }} USD</p>
+              <p>Estimated available after movement: {{ estimate | twoDecimals }} USD</p>
             } @else {
               <p>Balance estimate unavailable. Refresh your balances before confirming.</p>
             }
@@ -225,7 +226,7 @@ interface PendingMovement {
       }
       @if (receipt(); as r) {
         <section class="notice" aria-live="polite">
-          <h3>{{ r.status }} · {{ r.direction }} {{ r.amount }} {{ r.currency }}</h3>
+          <h3>{{ r.status }} · {{ r.direction }} {{ r.amount | twoDecimals }} {{ r.currency }}</h3>
           <p>{{ r.bankSnapshot }}</p>
           <p>{{ r.reason || 'Committed to your internal account.' }}</p>
           <p>Receipt {{ r.movementId }}</p>
@@ -236,7 +237,7 @@ interface PendingMovement {
       <h2>Cash movement history</h2>
       @for (r of history(); track r.movementId) {
         <article>
-          <p>{{ r.direction }} {{ r.amount }} USD · {{ r.status }}</p>
+          <p>{{ r.direction }} {{ r.amount | twoDecimals }} USD · {{ r.status }}</p>
           <p>{{ r.bankSnapshot }} · {{ r.recordedAt | date: 'medium' : 'UTC' }} UTC</p>
           <p>{{ r.reason }}</p>
           <small>Receipt {{ r.movementId }}</small>

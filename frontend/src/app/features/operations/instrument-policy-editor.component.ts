@@ -31,7 +31,7 @@ import {
     }
     @if (ready()) {
       <section class="panel">
-        <form #policyForm="ngForm" (ngSubmit)="save(policyForm)" class="workspace-form">
+        <form #policyForm="ngForm" (ngSubmit)="save(policyForm)" class="workspace-form instrument-editor">
           <fieldset [disabled]="saving()">
             <legend>Identity and provider validation</legend>
             <div class="form-field">
@@ -121,15 +121,25 @@ import {
                 The exchange or listing venue, for example NYSE Arca. This is a label, not automatic
                 listing verification.
               </p>
-              <input
+              <select
                 id="policy-venue"
-                placeholder="NYSE Arca"
                 aria-describedby="policy-venue-hint"
                 name="venue"
                 [(ngModel)]="form.venue"
                 required
-                maxlength="40"
-              />
+              >
+                <option value="" disabled>Choose an exchange</option>
+                @if (form.venue && !['NYSE','Nasdaq','Nasdaq Global Market','Nasdaq Global Select Market','NYSE Arca','Cboe BZX','OTC'].includes(form.venue)) {
+                  <option [value]="form.venue">{{ form.venue }} (current)</option>
+                }
+                <option value="NYSE">NYSE</option>
+                <option value="Nasdaq">Nasdaq</option>
+                <option value="Nasdaq Global Market">Nasdaq Global Market</option>
+                <option value="Nasdaq Global Select Market">Nasdaq Global Select Market</option>
+                <option value="NYSE Arca">NYSE Arca</option>
+                <option value="Cboe BZX">Cboe BZX</option>
+                <option value="OTC">OTC</option>
+              </select>
             </div>
             <p>
               Venue is an Operations label; a quote response alone does not verify listing identity.
@@ -152,6 +162,7 @@ import {
                 required
                 [(ngModel)]="form.quantityStep"
                 inputmode="decimal"
+                type="text"
               />
             </div>
             <div class="form-field">
@@ -168,12 +179,13 @@ import {
                 required
                 [(ngModel)]="form.maxQuantity"
                 inputmode="decimal"
+                type="text"
               />
             </div>
             <div class="form-field">
               <label for="policy-max-notional">Maximum consideration (USD)</label>
               <p class="field-hint" id="policy-max-notional-hint">
-                Maximum order value in USD (shares × price), up to 1,000,000. Checked again at
+                Maximum order value in USD (shares × price), up to 1,000,000.00. Checked again at
                 execution; this is not an account balance.
               </p>
               <input
@@ -184,6 +196,7 @@ import {
                 required
                 [(ngModel)]="form.maxNotional"
                 inputmode="decimal"
+                type="text"
               />
             </div>
             <div class="form-field">
@@ -192,17 +205,21 @@ import {
                 Oldest accepted provider quote in seconds. 60 means one minute; 1200 means twenty
                 minutes. Explicitly stale quotes remain blocked.
               </p>
-              <input
+              <select
                 id="policy-age"
-                placeholder="1200"
                 aria-describedby="policy-age-hint"
                 name="age"
                 required
                 [(ngModel)]="form.quoteMaxAgeSeconds"
-                type="number"
-                min="1"
-                max="1200"
-              />
+              >
+                @if (![60, 300, 600, 1200].includes(form.quoteMaxAgeSeconds)) {
+                  <option [ngValue]="form.quoteMaxAgeSeconds">{{ form.quoteMaxAgeSeconds }} seconds (current)</option>
+                }
+                <option [ngValue]="60">1 minute</option>
+                <option [ngValue]="300">5 minutes</option>
+                <option [ngValue]="600">10 minutes</option>
+                <option [ngValue]="1200">20 minutes</option>
+              </select>
             </div>
             <p>
               Session policy: provider open, or a verified U.S. core session when provider status is

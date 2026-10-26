@@ -1,3 +1,4 @@
+import { TwoDecimalsPipe } from '../../shared/two-decimals.pipe';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectorRef, Component, DestroyRef, ElementRef, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -25,7 +26,7 @@ type GuidanceDraft = { status: GuidanceStatus; reasoning: string; expectedVersio
 
 @Component({
   selector: 'app-advisor-client-detail-page',
-  imports: [DatePipe, FormsModule, RouterLink, RequestStateComponent],
+  imports: [TwoDecimalsPipe, DatePipe, FormsModule, RouterLink, RequestStateComponent],
   template: `
     <header class="workspace-heading">
       <p class="eyebrow">ADVISOR WORKSPACE</p>
@@ -80,9 +81,9 @@ type GuidanceDraft = { status: GuidanceStatus; reasoning: string; expectedVersio
                   @for (position of data.currentPositions; track position.instrumentId) {
                     <tr>
                       <th scope="row">{{ position.ticker }}<small>{{ position.name }} · {{ position.currency }}</small></th>
-                      <td>{{ position.owned }}</td>
-                      <td>{{ position.reserved }}</td>
-                      <td>{{ position.available }}</td>
+                      <td>{{ position.owned | twoDecimals }}</td>
+                      <td>{{ position.reserved | twoDecimals }}</td>
+                      <td>{{ position.available | twoDecimals }}</td>
                       <td>
                         @if (guidance.error()) {
                           <span role="status">Unavailable</span>

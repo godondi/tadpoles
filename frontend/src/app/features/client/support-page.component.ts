@@ -36,7 +36,7 @@ import { SupportWorkbenchComponent } from '../operations/support-workbench.compo
     SupportWorkbenchComponent,
   ],
   template: `
-    <header class="workspace-heading">
+    <header class="workspace-heading support-heading">
       <div>
         <h1>{{ staff ? 'Support cases' : 'Support' }}</h1>
         <p>
@@ -69,7 +69,7 @@ import { SupportWorkbenchComponent } from '../operations/support-workbench.compo
             >. <a [routerLink]="['/app/support', saved.reference]">View case</a>
           </div>
         } @else {
-          <form class="workspace-form" (ngSubmit)="submit()">
+          <form class="workspace-form support-intake-form" (ngSubmit)="submit()">
             <label
               >Category
               <select name="category" [(ngModel)]="category" [disabled]="busy() || uncertain()">
@@ -140,7 +140,7 @@ import { SupportWorkbenchComponent } from '../operations/support-workbench.compo
         <button (click)="load()">Retry</button>
       }
       @if (detail.data(); as item) {
-        <section class="panel">
+        <section class="panel support-case-detail">
           <h2>{{ item.subject }}</h2>
           <p>
             <strong>{{ item.reference }}</strong> · {{ label(item.status) }} ·
@@ -158,25 +158,27 @@ import { SupportWorkbenchComponent } from '../operations/support-workbench.compo
           @if (staff) {
             <app-operations-context [managedReference]="item.reference" />
           }
-          <h3>Public conversation</h3>
-          @for (event of item.events; track event.version) {
-            <article class="panel">
-              <p>
-                {{ label(event.authorRole) }} · {{ event.recordedAt | date: 'medium' : 'UTC' }} UTC
-                · {{ label(event.status) }}
-              </p>
-              <p class="case-prose">{{ event.body }}</p>
-            </article>
-          }
-          <div class="actions">
-            <button (click)="changePage(-1)" [disabled]="page === 0">Previous activity</button
-            ><span>Page {{ page + 1 }}</span
-            ><button (click)="changePage(1)" [disabled]="(page + 1) * 20 >= item.totalEvents">
-              Next activity
-            </button>
-          </div>
+          <section class="case-conversation" aria-labelledby="public-conversation-title">
+            <h3 id="public-conversation-title">Public conversation</h3>
+            @for (event of item.events; track event.version) {
+              <article class="panel">
+                <p>
+                  {{ label(event.authorRole) }} · {{ event.recordedAt | date: 'medium' : 'UTC' }} UTC
+                  · {{ label(event.status) }}
+                </p>
+                <p class="case-prose">{{ event.body }}</p>
+              </article>
+            }
+            <div class="actions">
+              <button (click)="changePage(-1)" [disabled]="page === 0">Previous activity</button
+              ><span>Page {{ page + 1 }}</span
+              ><button (click)="changePage(1)" [disabled]="(page + 1) * 20 >= item.totalEvents">
+                Next activity
+              </button>
+            </div>
+          </section>
           @if (!staff || item.actions?.reply || item.actions?.transitions?.length) {
-            <div class="form-field">
+            <div class="case-action-form">
               <label
                 >Public message
                 <textarea
@@ -188,39 +190,43 @@ import { SupportWorkbenchComponent } from '../operations/support-workbench.compo
                   [readonly]="writeBusy()"
                 ></textarea>
               </label>
+              @if (item.status !== 'RESOLVED' && (!staff || item.actions?.reply)) {
+                <button type="button" (click)="send('replies')" [disabled]="writeBusy()">
+                  Send public reply
+                </button>
+              } @else if (!staff) {
+                <button type="button" (click)="send('reopen')" [disabled]="writeBusy()">
+                  Reopen with public reason
+                </button>
+              }
             </div>
           }
-          @if (item.status !== 'RESOLVED' && (!staff || item.actions?.reply)) {
-            <button type="button" (click)="send('replies')" [disabled]="writeBusy()">
-              Send public reply
-            </button>
-          } @else if (!staff) {
-            <button type="button" (click)="send('reopen')" [disabled]="writeBusy()">
-              Reopen with public reason
-            </button>
-          }
           @if (staff && item.actions?.transitions?.length) {
-            <label
-              >New public status
-              <select name="nextStatus" [(ngModel)]="nextStatus">
-                <option value="">Choose allowed status</option>
-                @for (state of item.actions?.transitions; track state) {
-                  <option [value]="state">{{ label(state) }}</option>
-                }
-              </select></label
-            >
-            <button
-              type="button"
-              (click)="send('transitions')"
-              [disabled]="writeBusy() || !allowedTransition()"
-            >
-              Publish status and explanation
-            </button>
+            <div class="case-action-form">
+              <label
+                >New public status
+                <select name="nextStatus" [(ngModel)]="nextStatus">
+                  <option value="">Choose allowed status</option>
+                  @for (state of item.actions?.transitions; track state) {
+                    <option [value]="state">{{ label(state) }}</option>
+                  }
+                </select></label
+              >
+              <button
+                type="button"
+                (click)="send('transitions')"
+                [disabled]="writeBusy() || !allowedTransition()"
+              >
+                Publish status and explanation
+              </button>
+            </div>
           }
           @if (staff) {
             <h3>Internal notes — staff only</h3>
             <p>These notes are never included in the public conversation.</p>
-            <button type="button" (click)="loadNotes()">Load internal notes</button>
+            <div class="case-action-form">
+              <button type="button" (click)="loadNotes()">Load internal notes</button>
+            </div>
             @if (notes.error()) {
               <p role="alert">{{ notes.error() }}</p>
             }
@@ -241,20 +247,22 @@ import { SupportWorkbenchComponent } from '../operations/support-workbench.compo
               </button>
             }
             @if (item.actions?.note) {
-              <label
-                >Internal note
-                <textarea
-                  name="internalNote"
-                  [(ngModel)]="internalNote"
-                  minlength="10"
-                  maxlength="4000"
-                  rows="4"
-                  [readonly]="writeBusy()"
-                ></textarea>
-              </label>
-              <button type="button" (click)="send('notes')" [disabled]="writeBusy()">
-                Save internal note
-              </button>
+              <div class="case-action-form">
+                <label
+                  >Internal note
+                  <textarea
+                    name="internalNote"
+                    [(ngModel)]="internalNote"
+                    minlength="10"
+                    maxlength="4000"
+                    rows="4"
+                    [readonly]="writeBusy()"
+                  ></textarea>
+                </label>
+                <button type="button" (click)="send('notes')" [disabled]="writeBusy()">
+                  Save internal note
+                </button>
+              </div>
             }
           }
           @if (writePending()) {
@@ -280,10 +288,7 @@ import { SupportWorkbenchComponent } from '../operations/support-workbench.compo
           Filters are optional. Case access does not grant evidence access.
         </p>
       }
-      <div class="actions">
-        <button type="button" (click)="load()" [disabled]="list.loading()">Refresh cases</button>
-      </div>
-      <form class="filters" (ngSubmit)="page = 0; load()">
+      <form class="filters case-filters" (ngSubmit)="page = 0; load()">
         @if (staff && list.data()?.workflowEnabled) {
           <label
             >Attention view<select name="queueView" [(ngModel)]="queueView" (ngModelChange)="status = ''">
@@ -296,7 +301,7 @@ import { SupportWorkbenchComponent } from '../operations/support-workbench.compo
               <option value="RESOLVED">Resolved</option>
             </select></label
           >
-          <label
+          <label class="checkbox-field"
             ><input type="checkbox" name="assignedToMe" [(ngModel)]="assignedToMe" />Assigned to me
             (workflow enabled)</label
           >
@@ -316,7 +321,7 @@ import { SupportWorkbenchComponent } from '../operations/support-workbench.compo
               }
             </select></label
           >
-          <label
+          <label class="checkbox-field"
             ><input type="checkbox" name="overdueOnly" [(ngModel)]="overdueOnly" />Past recorded due
             time (not an SLA)</label
           >
@@ -332,6 +337,7 @@ import { SupportWorkbenchComponent } from '../operations/support-workbench.compo
             }
           </select></label
         ><button>Search</button>
+        <button class="secondary-button" type="button" (click)="load()" [disabled]="list.loading()">Refresh cases</button>
       </form>
       @if (list.loading()) {
         <p role="status">Loading cases…</p>

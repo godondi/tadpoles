@@ -148,4 +148,14 @@ describe('private Operations workbench', () => {
     http.expectNone((r) => r.url.endsWith('/diagnostics'));
     http.verify();
   });
+  it('keeps supporting workbench tools collapsed until the operator opens a section', () => {
+    const { fixture: f, http } = setup();
+    flush(http);
+    f.detectChanges();
+    const sections = [...f.nativeElement.querySelectorAll('.workbench-section')] as HTMLDetailsElement[];
+    expect(sections).toHaveLength(4);
+    expect(sections.every((section) => !section.open)).toBe(true);
+    expect(f.nativeElement.querySelector('.workbench-grid')).not.toBeNull();
+    http.verify();
+  });
 });

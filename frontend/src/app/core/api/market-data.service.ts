@@ -1,6 +1,15 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { buildApiUrl } from './api-url';
+import { retry, throwError, timer } from 'rxjs';
+
+// Retry only idempotent market-data reads, once, when transport/provider failure is transient.
+const transientMarketRetry = <T>() => retry<T>({
+  count: 1,
+  delay: (error) => [0, 500, 502, 503, 504].includes(error.status)
+    ? timer(500)
+    : throwError(() => error),
+});
 
 export interface Candle {
   date: string;
@@ -58,11 +67,11 @@ export class MarketDataService {
         from: from.toISOString().slice(0, 10),
         to: to.toISOString().slice(0, 10),
       },
-    });
+    }).pipe(transientMarketRetry());
   }
 
   getQuote(symbol: string) {
-    return this.http.get<QuoteResponse>(this.url('quotes', symbol));
+    return this.http.get<QuoteResponse>(this.url('quotes', symbol)).pipe(transientMarketRetry());
   }
 
   private url(kind: string, symbol: string) {

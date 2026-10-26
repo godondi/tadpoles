@@ -58,11 +58,6 @@ import { routeRole, WORKSPACES } from '../core/auth/workspace-policy';
               </div>
             }
           </nav>
-          <p class="sidebar-note">
-            Clear records.
-            <br />
-            Informed decisions.
-          </p>
         </aside>
         <main id="workspace-content" class="workspace-content" tabindex="-1">
           <router-outlet />

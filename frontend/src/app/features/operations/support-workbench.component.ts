@@ -139,7 +139,8 @@ import { utcFilter } from '../../shared/workspace/utc-filter';
             </form>
           </div>
         }
-        <h3>Scoped evidence and diagnostics</h3>
+        <details class="workbench-section">
+          <summary>Scoped evidence and diagnostics</summary>
         @if (instrumentId(); as instrument) {
           <a class="button-link" [routerLink]="['/operations/instruments', instrument]"
             >Review instrument policy separately (independent authorization required)</a
@@ -192,7 +193,9 @@ import { utcFilter } from '../../shared/workspace/utc-filter';
         @if (diagnostic(); as facts) {
           <app-evidence-facts [value]="facts" />
         }
-        <h3>Private Operations evidence library</h3>
+        </details>
+        <details class="workbench-section">
+          <summary>Private Operations evidence library</summary>
         <p>
           Associations retain original requester, purpose, digest and expiry. Metadata alone never
           authorizes a download. Use the protected Operations export workflow with its original
@@ -230,7 +233,9 @@ import { utcFilter } from '../../shared/workspace/utc-filter';
             Next export associations
           </button>
         </div>
-        <h3>Category checklist</h3>
+        </details>
+        <details class="workbench-section">
+          <summary>Category checklist</summary>
         @for (task of w.tasks; track task.code) {
           <article class="panel">
             <h4>{{ task.label }}</h4>
@@ -279,7 +284,9 @@ import { utcFilter } from '../../shared/workspace/utc-filter';
             }
           </article>
         }
-        <h3>Compliance handoff</h3>
+        </details>
+        <details class="workbench-section">
+          <summary>Compliance handoff</summary>
         <p>Mandatory referrals block resolution until a decision with disposition is retained.</p>
         @for (review of w.referrals; track review.reference) {
           <article>
@@ -368,6 +375,7 @@ import { utcFilter } from '../../shared/workspace/utc-filter';
             </button>
           </form>
         }
+        </details>
         <details>
           <summary>Private attributable workflow history</summary>
           @for (event of w.history; track event.version) {

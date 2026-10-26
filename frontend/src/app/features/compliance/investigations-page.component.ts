@@ -1,3 +1,4 @@
+import { TwoDecimalsPipe } from '../../shared/two-decimals.pipe';
 import { Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -20,7 +21,7 @@ import {
 
 @Component({
   selector: 'app-compliance-investigations',
-  imports: [DatePipe, FormsModule, RouterLink, RequestStateComponent, ComplianceContextComponent],
+  imports: [TwoDecimalsPipe, DatePipe, FormsModule, RouterLink, RequestStateComponent, ComplianceContextComponent],
   template: `
     <header class="workspace-heading">
       <p class="eyebrow">RISK &amp; COMPLIANCE</p>
@@ -132,7 +133,7 @@ import {
                       {{ item.orderId }}<small>{{ item.clientReference }}</small>
                     </td>
                     <td>
-                      {{ item.side }} {{ item.quantity }} {{ item.unit }} · {{ item.instrument }}
+                      {{ item.side }} {{ item.quantity | twoDecimals }} {{ item.unit }} · {{ item.instrument }}
                       <small>{{ item.executionMode }} · {{ item.recordKind }}</small>
                     </td>
                     <td>

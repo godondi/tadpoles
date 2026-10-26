@@ -23,7 +23,7 @@ import { AuthService } from '../../core/auth/auth.service';
       <h2 id="client-search-heading">Find an assigned client</h2>
       <form (ngSubmit)="searchClients()">
         <label for="advisor-client-search">Search by name or safe client reference</label>
-        <div class="actions">
+        <div class="advisor-search-row">
           <input
             id="advisor-client-search"
             name="search"

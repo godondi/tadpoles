@@ -1,3 +1,4 @@
+import { TwoDecimalsPipe } from '../two-decimals.pipe';
 import { Component, input } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -5,7 +6,7 @@ import { Order } from '../../core/api/workspace-api.service';
 
 @Component({
   selector: 'app-orders-table',
-  imports: [RouterLink, DatePipe],
+  imports: [TwoDecimalsPipe, RouterLink, DatePipe],
   template: ` @if (!orders().length) {
       <section class="empty">
         <h3>No orders to show</h3>
@@ -41,7 +42,7 @@ import { Order } from '../../core/api/workspace-api.service';
                   {{ order.ticker }} <small>{{ order.currency }}</small>
                 </td>
                 <td>{{ order.side }}</td>
-                <td class="mono-value">{{ order.exactQuantity ?? order.quantity }}</td>
+                <td class="mono-value">{{ (order.exactQuantity ?? order.quantity) | twoDecimals }}</td>
                 <td>
                   <span class="status-label">{{ order.status }}</span
                   ><small>{{

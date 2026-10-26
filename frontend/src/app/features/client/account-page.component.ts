@@ -1,3 +1,4 @@
+import { TwoDecimalsPipe } from '../../shared/two-decimals.pipe';
 import { OrderUpdateHealthComponent } from '../../shared/workspace/order-update-health.component';
 import { Component, inject } from '@angular/core';
 import { DisplayCurrencyComponent } from './display-currency.component';
@@ -21,7 +22,7 @@ import { ClientRecommendationsComponent } from './advisory/client-recommendation
 
 @Component({
   selector: 'app-account-page',
-  imports: [OrderUpdateHealthComponent,
+  imports: [TwoDecimalsPipe, OrderUpdateHealthComponent,
     DisplayCurrencyComponent,
     DatePipe,
     RouterLink,
@@ -60,20 +61,20 @@ import { ClientRecommendationsComponent } from './advisory/client-recommendation
           <h2 id="investing-heading" class="eyebrow">Investing</h2>
           @if (valuation.data(); as estimate) {
             <p class="mono-value metric-value">
-              {{ valuation.error() ? 'Unavailable' : (estimate.totalValue ?? 'Unavailable') }}
+              {{ valuation.error() ? 'Unavailable' : ((estimate.totalValue ?? 'Unavailable') | twoDecimals) }}
               @if (!valuation.error() && estimate.totalValue !== null) {
                 <small>USD</small>
               }
             </p>
             @if (!valuation.error()) {
               <p>
-                Holdings estimate: {{ estimate.holdingsValue ?? 'Unavailable' }}
+                Holdings estimate: {{ (estimate.holdingsValue ?? 'Unavailable') | twoDecimals }}
                 @if (estimate.holdingsValue !== null) {
                   USD
                 }
               </p>
               <p>
-                Cash balance: {{ estimate.cashBalance ?? 'Unavailable' }}
+                Cash balance: {{ (estimate.cashBalance ?? 'Unavailable') | twoDecimals }}
                 @if (estimate.cashBalance !== null) {
                   USD
                 }
@@ -117,12 +118,12 @@ import { ClientRecommendationsComponent } from './advisory/client-recommendation
           <h2 id="settled-balance-heading" class="eyebrow">Settled balance</h2>
           @for (balance of data.balances; track balance.currency) {
             <p class="mono-value metric-value">
-              {{ balance.available }}
+              {{ balance.available | twoDecimals }}
               <small>{{ balance.currency }}</small>
             </p>
             <p>Available to invest or withdraw</p>
-            <p>Reserved for pending buys: {{ balance.reserved }} {{ balance.currency }}</p>
-            <p>Total settled cash: {{ balance.posted }} {{ balance.currency }}</p>
+            <p>Reserved for pending buys: {{ balance.reserved | twoDecimals }} {{ balance.currency }}</p>
+            <p>Total settled cash: {{ balance.posted | twoDecimals }} {{ balance.currency }}</p>
             <p class="as-of">Committed {{ balance.updatedAt | date: 'medium' : 'UTC' }} UTC</p>
           } @empty {
             <p class="mono-value metric-value">Unavailable</p>
@@ -188,9 +189,9 @@ import { ClientRecommendationsComponent } from './advisory/client-recommendation
                       <a [routerLink]="['/app/instruments', p.instrumentId]">{{ p.ticker }}</a>
                       <small>{{ p.name }} · {{ p.currency }}</small>
                     </td>
-                    <td>{{ p.owned }}</td>
-                    <td>{{ p.reserved }}</td>
-                    <td>{{ p.available }}</td>
+                    <td>{{ p.owned | twoDecimals }}</td>
+                    <td>{{ p.reserved | twoDecimals }}</td>
+                    <td>{{ p.available | twoDecimals }}</td>
                     <td>
                       @if (advisory.error()) {
                         <span role="status">Unavailable</span>

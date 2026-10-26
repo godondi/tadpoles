@@ -1,4 +1,5 @@
 import { Component, ElementRef, HostListener, computed, inject, signal } from '@angular/core';
+import { ThemeService } from '../../core/theme.service';
 import { NavigationEnd, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/auth/auth.service';
@@ -18,17 +19,9 @@ export class TopNavComponent {
   private readonly router = inject(Router);
   private readonly userService = inject(UserService);
   private readonly elementRef = inject(ElementRef<HTMLElement>);
+  readonly theme = inject(ThemeService);
 
   readonly currentUrl = signal(this.router.url);
-  constructor() {
-    this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
-      if (event instanceof NavigationEnd) {
-        this.currentUrl.set(event.urlAfterRedirects);
-        this.searchQuery.set('');
-        this.closeProfileMenu();
-      }
-    });
-  }
   readonly clientWorkspace = computed(
     () =>
       this.authService.roles().includes('CLIENT') &&
@@ -36,6 +29,7 @@ export class TopNavComponent {
   );
   readonly searchQuery = signal('');
   readonly isMenuOpen = signal(false);
+  readonly darkMode = this.theme.dark;
   readonly userProfile = this.userService.getProfile();
   readonly userInitials = computed(() => {
     const name = (
@@ -50,6 +44,20 @@ export class TopNavComponent {
       .map((part) => part[0]?.toUpperCase() ?? '')
       .join('');
   });
+
+  constructor() {
+    this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
+      if (event instanceof NavigationEnd) {
+        this.currentUrl.set(event.urlAfterRedirects);
+        this.searchQuery.set('');
+        this.closeProfileMenu();
+      }
+    });
+  }
+
+  toggleTheme(): void {
+    this.theme.toggle();
+  }
 
   updateSearchQuery(value: string): void {
     this.searchQuery.set(value);

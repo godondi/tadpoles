@@ -85,6 +85,19 @@ describe('TopNavComponent', () => {
     expect(host.textContent).not.toContain('Trades');
   });
 
+  it('offers a text-only theme action and updates its label after toggling', () => {
+    const fixture = TestBed.createComponent(TopNavComponent);
+    fixture.componentInstance.toggleProfileMenu();
+    fixture.detectChanges();
+    const menu = fixture.nativeElement.querySelector('#account-menu') as HTMLElement;
+    const action = Array.from(menu.querySelectorAll('button')).find(button => button.textContent?.includes('Enable Dark Mode'))!;
+    expect(action.getAttribute('role')).toBe('menuitem');
+    action.click();
+    fixture.detectChanges();
+    expect(action.textContent).toContain('Disable Dark Mode');
+    expect(menu.querySelector('[role="switch"], .theme-switch')).toBeNull();
+  });
+
   it.each([' aapl ', 'brk.b', 'BRK-B'])('submits ticker %s through the search form', (query) => {
     const fixture = TestBed.createComponent(TopNavComponent);
     fixture.detectChanges();

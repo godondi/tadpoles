@@ -1,3 +1,4 @@
+import { TwoDecimalsPipe } from '../../shared/two-decimals.pipe';
 import { RequestStateComponent } from '../../shared/workspace/request-state.component';
 import { Subject, merge, takeUntil } from 'rxjs';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
@@ -13,7 +14,7 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
 
 @Component({
   selector: 'app-operations-investigation',
-  imports: [
+  imports: [TwoDecimalsPipe,
     RequestStateComponent,
     DatePipe,
     JsonPipe,
@@ -42,7 +43,7 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
       <section class="panel">
         <h2>Order {{ detail.order.orderId }} · {{ detail.order.status }}</h2>
         <p>
-          {{ detail.order.side }} {{ detail.order.quantity }} {{ detail.order.ticker }} ·
+          {{ detail.order.side }} {{ detail.order.quantity | twoDecimals }} {{ detail.order.ticker }} ·
           {{ detail.order.currency }} · {{ detail.order.executionMode }}
         </p>
         <p>

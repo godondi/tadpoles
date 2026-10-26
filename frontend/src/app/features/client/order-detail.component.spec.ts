@@ -83,7 +83,7 @@ describe('committed order evidence', () => {
         ],
       });
     f.detectChanges();
-    expect(f.nativeElement.textContent).toContain('50.125');
+    expect(f.nativeElement.textContent).toContain('50.13');
     expect(f.nativeElement.textContent).toContain('Retained test source');
     const next = [...f.nativeElement.querySelectorAll('button')].find((b: any) =>
       b.textContent.includes('Next events'),

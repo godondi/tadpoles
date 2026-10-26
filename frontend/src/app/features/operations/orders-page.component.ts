@@ -1,3 +1,4 @@
+import { TwoDecimalsPipe } from '../../shared/two-decimals.pipe';
 import { RequestStateComponent } from '../../shared/workspace/request-state.component';
 import { Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
@@ -12,7 +13,7 @@ import { utcFilters } from '../../shared/workspace/utc-filter';
 
 @Component({
   selector: 'app-operations-orders',
-  imports: [RequestStateComponent, DatePipe, FormsModule, RouterLink, OperationsContextComponent],
+  imports: [TwoDecimalsPipe, RequestStateComponent, DatePipe, FormsModule, RouterLink, OperationsContextComponent],
   template: `
     <header class="workspace-heading">
       <p class="eyebrow">TRADING OPERATIONS</p>
@@ -153,7 +154,7 @@ import { utcFilters } from '../../shared/workspace/utc-filter';
                       {{ order.orderId }}<small>{{ order.accountReference }}</small>
                     </td>
                     <td>
-                      {{ order.side }} {{ order.quantity }} {{ order.ticker
+                      {{ order.side }} {{ order.quantity | twoDecimals }} {{ order.ticker
                       }}<small>{{ order.currency }} · {{ order.executionMode }}</small>
                     </td>
                     <td>

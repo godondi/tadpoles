@@ -131,7 +131,7 @@ import { CompleteClientOnboardingRequest, UserService } from './user.service';
     :host {
       display: block;
       min-height: 100vh;
-      background: #f6f9f7;
+      background: var(--page-bg);
       padding: 2rem 1rem;
     }
 
@@ -141,7 +141,7 @@ import { CompleteClientOnboardingRequest, UserService } from './user.service';
     }
 
     .panel {
-      background: white;
+      background: var(--surface);
       border-radius: 0;
       padding: 2rem;
       box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
@@ -157,12 +157,12 @@ import { CompleteClientOnboardingRequest, UserService } from './user.service';
 
     h1 {
       margin: 0 0 0.5rem;
-      color: #006044;
+      color: var(--dark-green);
     }
 
     p {
       margin: 0;
-      color: #51606f;
+      color: var(--text-secondary);
     }
 
     .form-grid {
@@ -175,23 +175,23 @@ import { CompleteClientOnboardingRequest, UserService } from './user.service';
       display: grid;
       gap: 0.45rem;
       font-weight: 600;
-      color: #1f2937;
+      color: var(--text-primary);
     }
 
     input,
     select {
-      border: 1px solid #d5dde5;
+      border: 1px solid var(--border-gray);
       border-radius: 0;
       padding: 0.8rem 0.95rem;
       font: inherit;
-      background: white;
-      color: #1f2937;
+      background: var(--surface);
+      color: var(--text-primary);
       min-width: 0;
       width: 100%;
     }
 
     small {
-      color: #51606f;
+      color: var(--text-secondary);
       font-weight: 400;
       line-height: 1.4;
     }
@@ -223,7 +223,7 @@ import { CompleteClientOnboardingRequest, UserService } from './user.service';
       border: none;
       border-radius: 0;
       padding: 0.9rem 1.2rem;
-      background: #006044;
+      background: var(--action-bg);
       color: white;
       font: inherit;
       font-weight: 700;
@@ -237,7 +237,7 @@ import { CompleteClientOnboardingRequest, UserService } from './user.service';
 
     .link-button {
       background: transparent;
-      color: #006044;
+      color: var(--dark-green);
       padding: 0;
     }
 
@@ -249,13 +249,13 @@ import { CompleteClientOnboardingRequest, UserService } from './user.service';
     }
 
     .status {
-      background: #eef7ef;
-      color: #006044;
+      background: var(--success-bg);
+      color: var(--dark-green);
     }
 
     .message.error {
-      background: #fdecec;
-      color: #b42318;
+      background: var(--error-bg);
+      color: var(--error-text);
     }
 
     @media (max-width: 768px) {
@@ -293,13 +293,13 @@ export class OnboardingComponent implements OnInit {
   readonly riskToleranceOptions = ['Conservative', 'Moderate', 'Aggressive'];
   // Keep the numeric API contract: newly selected ranges submit their lower bound.
   readonly netWorthRanges = [
-    { minimum: 0, label: '$0 - $24,999' },
-    { minimum: 25000, label: '$25,000 - $49,999' },
-    { minimum: 50000, label: '$50,000 - $99,999' },
-    { minimum: 100000, label: '$100,000 - $249,999' },
-    { minimum: 250000, label: '$250,000 - $499,999' },
-    { minimum: 500000, label: '$500,000 - $999,999' },
-    { minimum: 1000000, label: '$1,000,000+' },
+    { minimum: 0, label: '$0.00 - $24,999.00' },
+    { minimum: 25000, label: '$25,000.00 - $49,999.00' },
+    { minimum: 50000, label: '$50,000.00 - $99,999.00' },
+    { minimum: 100000, label: '$100,000.00 - $249,999.00' },
+    { minimum: 250000, label: '$250,000.00 - $499,999.00' },
+    { minimum: 500000, label: '$500,000.00 - $999,999.00' },
+    { minimum: 1000000, label: '$1,000,000.00+' },
   ];
   readonly selectedNetWorthRange = computed(() => {
     const amount = this.form().netWorth;

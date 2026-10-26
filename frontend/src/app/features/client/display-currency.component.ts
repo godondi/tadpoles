@@ -1,3 +1,4 @@
+import { TwoDecimalsPipe } from '../../shared/two-decimals.pipe';
 import {
   Component,
   DestroyRef,
@@ -22,6 +23,7 @@ interface DisplayEstimate {
 }
 @Component({
   selector: 'app-display-currency',
+  imports: [TwoDecimalsPipe],
   template: `<section class="panel" aria-labelledby="display-currency-heading">
     <h2 id="display-currency-heading">Available cash in another currency</h2>
     <div class="filters">
@@ -40,7 +42,7 @@ interface DisplayEstimate {
       </label>
     </div>
     <p>
-      Available cash: <strong>{{ availableUsd }} USD</strong>
+      Available cash: <strong>{{ availableUsd | twoDecimals }} USD</strong>
     </p>
     <div aria-live="polite" [attr.aria-busy]="loading()">
       @if (loading()) {
@@ -48,11 +50,11 @@ interface DisplayEstimate {
       }
       @if (estimate(); as value) {
         <p>
-          Estimated equivalent: <strong>{{ value.estimatedValue }} {{ value.currency }}</strong>
+          Estimated equivalent: <strong>{{ value.estimatedValue | twoDecimals }} {{ value.currency }}</strong>
         </p>
-        <p>Based on {{ value.usd }} USD at the time of this check.</p>
+        <p>Based on {{ value.usd | twoDecimals }} USD at the time of this check.</p>
         <p class="as-of">
-          {{ value.source }} · rate date {{ value.rateDate }} · 1 USD = {{ value.targetPerUsd }}
+          {{ value.source }} · rate date {{ value.rateDate }} · 1 USD = {{ value.targetPerUsd | twoDecimals }}
           {{ value.currency }}
         </p>
       }
