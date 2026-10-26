@@ -109,19 +109,41 @@ public interface WorkspaceReadMapper {
                 AND ticker NOT IN ('CASH','USD','GBP','INR','EUR')
                 AND (LOWER(ticker) LIKE #{search} OR LOWER(instrument_name) LIKE #{search})
             <if test="assetClass != null">AND asset_class=#{assetClass}</if>
+            <if test="market == 'STOCK_ETF'">AND security_type IN ('COMMON_STOCK','ETF')</if>
+            <if test="market == 'CRYPTO'">AND security_type='CRYPTO'</if>
+            <if test="market == 'FOREX'">AND security_type='FX_PAIR'</if>
+            <if test="exchange != null">AND exchange=#{exchange}</if>
             """;
 
     @Select(
             "<script>SELECT instrument_id, instrument_name, ticker, currency, asset_class,"
                     + " security_type, exchange, is_active FROM instruments "
                     + CATALOG_FILTER
-                    + " ORDER BY ticker, instrument_id LIMIT #{limit} OFFSET #{offset}</script>")
+                    + " ORDER BY "
+                    + "<if test=\"market == null and search != '%%'\">"
+                    + " ROW_NUMBER() OVER (PARTITION BY CASE WHEN security_type IN ('COMMON_STOCK','ETF')"
+                    + " THEN 'STOCK_ETF' ELSE security_type END ORDER BY ticker, instrument_id),"
+                    + "</if> ticker, instrument_id LIMIT #{limit} OFFSET #{offset}</script>")
     List<Instrument> instruments(
             @Param("search") String search,
             @Param("assetClass") String assetClass,
+            @Param("market") String market,
+            @Param("exchange") String exchange,
             @Param("limit") int limit,
             @Param("offset") int offset);
 
+    default List<Instrument> instruments(String search, String assetClass, int limit, int offset) {
+        return instruments(search, assetClass, null, null, limit, offset);
+    }
+
     @Select("<script>SELECT COUNT(*) FROM instruments " + CATALOG_FILTER + "</script>")
-    long instrumentCount(@Param("search") String search, @Param("assetClass") String assetClass);
+    long instrumentCount(
+            @Param("search") String search,
+            @Param("assetClass") String assetClass,
+            @Param("market") String market,
+            @Param("exchange") String exchange);
+
+    default long instrumentCount(String search, String assetClass) {
+        return instrumentCount(search, assetClass, null, null);
+    }
 }

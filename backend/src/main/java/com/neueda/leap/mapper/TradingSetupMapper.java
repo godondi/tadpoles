@@ -36,6 +36,17 @@ public interface TradingSetupMapper {
     @Select("SELECT instrument_id FROM instruments WHERE ticker=#{ticker}")
     Integer instrument(String ticker);
 
+    @Select(
+            """
+            SELECT instrument_id AS "instrumentId", ticker, instrument_name AS name,
+                   exchange AS venue, asset_class AS "assetClass", security_type AS "securityType",
+                   currency, is_active AS active
+            FROM instruments
+            WHERE is_active AND currency = 'USD'
+            ORDER BY ticker
+            """)
+    List<Map<String, Object>> usdCatalog();
+
     @Select("SELECT policy_version FROM instrument_trading_policies WHERE instrument_id=#{id}")
     String version(int id);
 

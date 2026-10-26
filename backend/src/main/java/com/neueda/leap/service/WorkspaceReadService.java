@@ -31,5 +31,10 @@ public interface WorkspaceReadService {
     OrderDetail order(int clientId, int orderId);
 
     Page<InstrumentResponseDto> instruments(
-            int page, int pageSize, String search, String assetClass);
+            int page, int pageSize, String search, String assetClass, String market, String exchange);
+
+    default Page<InstrumentResponseDto> instruments(
+            int page, int pageSize, String search, String assetClass) {
+        return instruments(page, pageSize, search, assetClass, null, null);
+    }
 }

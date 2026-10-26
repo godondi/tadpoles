@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -101,6 +102,9 @@ public class FauxnanceQuoteServiceImpl implements FauxnanceQuoteService {
             // evidence of a fresh quote, and an absent spread source is not "modelled".
 
             return body;
+        } catch (ResourceAccessException exception) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "Market data provider could not be reached. Please retry shortly.", exception);
         } catch (HttpStatusCodeException exception) {
             throw translateUpstreamException(exception);
         }
@@ -116,6 +120,10 @@ public class FauxnanceQuoteServiceImpl implements FauxnanceQuoteService {
     private RuntimeException translateUpstreamException(HttpStatusCodeException exception) {
         HttpStatus status = HttpStatus.resolve(exception.getStatusCode().value());
         HttpStatus resolvedStatus = status == null ? HttpStatus.SERVICE_UNAVAILABLE : status;
+        if (resolvedStatus.is5xxServerError()) {
+            return new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "Market data provider is temporarily unavailable. Please retry shortly.", exception);
+        }
         String message =
                 extractErrorMessage(
                         exception.getResponseBodyAsString(), resolvedStatus.getReasonPhrase());

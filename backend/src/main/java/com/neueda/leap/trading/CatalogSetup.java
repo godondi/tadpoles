@@ -42,24 +42,14 @@ public class CatalogSetup {
     }
 
     public void initialize() {
-        for (var item :
-                List.of(
-                        new String[] {"AAPL", "Apple Inc.", "NASDAQ"},
-                        new String[] {"MSFT", "Microsoft Corporation", "NASDAQ"},
-                        new String[] {"AMZN", "Amazon.com Inc.", "NASDAQ"},
-                        new String[] {"GOOGL", "Alphabet Inc.", "NASDAQ"},
-                        new String[] {"TSLA", "Tesla Inc.", "NASDAQ"},
-                        new String[] {"VOO", "Vanguard S&P 500 ETF", "NYSE Arca"},
-                        new String[] {"AGG", "iShares Core U.S. Aggregate Bond ETF", "NYSE Arca"},
-                        new String[] {"JNJ", "Johnson & Johnson", "NYSE"},
-                        new String[] {"PG", "Procter & Gamble", "NYSE"},
-                        new String[] {"NVDA", "NVIDIA Corporation", "NASDAQ"},
-                        new String[] {"JPM", "JPMorgan Chase & Co.", "NYSE"},
-                        new String[] {"UNH", "UnitedHealth Group", "NYSE"},
-                        new String[] {"XOM", "Exxon Mobil", "NYSE"},
-                        new String[] {"BRK.B", "Berkshire Hathaway Class B", "NYSE"})) {
-            Integer existing = setup.instrument(item[0]);
-            if (existing != null && setup.version(existing) != null) continue;
+        for (var catalogItem : setup.usdCatalog()) {
+            String[] item = {
+                Objects.toString(catalogItem.get("ticker"), ""),
+                Objects.toString(catalogItem.get("name"), ""),
+                Objects.toString(catalogItem.get("venue"), "")
+            };
+            Integer existing = ((Number) catalogItem.get("instrumentId")).intValue();
+            if (setup.version(existing) != null) continue;
             var p =
                     new Policy(
                             existing == null ? 1 : existing,
@@ -122,15 +112,14 @@ public class CatalogSetup {
                     status -> {
                         setup.lockCatalog();
                         Integer id = setup.instrument(item[0]);
+                        if (id == null) id = existing;
                         if (id != null && setup.version(id) != null) return;
                         var a =
                                 map(
                                         "assetClass",
-                                        item[0].equals("AGG")
-                                                ? "Fixed Income"
-                                                : item[0].equals("VOO") ? "ETF" : "EQUITY",
+                                        Objects.toString(catalogItem.get("assetClass"), "EQUITY"),
                                         "securityType",
-                                        Set.of("VOO", "AGG").contains(item[0]) ? "ETF" : "STOCK",
+                                        Objects.toString(catalogItem.get("securityType"), "STOCK"),
                                         "name",
                                         item[1],
                                         "ticker",
@@ -161,7 +150,6 @@ public class CatalogSetup {
                                         "PROVIDER_OPEN",
                                         "validated",
                                         clock.instant());
-                        if (id == null) id = db.create(a);
                         a.put("id", id);
                         db.policy(a);
                         try {

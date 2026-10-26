@@ -123,7 +123,7 @@ public class WorkspaceReadServiceImpl implements WorkspaceReadService {
 
     @Override
     public Page<InstrumentResponseDto> instruments(
-            int page, int pageSize, String search, String assetClass) {
+            int page, int pageSize, String search, String assetClass, String market, String exchange) {
         validatePage(page, pageSize);
         if (search.length() > 100)
             throw new IllegalArgumentException("Search must be 100 characters or fewer");
@@ -135,12 +135,12 @@ public class WorkspaceReadServiceImpl implements WorkspaceReadService {
                                 .replace("_", "\\_")
                         + "%";
         return new Page<>(
-                mapper.instruments(pattern, assetClass, pageSize, page * pageSize).stream()
+                mapper.instruments(pattern, assetClass, market, exchange, pageSize, page * pageSize).stream()
                         .map(InstrumentResponseDto::fromEntity)
                         .toList(),
                 page,
                 pageSize,
-                mapper.instrumentCount(pattern, assetClass));
+                mapper.instrumentCount(pattern, assetClass, market, exchange));
     }
 
     private void validatePage(int page, int size) {

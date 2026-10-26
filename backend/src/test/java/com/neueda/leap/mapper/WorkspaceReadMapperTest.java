@@ -46,4 +46,32 @@ class WorkspaceReadMapperTest {
         assertEquals("GBP", fx.getCurrency());
         assertEquals("OTC", fx.getExchange());
     }
+
+    @Test void marketAndExchangeFiltersApplyToBothRowsAndCounts() {
+        jdbc.update("INSERT INTO instruments(instrument_name,ticker,currency,asset_class,security_type,exchange) VALUES (?,?,?,?,?,?)",
+                "Bitcoin", "X:BTC-USD", "USD", "Cryptocurrency", "CRYPTO", "OTC");
+        jdbc.update("INSERT INTO instruments(instrument_name,ticker,currency,asset_class,security_type,exchange) VALUES (?,?,?,?,?,?)",
+                "Euro / US Dollar", "FX:EURUSD", "USD", "Foreign Exchange", "FX_PAIR", "OTC");
+        assertEquals(1, mapper.instrumentCount("%%", null, "CRYPTO", "OTC"));
+        assertEquals("X:BTC-USD", mapper.instruments("%%", null, "CRYPTO", "OTC", 20, 0).get(0).getTicker());
+        assertEquals(1, mapper.instrumentCount("%%", null, "FOREX", "OTC"));
+        assertEquals("FX:EURUSD", mapper.instruments("%%", null, "FOREX", "OTC", 20, 0).get(0).getTicker());
+        assertEquals(0, mapper.instrumentCount("%%", null, "CRYPTO", "NYSE"));
+        assertEquals(0, mapper.instruments("%%", null, "FOREX", "NYSE", 20, 0).size());
+        assertTrue(mapper.instruments("%%", null, "STOCK_ETF", null, 20, 0).stream()
+                .noneMatch(row -> row.getTicker().startsWith("X:") || row.getTicker().startsWith("FX:")));
+    }
+
+    @Test void broadSearchIncludesMatchingMarketsOnTheFirstPage() {
+        for (int i = 0; i < 30; i++) {
+            jdbc.update("INSERT INTO instruments(instrument_id,instrument_name,ticker,currency,asset_class,security_type,exchange) VALUES (?,?,?,?,?,?,?)",
+                    1000 + i, "Bitcoin related equity " + i, String.format("B%02d", i), "USD", "Equity", "COMMON_STOCK", "NYSE");
+        }
+        jdbc.update("INSERT INTO instruments(instrument_id,instrument_name,ticker,currency,asset_class,security_type,exchange) VALUES (?,?,?,?,?,?,?)",
+                2000, "Bitcoin", "X:BTC-USD", "USD", "Cryptocurrency", "CRYPTO", "OTC");
+        var page = mapper.instruments("%b%", null, null, null, 20, 0);
+        assertEquals(20, page.size());
+        assertTrue(page.stream().anyMatch(row -> row.getTicker().equals("X:BTC-USD")));
+        assertTrue(page.stream().anyMatch(row -> row.getTicker().startsWith("B")));
+    }
 }

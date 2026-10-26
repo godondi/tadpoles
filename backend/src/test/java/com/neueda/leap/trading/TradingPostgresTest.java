@@ -139,6 +139,8 @@ class TradingPostgresTest {
         script("database/migrations/015_compliance_scope_compatibility.sql");
         script("database/migrations/016_support_workflow.sql");
         script("database/migrations/017_compliance_referrals.sql");
+        script("database/migrations/018_advisor_workspace.sql");
+        script("database/migrations/019_instrument_exchange.sql");
         script("backend/src/test/resources/provider_accounts.sql");
         client =
                 Integer.parseInt(
@@ -1484,6 +1486,8 @@ class TradingPostgresTest {
         script("database/migrations/015_compliance_scope_compatibility.sql");
         script("database/migrations/016_support_workflow.sql");
         script("database/migrations/017_compliance_referrals.sql");
+        script("database/migrations/018_advisor_workspace.sql");
+        script("database/migrations/019_instrument_exchange.sql");
         demoSetup.initialize();
         equalDecimal(
                 "10000",
@@ -1649,6 +1653,8 @@ class TradingPostgresTest {
 
     @Test
     void startupMapsProviderIdentityWithoutOverwritingAnOperationsHalt() throws Exception {
+        sql("INSERT INTO instruments(instrument_name,ticker,currency,asset_class,security_type,exchange)"
+                + " VALUES('Microsoft Corporation','MSFT','USD','EQUITY','STOCK','NASDAQ')");
         var q = new FauxnanceTradingQuotesTest().response();
         q.getData().setSymbol("MSFT");
         q.getMeta().setSymbol("MSFT");
@@ -1672,6 +1678,9 @@ class TradingPostgresTest {
 
     @Test
     void startupRetainsDistinctBondAndEquityFundClassification() throws Exception {
+        sql("INSERT INTO instruments(instrument_name,ticker,currency,asset_class,security_type,exchange)"
+                + " VALUES ('Vanguard S&P 500 ETF','VOO','USD','ETF','ETF','NYSE Arca'),"
+                + " ('iShares Core U.S. Aggregate Bond ETF','AGG','USD','Fixed Income','ETF','NYSE Arca')");
         for (String symbol : java.util.List.of("VOO", "AGG")) {
             var q = new FauxnanceTradingQuotesTest().response();
             q.getData().setSymbol(symbol);

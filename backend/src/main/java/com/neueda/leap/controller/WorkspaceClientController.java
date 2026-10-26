@@ -79,9 +79,11 @@ public class WorkspaceClientController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int pageSize,
             @RequestParam(defaultValue = "") String search,
-            @RequestParam(required = false) String assetClass) {
+            @RequestParam(required = false) String assetClass,
+            @RequestParam(required = false) String market,
+            @RequestParam(required = false) String exchange) {
         return trading.catalog(
-                clientId(jwt), reads.instruments(page, pageSize, search, assetClass));
+                clientId(jwt), reads.instruments(page, pageSize, search, assetClass, market, exchange));
     }
 
     @GetMapping("/workspace/client/trading-availability")
