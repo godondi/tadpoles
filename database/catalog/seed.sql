@@ -66,6 +66,20 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'Catalog manifests contain duplicate ticker symbols';
     END IF;
+
+    IF EXISTS (
+        SELECT required.ticker
+        FROM (VALUES ('IWM'), ('QQQ')) AS required(ticker)
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM catalog_symbols
+            WHERE market = 'US'
+                AND catalog_symbols.ticker = required.ticker
+                AND instrument_type = 'etf'
+        )
+    ) THEN
+        RAISE EXCEPTION 'The local US catalog must retain IWM and QQQ as ETFs';
+    END IF;
 END;
 $$;
 
