@@ -71,7 +71,7 @@ ANALYTICS_CONTAINER_PORT=8000
         if service == 'backend':
             lines += [f'    image: {PROJECT}-backend:test',
                       '    environment:', '      SERVER_PORT: "8080"']
-    for service in ['analytics-database', 'analytics-api', 'nginx']:
+    for service in ['analytics-database', 'analytics-api', 'analytics-demo-seed', 'nginx']:
         lines += [f'  {service}:', '    profiles: ["not-under-test"]',
                   '    env_file: !reset []', '    ports: !reset []']
     override.write_text('\n'.join(lines) + '\n')

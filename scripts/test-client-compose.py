@@ -112,7 +112,7 @@ ANALYTICS_CONTAINER_PORT=8000
     first = lines.index("  backend:")
     last = lines.index("  frontend:")
     del lines[first:last]
-    for service in ["analytics-database", "analytics-api", "nginx"]:
+    for service in ["analytics-database", "analytics-api", "analytics-demo-seed", "nginx"]:
         lines += [f"  {service}:", '    profiles: ["not-under-test"]',
                   "    env_file: !reset []", "    ports: !reset []"]
     override.write_text("\n".join(lines) + "\n")
