@@ -32,22 +32,30 @@ class WorkspaceAuthorizationTest {
     @ParameterizedTest
     @ValueSource(strings = {"TRADING_OPS", "COMPLIANCE", "ANALYST", "FINANCE", "OPERATIONS", "GUEST"})
     void staffCannotReadClientRecordsViaLegacyPaths(String role) throws Exception {
-        for (String path : new String[]{"/api/clients/7", "/api/clients/7/balance", "/api/clients/7/holdings", "/api/clients/7/trades"}) {
+        for (String path : new String[]{"/api/clients/7", "/api/clients/7/holdings", "/api/clients/7/trades"}) {
             mvc.perform(get(path).with(jwtWithRoles(role))).andExpect(status().isForbidden());
         }
+        mvc.perform(get("/api/clients/7/balance").with(jwtWithRoles(role)))
+                .andExpect(status().isNotFound());
         verifyNoInteractions(clients, holdings, trades);
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"CLIENT", "TRADING_OPS", "COMPLIANCE", "ANALYST", "FINANCE", "OPERATIONS"})
     void workspaceRolesCannotMutateFinancialRecords(String role) throws Exception {
-        for (String path : new String[]{"/api/clients", "/api/clients/7/holdings", "/api/clients/7/trades", "/api/clients/7/trades/21/fill", "/api/instruments"}) {
+        mvc.perform(post("/api/clients").with(jwtWithRoles(role)).contentType("application/json").content("{}"))
+                .andExpect(status().isForbidden());
+        for (String path : new String[]{"/api/clients/7/holdings", "/api/clients/7/trades", "/api/instruments"}) {
             mvc.perform(post(path).with(jwtWithRoles(role)).contentType("application/json").content("{}"))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isMethodNotAllowed());
         }
-        for (String path : new String[]{"/api/clients/7", "/api/clients/7/holdings/1", "/api/clients/7/trades/21", "/api/instruments/1"}) {
+        mvc.perform(post("/api/clients/7/trades/21/fill").with(jwtWithRoles(role)).contentType("application/json").content("{}"))
+                .andExpect(status().isNotFound());
+        mvc.perform(patch("/api/clients/7").with(jwtWithRoles(role)).contentType("application/json").content("{}"))
+                .andExpect(status().isForbidden());
+        for (String path : new String[]{"/api/clients/7/holdings/1", "/api/clients/7/trades/21", "/api/instruments/1"}) {
             mvc.perform(patch(path).with(jwtWithRoles(role)).contentType("application/json").content("{}"))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isMethodNotAllowed());
         }
         verifyNoInteractions(clients, holdings, trades, fills, instruments);
     }

@@ -146,7 +146,7 @@ public class PortfolioValuationService {
             return false;
         }
         Instant value = timestamp.toInstant();
-        return !value.isBefore(now.minusSeconds(Math.min(1200, policy.quoteMaxAgeSeconds())))
+        return !value.isBefore(now.minusSeconds(Math.min(1800, policy.quoteMaxAgeSeconds())))
                 && !value.isAfter(now.plusSeconds(policy.futureSkewSeconds()));
     }
 

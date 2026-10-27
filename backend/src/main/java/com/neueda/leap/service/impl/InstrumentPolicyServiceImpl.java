@@ -209,7 +209,7 @@ public class InstrumentPolicyServiceImpl implements InstrumentPolicyService {
                 || p.maxNotional().signum() <= 0
                 || p.maxNotional().compareTo(new BigDecimal("1000000")) > 0
                 || r.quoteMaxAgeSeconds() < 1
-                || r.quoteMaxAgeSeconds() > 1200)
+                || r.quoteMaxAgeSeconds() > 1800)
             throw new IllegalArgumentException("Invalid quantity, notional or quote-age limits");
         // Existing full halts must remain available during provider outages. All enable/edit
         // requests are freshly validated.

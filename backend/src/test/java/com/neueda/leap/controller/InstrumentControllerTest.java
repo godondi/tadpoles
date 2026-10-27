@@ -44,7 +44,7 @@ class InstrumentControllerTest {
     }
 
     @Test
-    void createInstrumentRejectsRetiredWritePath() throws Exception {
+    void createInstrumentRouteIsRemoved() throws Exception {
         mockMvc.perform(
                         post("/api/instruments")
                                 .with(jwtWithRoles("ADMIN"))
@@ -59,7 +59,7 @@ class InstrumentControllerTest {
                                           "securityType": "Stock"
                                         }
                                         """))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isMethodNotAllowed());
         org.mockito.Mockito.verifyNoInteractions(instrumentService);
     }
 
@@ -75,7 +75,7 @@ class InstrumentControllerTest {
     }
 
     @Test
-    void updateInstrumentRejectsRetiredWritePath() throws Exception {
+    void updateInstrumentRouteIsRemoved() throws Exception {
         mockMvc.perform(
                         patch("/api/instruments/11")
                                 .with(jwtWithRoles("ADMIN"))
@@ -86,7 +86,7 @@ class InstrumentControllerTest {
                                           "currency": "EUR"
                                         }
                                         """))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isMethodNotAllowed());
         org.mockito.Mockito.verifyNoInteractions(instrumentService);
     }
 

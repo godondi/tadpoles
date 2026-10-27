@@ -57,7 +57,7 @@ class ClientTradeControllerTest {
     }
 
     @Test
-    void createTradeRejectsRetiredWritePath() throws Exception {
+    void createTradeRouteIsRemoved() throws Exception {
         mockMvc.perform(
                         post("/api/clients/7/trades")
                                 .with(jwtWithRoles("ADMIN"))
@@ -74,7 +74,7 @@ class ClientTradeControllerTest {
                                           "reason": "Add position"
                                         }
                                         """))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isMethodNotAllowed());
         org.mockito.Mockito.verifyNoInteractions(clientTradeService);
     }
 
@@ -89,7 +89,7 @@ class ClientTradeControllerTest {
     }
 
     @Test
-    void updateTradeRejectsRetiredWritePath() throws Exception {
+    void updateTradeRouteIsRemoved() throws Exception {
         mockMvc.perform(
                         patch("/api/clients/7/trades/21")
                                 .with(jwtWithRoles("ADMIN"))
@@ -100,12 +100,12 @@ class ClientTradeControllerTest {
                                           "status": "EXECUTED"
                                         }
                                         """))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isMethodNotAllowed());
         org.mockito.Mockito.verifyNoInteractions(clientTradeService);
     }
 
     @Test
-    void fillTradeRejectsRetiredWritePath() throws Exception {
+    void fillTradeRouteIsRemoved() throws Exception {
         mockMvc.perform(
                         post("/api/clients/7/trades/21/fill")
                                 .with(jwtWithRoles("ADMIN"))
@@ -119,7 +119,7 @@ class ClientTradeControllerTest {
                                           "reason": "Executed on market"
                                         }
                                         """))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
         org.mockito.Mockito.verifyNoInteractions(orderFillService, clientTradeService);
     }
 

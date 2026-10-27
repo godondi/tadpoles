@@ -141,6 +141,8 @@ class TradingPostgresTest {
         script("database/migrations/017_compliance_referrals.sql");
         script("database/migrations/018_advisor_workspace.sql");
         script("database/migrations/019_instrument_exchange.sql");
+        script("database/migrations/020_user_trade_access.sql");
+        script("database/migrations/021_quote_stale_after_thirty_minutes.sql");
         script("backend/src/test/resources/provider_accounts.sql");
         client =
                 Integer.parseInt(
@@ -159,6 +161,35 @@ class TradingPostgresTest {
                 new com.neueda.leap.dto.BankingDtos.BankRequest(
                         "Fixture reference", "000000001", "00005678", true, null));
         when(quotes.quote(any())).thenAnswer(i -> quote(i.getArgument(0), "49", "50"));
+    }
+
+    @Test
+    void thirtyMinuteQuoteMigrationWidensOldDefaultsAndKeepsCustomLimits() throws Exception {
+        sql("ALTER TABLE instrument_trading_policies DROP CONSTRAINT"
+                + " instrument_trading_policies_quote_max_age_seconds_check");
+        sql("ALTER TABLE instrument_trading_policies ADD CONSTRAINT"
+                + " instrument_trading_policies_quote_max_age_seconds_check"
+                + " CHECK (quote_max_age_seconds BETWEEN 1 AND 1200)");
+        sql("UPDATE instrument_trading_policies SET quote_max_age_seconds = 1200"
+                + " WHERE provider_symbol = 'AAPL'");
+        sql("INSERT INTO instruments(instrument_name,ticker,currency,asset_class,security_type)"
+                + " VALUES ('Custom age test','CUSTOM','USD','EQUITY','STOCK')");
+        String customInstrument = scalar(
+                "SELECT instrument_id FROM instruments WHERE ticker='CUSTOM'");
+        sql("INSERT INTO instrument_trading_policies (instrument_id,policy_version,venue,"
+                + "quantity_unit,price_unit,currency,quantity_step,currency_scale,max_quantity,"
+                + "max_notional,quote_max_age_seconds,future_skew_seconds,retry_seconds,"
+                + "max_attempts,session,enabled,raw_price_unit,price_multiplier,provider_symbol,"
+                + "buy_allowed,sell_allowed) SELECT " + customInstrument + ",policy_version,venue,"
+                + "quantity_unit,price_unit,currency,quantity_step,currency_scale,max_quantity,"
+                + "max_notional,30,future_skew_seconds,retry_seconds,max_attempts,session,enabled,"
+                + "raw_price_unit,price_multiplier,'CUSTOM',buy_allowed,sell_allowed "
+                + "FROM instrument_trading_policies WHERE provider_symbol='AAPL'");
+        script("database/migrations/021_quote_stale_after_thirty_minutes.sql");
+        assertEquals("1800", scalar("SELECT quote_max_age_seconds FROM"
+                + " instrument_trading_policies WHERE provider_symbol = 'AAPL'"));
+        assertEquals("30", scalar("SELECT quote_max_age_seconds FROM"
+                + " instrument_trading_policies WHERE provider_symbol = 'CUSTOM'"));
     }
 
     Quote quote(Policy p, String bid, String ask) {
@@ -1193,7 +1224,7 @@ class TradingPostgresTest {
                                 .content(payload))
                 .andExpect(
                         org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
-                                .isForbidden());
+                                .isMethodNotAllowed());
         mvc.perform(
                         org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(
                                         "/api/workspace/operations/instruments/" + target)
@@ -1417,6 +1448,7 @@ class TradingPostgresTest {
         script("database/fresh/001_schema.sql");
         script("database/fresh/002_reference.sql");
         script("database/demo/role_workspaces.sql");
+        script("database/migrations/020_user_trade_access.sql");
         int second =
                 Integer.parseInt(
                         scalar(
@@ -1479,6 +1511,7 @@ class TradingPostgresTest {
         script("database/migrations/008_trading_controls.sql");
         script("database/migrations/009_quote_cache_age.sql");
         script("database/migrations/010_quote_cache_twenty_minutes.sql");
+        script("database/migrations/021_quote_stale_after_thirty_minutes.sql");
         script("database/migrations/011_operations_workspace.sql");
         script("database/migrations/012_managed_support.sql");
         script("database/migrations/013_compliance_workspace.sql");
@@ -1488,6 +1521,7 @@ class TradingPostgresTest {
         script("database/migrations/017_compliance_referrals.sql");
         script("database/migrations/018_advisor_workspace.sql");
         script("database/migrations/019_instrument_exchange.sql");
+        script("database/migrations/020_user_trade_access.sql");
         demoSetup.initialize();
         equalDecimal(
                 "10000",

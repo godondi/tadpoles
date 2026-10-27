@@ -34,9 +34,17 @@ public interface TradingMapper {
                  FROM clients c
                  JOIN users u USING(user_id)
                  WHERE c.client_id = #{id}
-                     AND u.enabled)
+                     AND u.enabled
+                     AND (u.trade_access_revoked_at IS NULL OR
+                          (u.trade_access_until IS NOT NULL AND u.trade_access_until <= now())))
             """)
     boolean accountEnabled(int id);
+
+    @Select("SELECT EXISTS(SELECT 1 FROM users u JOIN clients c USING(user_id) WHERE c.client_id=#{id} AND u.trade_access_revoked_at IS NOT NULL AND (u.trade_access_until IS NULL OR u.trade_access_until > now()))")
+    boolean tradeAccessRevoked(int id);
+
+    @Select("SELECT u.trade_access_revoked_at AS revoked_at, u.trade_access_until AS revoked_until FROM users u JOIN clients c USING(user_id) WHERE c.client_id=#{id}")
+    Map<String,Object> tradeAccess(int id);
 
     @Select("SELECT EXISTS(SELECT 1 FROM bank_references WHERE client_id=#{id} AND active)")
     boolean hasBank(int id);

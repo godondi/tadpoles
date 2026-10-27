@@ -64,7 +64,7 @@ public class CatalogSetup {
                             2,
                             new BigDecimal("10000"),
                             new BigDecimal("1000000"),
-                            1200,
+                            1800,
                             2,
                             120,
                             3,

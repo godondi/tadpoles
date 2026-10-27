@@ -128,6 +128,7 @@ class SupportWorkflowPostgresTest {
         script("database/demo/role_workspaces.sql");
         script("database/demo/operations_workspace.sql");
         script("database/demo/compliance_workspace.sql");
+        script("database/migrations/020_user_trade_access.sql");
         if (runtimeRole != null) {
             String grants = Files.readString(Path.of("../database/runtime-grants.sql"));
             sql(

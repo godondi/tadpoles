@@ -8,6 +8,8 @@ public interface TradingService {
 
     Map<String, Object> availability(int client, Integer instrument);
 
+    Map<String, Object> tradeAccessState(int client);
+
     Preview preview(int client, Command command);
 
     Map<String, Object> submit(int client, int actor, String key, Command command);

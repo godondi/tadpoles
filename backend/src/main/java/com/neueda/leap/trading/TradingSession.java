@@ -17,7 +17,9 @@ import java.util.Set;
  */
 public final class TradingSession {
     private static final ZoneId EASTERN = ZoneId.of("America/New_York");
-    private static final Set<String> VENUES = Set.of("NYSE", "NASDAQ", "NYSE Arca");
+    // `venue` is seeded from provider exchange labels (for example, `NYSE ARCA`). Compare
+    // normalized labels so casing from the catalog cannot disable the scheduled fallback.
+    private static final Set<String> VENUES = Set.of("NYSE", "NASDAQ", "NYSE ARCA", "US");
     private static final Set<LocalDate> HOLIDAYS =
             Set.of(
                     LocalDate.parse("2026-01-01"), LocalDate.parse("2026-01-19"),
@@ -34,7 +36,7 @@ public final class TradingSession {
         if ("open".equals(providerState)) return true;
         if (!"unknown".equals(providerState)
                 || venue == null
-                || !VENUES.contains(venue)
+                || !VENUES.contains(venue.trim().toUpperCase(java.util.Locale.ROOT))
                 || now == null) return false;
         var local = now.atZone(EASTERN);
         var date = local.toLocalDate();

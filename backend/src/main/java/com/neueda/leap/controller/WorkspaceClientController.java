@@ -93,6 +93,13 @@ public class WorkspaceClientController {
         return trading.availability(clientId(jwt), instrumentId);
     }
 
+    @GetMapping("/workspace/client/trade-access")
+    public Object tradeAccess(@AuthenticationPrincipal Jwt jwt) {
+        int client = clientId(jwt);
+        var state = trading.tradeAccessState(client);
+        return state;
+    }
+
     @PostMapping("/orders/preview")
     public Object preview(
             @AuthenticationPrincipal Jwt jwt,

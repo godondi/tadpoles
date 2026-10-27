@@ -1,8 +1,10 @@
 package com.neueda.leap.service.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -11,6 +13,7 @@ import com.neueda.leap.domain.Client;
 import com.neueda.leap.domain.ClientProfile;
 import com.neueda.leap.dto.ClientOnboardingResponseDto;
 import com.neueda.leap.dto.CompleteClientOnboardingRequestDto;
+import com.neueda.leap.mapper.AdvisorMapper;
 import com.neueda.leap.mapper.ClientMapper;
 import com.neueda.leap.mapper.ClientProfileMapper;
 import java.math.BigDecimal;
@@ -21,6 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
@@ -32,12 +36,15 @@ class ClientOnboardingServiceImplTest {
     private ClientProfileMapper clientProfileMapper;
     @Mock
     private ClientMapper clientMapper;
+    @Mock
+    private AdvisorMapper advisorMapper;
 
     private ClientOnboardingServiceImpl clientOnboardingService;
 
     @BeforeEach
     void setUp() {
-        clientOnboardingService = new ClientOnboardingServiceImpl(clientProfileMapper, clientMapper);
+        clientOnboardingService = new ClientOnboardingServiceImpl(
+                clientProfileMapper, clientMapper, advisorMapper);
     }
 
     @Test
@@ -66,6 +73,64 @@ class ClientOnboardingServiceImplTest {
         assertEquals(BigDecimal.ZERO, clientCaptor.getValue().getCashBalance());
         assertEquals(Integer.valueOf(7), profileCaptor.getValue().getClientId());
         assertEquals(new BigDecimal("250000.00"), profileCaptor.getValue().getNetWorth());
+    }
+
+    @Test
+    void newOnboardedClientIsAssignedToTheLeastLoadedAdvisor() {
+        when(clientMapper.getClientByUserId(14)).thenReturn(null);
+        when(advisorMapper.findLeastAssignedAdvisorId()).thenReturn(6);
+        when(clientMapper.insertClient(any())).thenAnswer(invocation -> {
+            Client client = invocation.getArgument(0, Client.class);
+            client.setClientId(7);
+            return 1;
+        });
+        when(clientProfileMapper.findByUserId(14)).thenReturn(null, storedProfile());
+
+        clientOnboardingService.completeOnboarding(buildClientUser(), buildRequest());
+
+        ArgumentCaptor<Client> captor = ArgumentCaptor.forClass(Client.class);
+        InOrder ordering = inOrder(advisorMapper, clientMapper);
+        ordering.verify(advisorMapper).lockAdvisorAssignmentBucket();
+        ordering.verify(advisorMapper).findLeastAssignedAdvisorId();
+        ordering.verify(clientMapper).insertClient(captor.capture());
+        assertEquals(Integer.valueOf(6), captor.getValue().getAdvisorId());
+    }
+
+    @Test
+    void onboardingCanCompleteWithoutAnAdvisorAndLeavesClientUnassigned() {
+        when(clientMapper.getClientByUserId(14)).thenReturn(null);
+        when(advisorMapper.findLeastAssignedAdvisorId()).thenReturn(null);
+        when(clientMapper.insertClient(any())).thenAnswer(invocation -> {
+            Client client = invocation.getArgument(0, Client.class);
+            client.setClientId(7);
+            return 1;
+        });
+        when(clientProfileMapper.findByUserId(14)).thenReturn(null, storedProfile());
+
+        clientOnboardingService.completeOnboarding(buildClientUser(), buildRequest());
+
+        ArgumentCaptor<Client> captor = ArgumentCaptor.forClass(Client.class);
+        verify(clientMapper).insertClient(captor.capture());
+        assertNull(captor.getValue().getAdvisorId());
+    }
+
+    @Test
+    void completingAnExistingUnassignedClientAddsItToTheAdvisorPool() {
+        Client client = new Client();
+        client.setClientId(7);
+        client.setUserId(14);
+        client.setClientName("Before onboarding");
+        when(clientMapper.getClientByUserId(14)).thenReturn(client);
+        when(advisorMapper.findLeastAssignedAdvisorId()).thenReturn(4);
+        when(clientProfileMapper.findByUserId(14)).thenReturn(storedProfile());
+
+        clientOnboardingService.completeOnboarding(buildClientUser(), buildRequest());
+
+        verify(advisorMapper).lockAdvisorAssignmentBucket();
+        verify(advisorMapper).findLeastAssignedAdvisorId();
+        ArgumentCaptor<Client> captor = ArgumentCaptor.forClass(Client.class);
+        verify(clientMapper).updateClient(captor.capture());
+        assertEquals(Integer.valueOf(4), captor.getValue().getAdvisorId());
     }
 
     @Test
