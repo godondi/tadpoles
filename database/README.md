@@ -1,6 +1,6 @@
 # Database guide
 
-This directory contains SQL files, but a normal new installation does not execute all of them. PostgreSQL 15 is the supported database. The current schema includes private Support workflow, Compliance review, Advisor records, and instrument listing venues through migration **019**. Initialize an empty database from `fresh/`, or upgrade an existing database through `migrations/`.
+This directory contains SQL files, but a normal new installation does not execute all of them. PostgreSQL 15 is the supported database. The current schema includes private Support workflow, Compliance review, Advisor records, instrument listing venues, and client trade-access revocation through migration **020**. Initialize an empty database from `fresh/`, or upgrade an existing database through `migrations/`.
 
 The split is intentional. A fresh schema describes the final structure; a migration describes how to reach that structure while preserving older data. Demo and historical test data are optional. Runtime grants are a separate security step.
 
@@ -38,7 +38,9 @@ flowchart TD
     M16 --> M17["017 independent Compliance reviews"]
     M17 --> M18["018 Advisor guidance, recommendations and immutable history"]
     M18 --> M19["019 instrument listing venue"]
-    M19 --> Current[Current schema]
+    M19 --> M20["020 client trade access revocation"]
+    M20 --> M21["021 quote-age ceiling and default: 1800 seconds"]
+    M21 --> Current[Current schema]
     Missing -->|None| Current
     Current --> Demo["Optional local startup:<br/>demo/role_workspaces.sql"]
     Demo --> Local[Backend with local demo setup enabled]
@@ -79,9 +81,11 @@ Paths below are relative to this directory. “Repeatable” means safe to rerun
 | [migrations/007_trading_openings.sql](migrations/007_trading_openings.sql) | Records historical balances/holdings/policies as evidence and quarantines uncertain balances. Creates missing zero USD accounts; disables old synthetic instruments/policies, removes fixture prices and blocks historical financial writes. Does not infer spendable USD from old scalar cash. | 006. Old simulation fixtures, if used by a test, must have been loaded before cutover. | No. |
 | [migrations/008_trading_controls.sql](migrations/008_trading_controls.sql) | Adds provider setup results, stored reconciliation reports, system audit actors, and guards against changing ticker/currency/provider identity in place. | 007. | No. |
 | [migrations/009_quote_cache_age.sql](migrations/009_quote_cache_age.sql) | Historical change to permit quote-age limits between 1 and 600 seconds. Changes a constraint, not existing policy values. | 008; retained so existing volumes have an ordered upgrade path. | No. |
-| [migrations/010_quote_cache_twenty_minutes.sql](migrations/010_quote_cache_twenty_minutes.sql) | Raises the configurable ceiling to 1200 seconds. Does not change individual policy values or make explicitly stale quotes usable. | 009. | No. |
+| [migrations/010_quote_cache_twenty_minutes.sql](migrations/010_quote_cache_twenty_minutes.sql) | Historical step raising the configurable ceiling to 1200 seconds. | 009. | No. |
+| [migrations/021_quote_stale_after_thirty_minutes.sql](migrations/021_quote_stale_after_thirty_minutes.sql) | Raises the quote-age ceiling and widens policies at the prior 1200-second default to 1800 seconds. Explicit provider stale flags still reject a quote. | Existing trading policy table. | No; preserves lower customized limits. |
 | [migrations/018_advisor_workspace.sql](migrations/018_advisor_workspace.sql) | Adds dedicated guidance (including versioned NONE clears), active/archived recommendations and immutable attributed history. Projection triggers enforce advisor assignment/role, exact ownership eligibility and versions; history is appended atomically by a fixed-search-path security-definer trigger. No financial writes or automatic assignment. | Current chain through 017. Review/reapply runtime grants as the schema owner before a restricted runtime uses these APIs. | Runner skips recorded version 18; do not rerun its DDL manually. |
 | [migrations/019_instrument_exchange.sql](migrations/019_instrument_exchange.sql) | Adds nullable listing-exchange metadata, separate from trading policy and provider venue. | Current chain through 018. | Runner skips recorded version 19; do not rerun manually. |
+| [migrations/020_user_trade_access.sql](migrations/020_user_trade_access.sql) | Adds durable indefinite/timed client trade-access revocation fields and immutable operator-attributed access events. Expired timed revocations become eligible automatically. | Current chain through 019. Reapply runtime grants to enable the access-event insert. | Runner skips recorded version 20; do not rerun manually. |
 | [catalog/seed.sql](catalog/seed.sql) | Imports the US equity/ETF, crypto and forex manifests. Crypto and forex are identified as OTC; US listings use sourced exchange names. Existing policies and other instrument fields are not overwritten. | Compose catalog-seed service, after migrations; database container mounts the three root JSON files at `/catalog`. | Yes; inserts are idempotent and existing rows only have exchange refreshed. |
 | [demo/role_workspaces.sql](demo/role_workspaces.sql) | Creates seven fictitious local users, role assignments and client profiles, plus empty USD accounts when ledger tables exist. Includes `demo.advisor` / `Demo Advisor`, ADVISOR role and linked advisor; assigns only `demo.client` if unassigned, and rejects a conflicting existing advisor. Leaves `demo.client2` untouched. Uses `pgcrypto`; existing passwords and balances are retained. | Identity/client/advisor tables; normal local startup runs it after all migrations. Upgrade fixtures can use it after 004. | Yes; does not refill spent cash or overwrite assignments. |
 | [demo/simulation.sql](demo/simulation.sql) | Historical fixture: synthetic instruments, deterministic prices and fictitious multi-currency openings. Lets tests reconstruct a pre-provider database and verify upgrade behavior. | 003/004 and role demo accounts, **before 006/007**. Incompatible with the current fresh schema because old columns have been removed. | Yes only at the old schema stage; opening references prevent refills. |
@@ -99,7 +103,7 @@ Paths below are relative to this directory. “Repeatable” means safe to rerun
 
 **Outbox and jobs.** Execution jobs retain worker retry/lease state so accepted orders survive a restart. An outbox stores committed event facts with the financial transaction; delivery bookkeeping can change afterward. Neither is a disposable quote cache.
 
-**Quote age is not caching.** Files 009/010 only alter the permitted `quote_max_age_seconds` range. There is no quote-cache table created by them. `order_quote_observations` stores audit evidence. An instrument's actual age limit, quote timestamp and explicit provider stale/session flags still determine eligibility in application code. Widening a database ceiling does not refresh prices.
+**Quote age is not caching.** Files 009/010/021 alter the permitted `quote_max_age_seconds` range and 021 widens prior-default policies. There is no quote-cache table created by them. `order_quote_observations` stores audit evidence. The 30-minute quote-age policy and explicit provider stale/session flags still determine eligibility in application code. Widening this age limit does not refresh prices.
 
 **Permissions.** Application roles such as `TRADING_OPS` are rows in `roles`/`user_roles`. A PostgreSQL runtime role is the database login used by the backend. They solve different problems. `runtime-grants.sql` configures the latter; it does not grant a user an application role.
 

@@ -65,7 +65,9 @@ class FreshTradingSchemaTest extends AbstractPostgresIntegrationTest {
                     "016_support_workflow.sql",
                     "017_compliance_referrals.sql",
                     "018_advisor_workspace.sql",
-                    "019_instrument_exchange.sql"
+                    "019_instrument_exchange.sql",
+                    "020_user_trade_access.sql",
+                    "021_quote_stale_after_thirty_minutes.sql"
                 }) executeSqlScript(Path.of("../database/migrations/" + file));
         var upgraded = shape();
         try (var c = newConnection();
@@ -83,7 +85,9 @@ class FreshTradingSchemaTest extends AbstractPostgresIntegrationTest {
                                 "SELECT array_agg(version ORDER BY version)::text FROM"
                                     + " schema_migrations")) {
             r.next();
-            assertEquals("{3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19}", r.getString(1));
+            assertEquals(
+                    "{3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21}",
+                    r.getString(1));
         }
     }
 }
