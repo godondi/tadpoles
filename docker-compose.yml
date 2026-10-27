@@ -1,46 +1,90 @@
 volumes:
   tadpole-db-data:
+  tadpole-analytics-db-data:
 
 services:
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    image: tadpole-nginx:latest
+    ports:
+      - "${NGINX_HOST_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_started
+      frontend:
+        condition: service_started
+      analytics-api:
+        condition: service_healthy
+
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     image: tadpole-app:latest
-    container_name: tadpole-backend
     env_file:
-      - .env
+      - ${COMPOSE_ENV_FILE:-.env}
     environment:
       DB_URL: ${DB_URL}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       AUTH_STUB_URL: ${AUTH_STUB_URL}
       JWT_SECRET: ${JWT_SECRET}
+      FAUX_SERVER_URL: ${FAUX_SERVER_URL}
+      FAUX_API_KEY: ${FAUX_API_KEY}
+      FAUX_DEFAULT_INTERVAL: ${FAUX_DEFAULT_INTERVAL}
+      FAUX_CONNECT_TIMEOUT_SECONDS: ${FAUX_CONNECT_TIMEOUT_SECONDS}
+      FAUX_READ_TIMEOUT_SECONDS: ${FAUX_READ_TIMEOUT_SECONDS}
       PORT: ${SERVER_PORT}
+      SERVER_PORT: ${SERVER_PORT:-8080}
+      TRADING_ADMISSION_ENABLED: ${TRADING_ADMISSION_ENABLED:-true}
+      TRADING_WORKER_ENABLED: ${TRADING_WORKER_ENABLED:-true}
+      TRADING_LOCAL_DEMO_SETUP: ${TRADING_LOCAL_DEMO_SETUP:-true}
+      # Local demo defaults. The hardened overlay requires explicit deployment policy.
+      OPERATIONS_ACCESS_ENABLED: ${OPERATIONS_ACCESS_ENABLED:-true}
+      SUPPORT_WORKFLOW_ENABLED: ${SUPPORT_WORKFLOW_ENABLED:-true}
+      OPERATIONS_ALLOWED_PURPOSES: ${OPERATIONS_ALLOWED_PURPOSES:-ORDER_REVIEW}
+      OPERATIONS_POLICY_VERSION: ${OPERATIONS_POLICY_VERSION:-local-demo-v1}
+      OPERATIONS_CONTEXT_SECONDS: ${OPERATIONS_CONTEXT_SECONDS:-3600}
+      OPERATIONS_EXPORT_SECONDS: ${OPERATIONS_EXPORT_SECONDS:-3600}
+      # Local demo defaults. Hardened deployments require explicit Compliance policy/grants.
+      COMPLIANCE_ACCESS_ENABLED: ${COMPLIANCE_ACCESS_ENABLED:-true}
+      COMPLIANCE_ALLOWED_PURPOSES: ${COMPLIANCE_ALLOWED_PURPOSES:-ORDER_REVIEW}
+      COMPLIANCE_POLICY_VERSION: ${COMPLIANCE_POLICY_VERSION:-local-compliance-v1}
+      COMPLIANCE_SCOPE_LABEL: ${COMPLIANCE_SCOPE_LABEL:-Assigned accounts only}
+      COMPLIANCE_CONTEXT_SECONDS: ${COMPLIANCE_CONTEXT_SECONDS:-3600}
+      COMPLIANCE_EXPORT_SECONDS: ${COMPLIANCE_EXPORT_SECONDS:-3600}
+      # Fictitious local demo only. Hardened deployments require a separately provisioned key.
+      BANKING_ENCRYPTION_KEY: ${BANKING_ENCRYPTION_KEY:-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
     ports:
       - "${BACKEND_HOST_PORT}:${BACKEND_CONTAINER_PORT}"
     depends_on:
-      - database
-      - auth-stub
+      database-demo-seed:
+        condition: service_completed_successfully
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     image: tadpole-frontend:latest
-    container_name: tadpole-frontend
     env_file:
-      - .env
+      - ${COMPOSE_ENV_FILE:-.env}
     environment:
       PORT: ${FRONTEND_CONTAINER_PORT}
+      # Nginx overwrites X-Forwarded-Proto. Trust only that proxy-set header.
+      NG_TRUST_PROXY_HEADERS: ${NG_TRUST_PROXY_HEADERS:-x-forwarded-proto}
+      # Keep the SSR Host allowlist explicit; add the deployment hostname/IP here.
+      NG_ALLOWED_HOSTS: ${NG_ALLOWED_HOSTS:-localhost,127.0.0.1,10.18.72.65,10.18.69.68,10.18.71.47,10.18.73.232}
     ports:
-      - "${FRONTEND_HOST_PORT}:${FRONTEND_CONTAINER_PORT}"
+      # Remote browser traffic must pass through Nginx, the trusted proxy.
+      - "127.0.0.1:${FRONTEND_HOST_PORT}:${FRONTEND_CONTAINER_PORT}"
 
   database:
     image: postgres:15
-    container_name: tadpole-database
     env_file:
-      - .env
+      - ${COMPOSE_ENV_FILE:-.env}
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -49,21 +93,134 @@ services:
       - "${POSTGRES_HOST_PORT}:5432"
     volumes:
       - tadpole-db-data:/var/lib/postgresql/data
-      - ./database/schema:/docker-entrypoint-initdb.d:ro
+      - ./database/fresh:/docker-entrypoint-initdb.d:ro
+      - ./us-v1.json:/catalog/us-v1.json:ro
+      - ./crypto-v1.json:/catalog/crypto-v1.json:ro
+      - ./fx-v1.json:/catalog/fx-v1.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 5s
+      retries: 12
 
-  auth-stub:
-    build:
-      context: ./auth-stub
-      dockerfile: Dockerfile
-    image: tadpole-auth-stub:latest
-    container_name: tadpole-auth-stub
+  database-migrate:
+    image: postgres:15
+    env_file:
+      - "${COMPOSE_ENV_FILE:-.env}"
+    environment:
+      PGHOST: database
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+    volumes:
+      - ./database/migrations:/migrations:ro
+      - ./database/migrate.sh:/migrate.sh:ro
+    command: ["sh", "/migrate.sh"]
+    depends_on:
+      database:
+        condition: service_healthy
+
+  database-catalog-seed:
+    image: postgres:15
+    env_file:
+      - "${COMPOSE_ENV_FILE:-.env}"
+    environment:
+      PGHOST: database
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+    volumes:
+      - ./database/catalog/seed.sql:/seed.sql:ro
+    command:
+      ["sh", "-c", "psql -v ON_ERROR_STOP=1 --username \"$$PGUSER\" --dbname \"$$PGDATABASE\" --file /seed.sql"]
+    depends_on:
+      database-migrate:
+        condition: service_completed_successfully
+
+  database-demo-seed:
+    image: postgres:15
+    env_file:
+      - ${COMPOSE_ENV_FILE:-.env}
+    environment:
+      PGHOST: database
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      TRADING_LOCAL_DEMO_SETUP: ${TRADING_LOCAL_DEMO_SETUP:-true}
+      OPERATIONS_ACCESS_ENABLED: ${OPERATIONS_ACCESS_ENABLED:-true}
+      COMPLIANCE_ACCESS_ENABLED: ${COMPLIANCE_ACCESS_ENABLED:-true}
+      COMPLIANCE_LOCAL_DEMO_SETUP: ${COMPLIANCE_LOCAL_DEMO_SETUP:-true}
+    volumes:
+      - ./database/demo/role_workspaces.sql:/role_workspaces.sql:ro
+      - ./database/demo/operations_workspace.sql:/operations_workspace.sql:ro
+      - ./database/demo/compliance_workspace.sql:/compliance_workspace.sql:ro
+      - ./database/demo/seed-role-workspaces.sh:/seed-role-workspaces.sh:ro
+    command: ["sh", "/seed-role-workspaces.sh"]
+    depends_on:
+      database-catalog-seed:
+        condition: service_completed_successfully
+
+  analytics-database:
+    image: postgres:15
+    container_name: tadpole-analytics-database
     env_file:
       - .env
     environment:
-      PORT: ${AUTH_STUB_PORT}
-      JWT_SECRET: ${JWT_SECRET}
+      POSTGRES_USER: ${ANALYTICS_POSTGRES_OWNER}
+      POSTGRES_PASSWORD: ${ANALYTICS_POSTGRES_OWNER_PASSWORD}
+      POSTGRES_DB: ${ANALYTICS_POSTGRES_DB}
+      ANALYTICS_READER_PASSWORD: ${ANALYTICS_POSTGRES_PASSWORD}
     ports:
-      - "${AUTH_STUB_HOST_PORT}:${AUTH_STUB_CONTAINER_PORT}"
+      - "${ANALYTICS_POSTGRES_HOST_PORT}:5432"
+    volumes:
+      - tadpole-analytics-db-data:/var/lib/postgresql/data
+      - ./analytics-service/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  analytics-api:
+    build:
+      context: ./analytics-service
+      dockerfile: Dockerfile
+    image: tadpole-analytics-api:latest
+    container_name: tadpole-analytics-api
+    environment:
+      ANALYTICS_DATABASE_URL: ${ANALYTICS_DATABASE_URL}
+      ANALYTICS_JWT_SECRET: ${JWT_SECRET}
+      ANALYTICS_MAX_RANGE_DAYS: ${ANALYTICS_MAX_RANGE_DAYS}
+      ANALYTICS_MAX_PAGE_SIZE: ${ANALYTICS_MAX_PAGE_SIZE:-100}
+      ANALYTICS_DATA_MODE: ${ANALYTICS_DATA_MODE:-demo}
+    ports:
+      - "${ANALYTICS_HOST_PORT}:${ANALYTICS_CONTAINER_PORT}"
+    depends_on:
+      analytics-demo-seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  analytics-demo-seed:
+    image: postgres:15
+    container_name: tadpole-analytics-demo-seed
+    env_file:
+      - .env
+    environment:
+      PGHOST: analytics-database
+      PGUSER: ${ANALYTICS_POSTGRES_OWNER}
+      PGPASSWORD: ${ANALYTICS_POSTGRES_OWNER_PASSWORD}
+      PGDATABASE: ${ANALYTICS_POSTGRES_DB}
+    volumes:
+      - ./analytics-service/migrations/003_demo_reporting_data.sql:/demo-reporting-data.sql:ro
+    command:
+      ["sh", "-c", "psql -v ON_ERROR_STOP=1 --username \"$$PGUSER\" --dbname \"$$PGDATABASE\" --file /demo-reporting-data.sql"]
+    depends_on:
+      analytics-database:
+        condition: service_healthy
 
 #  testing:
 #    build:

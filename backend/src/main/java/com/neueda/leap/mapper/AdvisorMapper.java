@@ -30,6 +30,29 @@ public interface AdvisorMapper {
             """)
     List<Advisor> listAdvisors();
 
+    /** Serialize onboarding assignment so concurrent completions see the latest client counts. */
+    @Select("SELECT (pg_advisory_xact_lock(746532910::bigint) IS NULL)::integer")
+    Integer lockAdvisorAssignmentBucket();
+
+    /**
+     * Select an enabled, linked ADVISOR account with the fewest assigned clients. Demo fixtures
+     * remain a fallback only; real staff advisors win ties before the stable advisor-id tie break.
+     */
+    @Select("""
+            SELECT a.advisor_id
+            FROM advisors a
+            JOIN users u ON u.user_id = a.user_id AND u.enabled
+            JOIN user_roles ur ON ur.user_id = u.user_id
+            JOIN roles r ON r.role_id = ur.role_id AND r.role_name = 'ADVISOR'
+            ORDER BY CASE WHEN u.username LIKE 'demo.%' THEN 1 ELSE 0 END, (
+                SELECT COUNT(*)
+                FROM clients c
+                WHERE c.advisor_id = a.advisor_id
+            ), a.advisor_id
+            LIMIT 1
+            """)
+    Integer findLeastAssignedAdvisorId();
+
     @Insert("""
             INSERT INTO advisors (
                 advisor_name,

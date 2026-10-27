@@ -5,6 +5,7 @@ import com.neueda.leap.domain.Client;
 import com.neueda.leap.domain.ClientProfile;
 import com.neueda.leap.dto.ClientOnboardingResponseDto;
 import com.neueda.leap.dto.CompleteClientOnboardingRequestDto;
+import com.neueda.leap.mapper.AdvisorMapper;
 import com.neueda.leap.mapper.ClientMapper;
 import com.neueda.leap.mapper.ClientProfileMapper;
 import com.neueda.leap.service.ClientOnboardingService;
@@ -20,10 +21,18 @@ import org.springframework.web.server.ResponseStatusException;
 public class ClientOnboardingServiceImpl implements ClientOnboardingService {
     private final ClientProfileMapper clientProfileMapper;
     private final ClientMapper clientMapper;
+    private final AdvisorMapper advisorMapper;
 
-    public ClientOnboardingServiceImpl(ClientProfileMapper clientProfileMapper, ClientMapper clientMapper) {
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.neueda.leap.trading.TradingAccountSetup tradingAccounts;
+
+    public ClientOnboardingServiceImpl(
+            ClientProfileMapper clientProfileMapper,
+            ClientMapper clientMapper,
+            AdvisorMapper advisorMapper) {
         this.clientProfileMapper = clientProfileMapper;
         this.clientMapper = clientMapper;
+        this.advisorMapper = advisorMapper;
     }
 
     @Override
@@ -37,19 +46,29 @@ public class ClientOnboardingServiceImpl implements ClientOnboardingService {
 
     @Override
     @Transactional
-    public ClientOnboardingResponseDto completeOnboarding(AppUser currentUser, CompleteClientOnboardingRequestDto request) {
+    public ClientOnboardingResponseDto completeOnboarding(
+            AppUser currentUser, CompleteClientOnboardingRequestDto request) {
         validateCurrentUser(currentUser);
         validateRequest(request);
 
         Client client = clientMapper.getClientByUserId(currentUser.getUserId());
         if (client == null) {
+            advisorMapper.lockAdvisorAssignmentBucket();
             client = new Client();
             client.setUserId(currentUser.getUserId());
-            client.setClientName(normalizeRequired(request.clientName(), "Client name is required"));
+            client.setClientName(
+                    normalizeRequired(request.clientName(), "Client name is required"));
+            client.setAdvisorId(advisorMapper.findLeastAssignedAdvisorId());
             client.setCashBalance(BigDecimal.ZERO);
             clientMapper.insertClient(client);
+            if (tradingAccounts != null) tradingAccounts.initialize(client.getClientId());
         } else {
-            client.setClientName(normalizeRequired(request.clientName(), "Client name is required"));
+            client.setClientName(
+                    normalizeRequired(request.clientName(), "Client name is required"));
+            if (client.getAdvisorId() == null) {
+                advisorMapper.lockAdvisorAssignmentBucket();
+                client.setAdvisorId(advisorMapper.findLeastAssignedAdvisorId());
+            }
             clientMapper.updateClient(client);
         }
 
@@ -63,17 +82,24 @@ public class ClientOnboardingServiceImpl implements ClientOnboardingService {
         profile.setClientId(client.getClientId());
         profile.setPhone(normalizeOptional(request.phone()));
         profile.setDateOfBirth(request.dateOfBirth());
-        profile.setAddressLine1(normalizeRequired(request.addressLine1(), "Address line 1 is required"));
+        profile.setAddressLine1(
+                normalizeRequired(request.addressLine1(), "Address line 1 is required"));
         profile.setAddressLine2(normalizeOptional(request.addressLine2()));
         profile.setCity(normalizeRequired(request.city(), "City is required"));
         profile.setState(normalizeRequired(request.state(), "State is required"));
         profile.setPostalCode(normalizeRequired(request.postalCode(), "Postal code is required"));
         profile.setCountry(normalizeRequired(request.country(), "Country is required"));
-        profile.setEmploymentStatus(normalizeRequired(request.employmentStatus(), "Employment status is required"));
+        profile.setEmploymentStatus(
+                normalizeRequired(request.employmentStatus(), "Employment status is required"));
         profile.setNetWorth(request.netWorth());
-        profile.setRiskTolerance(normalizeRequired(request.riskTolerance(), "Risk tolerance is required"));
-        profile.setInvestmentObjective(normalizeRequired(request.investmentObjective(), "Investment objective is required"));
-        profile.setPreferredContactMethod(normalizeRequired(request.preferredContactMethod(), "Preferred contact method is required"));
+        profile.setRiskTolerance(
+                normalizeRequired(request.riskTolerance(), "Risk tolerance is required"));
+        profile.setInvestmentObjective(
+                normalizeRequired(
+                        request.investmentObjective(), "Investment objective is required"));
+        profile.setPreferredContactMethod(
+                normalizeRequired(
+                        request.preferredContactMethod(), "Preferred contact method is required"));
         profile.setPaperlessStatements(resolvePaperlessStatements(request.paperlessStatements()));
         profile.setMarketingOptIn(Boolean.TRUE.equals(request.marketingOptIn()));
         profile.setOnboardingComplete(true);
@@ -91,16 +117,19 @@ public class ClientOnboardingServiceImpl implements ClientOnboardingService {
 
     private void validateCurrentUser(AppUser currentUser) {
         if (currentUser == null || currentUser.getUserId() == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unable to resolve authenticated user");
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED, "Unable to resolve authenticated user");
         }
-        if (currentUser.getRoles() == null || currentUser.getRoles().stream().noneMatch("CLIENT"::equalsIgnoreCase)) {
+        if (currentUser.getRoles() == null
+                || currentUser.getRoles().stream().noneMatch("CLIENT"::equalsIgnoreCase)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Client role required");
         }
     }
 
     private void validateRequest(CompleteClientOnboardingRequestDto request) {
         if (request == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Onboarding request is required");
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Onboarding request is required");
         }
         normalizeRequired(request.clientName(), "Client name is required");
         normalizeRequired(request.addressLine1(), "Address line 1 is required");
@@ -117,20 +146,25 @@ public class ClientOnboardingServiceImpl implements ClientOnboardingService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Date of birth is required");
         }
         if (!request.dateOfBirth().isBefore(LocalDate.now())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Date of birth must be in the past");
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Date of birth must be in the past");
         }
         if (request.netWorth() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Net worth is required");
         }
         if (request.netWorth().compareTo(BigDecimal.ZERO) < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Net worth must be zero or greater");
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Net worth must be zero or greater");
         }
     }
 
-    private ClientOnboardingResponseDto toResponse(AppUser currentUser, Client client, ClientProfile profile) {
+    private ClientOnboardingResponseDto toResponse(
+            AppUser currentUser, Client client, ClientProfile profile) {
         return new ClientOnboardingResponseDto(
                 currentUser.getUserId(),
-                profile != null && profile.getClientId() != null ? profile.getClientId() : client == null ? null : client.getClientId(),
+                profile != null && profile.getClientId() != null
+                        ? profile.getClientId()
+                        : client == null ? null : client.getClientId(),
                 currentUser.getEmail(),
                 currentUser.getDisplayName(),
                 client == null ? null : client.getClientName(),
@@ -147,10 +181,11 @@ public class ClientOnboardingServiceImpl implements ClientOnboardingService {
                 profile == null ? null : profile.getRiskTolerance(),
                 profile == null ? null : profile.getInvestmentObjective(),
                 profile == null ? null : profile.getPreferredContactMethod(),
-                profile == null || profile.getPaperlessStatements() == null ? true : profile.getPaperlessStatements(),
+                profile == null || profile.getPaperlessStatements() == null
+                        ? true
+                        : profile.getPaperlessStatements(),
                 profile != null && Boolean.TRUE.equals(profile.getMarketingOptIn()),
-                profile != null && Boolean.TRUE.equals(profile.getOnboardingComplete())
-        );
+                profile != null && Boolean.TRUE.equals(profile.getOnboardingComplete()));
     }
 
     private Boolean resolvePaperlessStatements(Boolean paperlessStatements) {
@@ -172,4 +207,3 @@ public class ClientOnboardingServiceImpl implements ClientOnboardingService {
         return trimmedValue.isEmpty() ? null : trimmedValue;
     }
 }
-

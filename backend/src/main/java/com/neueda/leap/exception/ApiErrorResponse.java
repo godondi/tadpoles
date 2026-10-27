@@ -7,7 +7,18 @@ public record ApiErrorResponse(
         int status,
         String error,
         String message,
-        String path
-) {
+        String path,
+        String code,
+        String correlationId) {
+    public ApiErrorResponse(
+            OffsetDateTime timestamp, int status, String error, String message, String path) {
+        this(
+                timestamp,
+                status,
+                error,
+                message,
+                path,
+                "HTTP_" + status,
+                java.util.UUID.randomUUID().toString());
+    }
 }
-

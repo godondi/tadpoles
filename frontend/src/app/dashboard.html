@@ -33,7 +33,7 @@
         [attr.aria-label]="'Today change: ' + formatCurrency(dayChange()) + ' (' + (dayChangePercent() > 0 ? '+' : '') + dayChangePercent() + '%)'"
       >
         {{ getChangeSign(dayChange()) }}{{ formatCurrency(dayChange()) }}
-        <span class="percent">({{ getChangeSign(dayChangePercent()) }}{{ dayChangePercent() }}%)</span>
+        <span class="percent">({{ getChangeSign(dayChangePercent()) }}{{ dayChangePercent() | twoDecimals }}%)</span>
       </div>
     </div>
   </div>
@@ -83,7 +83,7 @@
             <tr>
               <td class="symbol">{{ holding.symbol }}</td>
               <td class="company">{{ holding.name }}</td>
-              <td class="number">{{ holding.shares }}</td>
+              <td class="number">{{ holding.shares | twoDecimals }}</td>
               <td class="number">{{ formatCurrency(holding.price) }}</td>
               <td class="number">{{ formatCurrency(holding.value) }}</td>
               <td class="number">{{ holding.percent.toFixed(2) }}%</td>

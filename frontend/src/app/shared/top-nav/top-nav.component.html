@@ -1,23 +1,25 @@
 <nav class="top-nav">
   <div class="nav-container">
-    <button class="brand" type="button" aria-label="Tadpoles dashboard" (click)="openDashboard()">Tadpoles</button>
+    <button class="brand" type="button" aria-label="Tadpoles dashboard" (click)="openDashboard()">
+      <img class="brand-logo" src="/tadpole-yellow.png" alt="" aria-hidden="true" />
+    </button>
 
     <div class="nav-actions">
-      <form class="search-form" (submit)="search($event)" aria-label="Search for a ticker">
-        <label class="sr-only" for="global-search">Search ticker</label>
-        <input
-          id="global-search"
-          type="search"
-          class="search-input"
-          placeholder="Search ticker"
-          [value]="searchQuery()"
-          (input)="updateSearchQuery(searchInput.value)"
-          #searchInput
-        />
-        <button class="search-button" type="submit">
-          Search
-        </button>
-      </form>
+      @if (clientWorkspace()) {
+        <form class="search-form" (submit)="search($event)" aria-label="Search for a ticker">
+          <label class="sr-only" for="global-search">Search ticker</label>
+          <input
+            id="global-search"
+            type="search"
+            class="search-input"
+            placeholder="Search ticker"
+            [value]="searchQuery()"
+            (input)="updateSearchQuery(searchInput.value)"
+            #searchInput
+          />
+          <button class="search-button" type="submit">Search</button>
+        </form>
+      }
 
       <div class="profile-section">
         <button
@@ -36,17 +38,29 @@
           <div id="account-menu" class="profile-menu" role="menu" aria-label="Account menu">
             <div class="profile-summary">
               <div class="profile-summary__label">Signed in as</div>
-              <div class="profile-summary__name">{{ userProfile().displayName || userProfile().clientName || 'New Client' }}</div>
+              <div class="profile-summary__name">
+                {{ userProfile().displayName || userProfile().clientName || 'Account' }}
+              </div>
               <div class="profile-summary__email mono-value">{{ userProfile().email }}</div>
             </div>
 
-            <button class="menu-item" type="button" role="menuitem" (click)="openProfile()">
-              Profile
+            @if (clientWorkspace()) {
+              <button class="menu-item" type="button" role="menuitem" (click)="openProfile()">
+                Profile
+              </button>
+              <button class="menu-item" type="button" role="menuitem" (click)="openTrades()">
+                Trade History
+              </button>
+            }
+            <button class="menu-item" type="button" role="menuitem" (click)="toggleTheme()">
+              {{ darkMode() ? 'Disable Dark Mode' : 'Enable Dark Mode' }}
             </button>
-            <button class="menu-item" type="button" role="menuitem" (click)="openTrades()">
-              Trade History
-            </button>
-            <button class="menu-item menu-item--logout" type="button" role="menuitem" (click)="logout()">
+            <button
+              class="menu-item menu-item--logout"
+              type="button"
+              role="menuitem"
+              (click)="logout()"
+            >
               Log Out
             </button>
           </div>

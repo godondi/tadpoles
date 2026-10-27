@@ -1,0 +1,17 @@
+README.md
+pyproject.toml
+app/__init__.py
+app/api.py
+app/auth.py
+app/config.py
+app/db.py
+app/main.py
+app/reporting.py
+app/schemas.py
+app/services.py
+tadpoles_analytics_service.egg-info/PKG-INFO
+tadpoles_analytics_service.egg-info/SOURCES.txt
+tadpoles_analytics_service.egg-info/dependency_links.txt
+tadpoles_analytics_service.egg-info/requires.txt
+tadpoles_analytics_service.egg-info/top_level.txt
+tests/test_api.py

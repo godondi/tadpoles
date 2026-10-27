@@ -15,8 +15,8 @@ import com.neueda.leap.service.InstrumentService;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
@@ -37,33 +37,30 @@ class InstrumentControllerTest {
         Instrument instrument = buildInstrument();
         when(instrumentService.listInstruments()).thenReturn(List.of(instrument));
 
-        mockMvc.perform(get("/api/instruments")
-                        .with(jwtWithRoles("ADMIN")))
+        mockMvc.perform(get("/api/instruments").with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.instruments[0].instrumentId").value(11))
                 .andExpect(jsonPath("$.instruments[0].ticker").value("AAPL"));
     }
 
     @Test
-    void createInstrumentReturnsCreatedResponse() throws Exception {
-        Instrument instrument = buildInstrument();
-        when(instrumentService.createInstrument(org.mockito.ArgumentMatchers.any())).thenReturn(instrument);
-
-        mockMvc.perform(post("/api/instruments")
-                        .with(jwtWithRoles("ADMIN"))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "instrumentName": "Apple Inc",
-                                  "ticker": "AAPL",
-                                  "currency": "USD",
-                                  "assetClass": "Equity",
-                                  "securityType": "Stock"
-                                }
-                                """))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.instrumentId").value(11))
-                .andExpect(jsonPath("$.instrumentName").value("Apple Inc"));
+    void createInstrumentRouteIsRemoved() throws Exception {
+        mockMvc.perform(
+                        post("/api/instruments")
+                                .with(jwtWithRoles("ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "instrumentName": "Apple Inc",
+                                          "ticker": "AAPL",
+                                          "currency": "USD",
+                                          "assetClass": "Equity",
+                                          "securityType": "Stock"
+                                        }
+                                        """))
+                .andExpect(status().isMethodNotAllowed());
+        org.mockito.Mockito.verifyNoInteractions(instrumentService);
     }
 
     @Test
@@ -71,41 +68,38 @@ class InstrumentControllerTest {
         Instrument instrument = buildInstrument();
         when(instrumentService.getInstrument(11)).thenReturn(instrument);
 
-        mockMvc.perform(get("/api/instruments/11")
-                        .with(jwtWithRoles("ADMIN")))
+        mockMvc.perform(get("/api/instruments/11").with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.instrumentId").value(11))
                 .andExpect(jsonPath("$.ticker").value("AAPL"));
     }
 
     @Test
-    void updateInstrumentReturnsJsonResponse() throws Exception {
-        Instrument instrument = buildInstrument();
-        instrument.setCurrency("EUR");
-        when(instrumentService.updateInstrument(org.mockito.ArgumentMatchers.eq(11), org.mockito.ArgumentMatchers.any()))
-                .thenReturn(instrument);
-
-        mockMvc.perform(patch("/api/instruments/11")
-                        .with(jwtWithRoles("ADMIN"))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "currency": "EUR"
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.currency").value("EUR"));
+    void updateInstrumentRouteIsRemoved() throws Exception {
+        mockMvc.perform(
+                        patch("/api/instruments/11")
+                                .with(jwtWithRoles("ADMIN"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "currency": "EUR"
+                                        }
+                                        """))
+                .andExpect(status().isMethodNotAllowed());
+        org.mockito.Mockito.verifyNoInteractions(instrumentService);
     }
 
     @Test
     void getInstrumentReturnsBadRequestForInvalidId() throws Exception {
         when(instrumentService.getInstrument(0))
-                .thenThrow(new IllegalArgumentException("Instrument id must be a positive integer."));
+                .thenThrow(
+                        new IllegalArgumentException("Instrument id must be a positive integer."));
 
-        mockMvc.perform(get("/api/instruments/0")
-                        .with(jwtWithRoles("ADMIN")))
+        mockMvc.perform(get("/api/instruments/0").with(jwtWithRoles("ADMIN")))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Instrument id must be a positive integer."));
+                .andExpect(
+                        jsonPath("$.message").value("Instrument id must be a positive integer."));
     }
 
     private Instrument buildInstrument() {
@@ -120,4 +114,3 @@ class InstrumentControllerTest {
         return instrument;
     }
 }
-

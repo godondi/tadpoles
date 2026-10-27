@@ -1,5 +1,7 @@
 import { Component, ElementRef, HostListener, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { ThemeService } from '../../core/theme.service';
+import { NavigationEnd, Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/auth/auth.service';
 import { UserService } from '../../user.service';
 
@@ -13,16 +15,28 @@ import { UserService } from '../../user.service';
   },
 })
 export class TopNavComponent {
-  private readonly authService = inject(AuthService);
+  readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly userService = inject(UserService);
   private readonly elementRef = inject(ElementRef<HTMLElement>);
+  readonly theme = inject(ThemeService);
 
+  readonly currentUrl = signal(this.router.url);
+  readonly clientWorkspace = computed(
+    () =>
+      this.authService.roles().includes('CLIENT') &&
+      !/^\/(operations|compliance|analytics|finance)/.test(this.currentUrl()),
+  );
   readonly searchQuery = signal('');
   readonly isMenuOpen = signal(false);
+  readonly darkMode = this.theme.dark;
   readonly userProfile = this.userService.getProfile();
   readonly userInitials = computed(() => {
-    const name = (this.userProfile().displayName || this.userProfile().clientName || this.userProfile().email).trim();
+    const name = (
+      this.userProfile().displayName ||
+      this.userProfile().clientName ||
+      this.userProfile().email
+    ).trim();
 
     return name
       .split(/\s+/)
@@ -30,6 +44,20 @@ export class TopNavComponent {
       .map((part) => part[0]?.toUpperCase() ?? '')
       .join('');
   });
+
+  constructor() {
+    this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
+      if (event instanceof NavigationEnd) {
+        this.currentUrl.set(event.urlAfterRedirects);
+        this.searchQuery.set('');
+        this.closeProfileMenu();
+      }
+    });
+  }
+
+  toggleTheme(): void {
+    this.theme.toggle();
+  }
 
   updateSearchQuery(value: string): void {
     this.searchQuery.set(value);
@@ -39,7 +67,7 @@ export class TopNavComponent {
     event?.preventDefault();
     const ticker = this.searchQuery().trim().toUpperCase();
     if (!ticker) return;
-    this.searchQuery.set(ticker);
+    this.searchQuery.set('');
     this.closeProfileMenu();
     void this.router.navigate(['/trade', ticker]);
   }

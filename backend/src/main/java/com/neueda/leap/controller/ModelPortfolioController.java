@@ -27,7 +27,7 @@ public class ModelPortfolioController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR', 'ANALYST', 'ADVISOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR', 'ADVISOR')")
     public ModelPortfolioListResponseDto listModelPortfolios() {
         return ModelPortfolioListResponseDto.fromEntities(modelPortfolioService.listModelPortfolios());
     }
@@ -41,7 +41,7 @@ public class ModelPortfolioController {
     }
 
     @GetMapping("/{modelPortfolioId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR', 'ANALYST', 'ADVISOR', 'CLIENT')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR', 'ADVISOR', 'CLIENT')")
     public ModelPortfolioResponseDto getModelPortfolio(@PathVariable Integer modelPortfolioId) {
         ModelPortfolio modelPortfolio = modelPortfolioService.getModelPortfolio(modelPortfolioId);
         return ModelPortfolioResponseDto.fromEntity(modelPortfolio);

@@ -130,17 +130,21 @@ describe('Trade page', () => {
   });
   it('keeps the chart and old quote on refresh failure and allows retry', async () => {
     const el = await loaded();
+    vi.useFakeTimers();
     el.querySelector<HTMLButtonElement>('[data-refresh]')!.click();
     request('quotes').flush(
       { message: 'Market data unavailable' },
       { status: 503, statusText: 'Unavailable' },
     );
+    await vi.advanceTimersByTimeAsync(500);
+    request('quotes').flush({}, { status: 503, statusText: 'Unavailable' });
+    vi.useRealTimers();
     expect(render().querySelectorAll('[data-candle]').length).toBe(30);
     expect(el.textContent).toContain('$210.00');
-    expect(el.textContent).toContain('Market data unavailable');
+    expect(el.textContent).toContain('Market data is temporarily unavailable');
     el.querySelector<HTMLButtonElement>('[data-refresh]')!.click();
     request('quotes').flush(quote);
-    expect(render().textContent).not.toContain('Market data unavailable');
+    expect(render().textContent).not.toContain('Market data is temporarily unavailable');
   });
   it('cancels pending requests and clears data when the ticker changes', async () => {
     await harness.navigateByUrl('/trade/AAPL');
@@ -149,15 +153,23 @@ describe('Trade page', () => {
     await harness.navigateByUrl('/trade/MSFT');
     expect(oldCandles.cancelled).toBe(true);
     expect(oldQuote.cancelled).toBe(true);
-    request('candles', 'MSFT').flush({ ...candles, data: { ...candles.data, candles: [] } });
+    request('candles', 'MSFT').flush({
+      ...candles,
+      data: { ...candles.data, symbol: 'MSFT', candles: [] },
+      meta: { ...candles.meta, symbol: 'MSFT' },
+    });
     request('quotes', 'MSFT').flush({ ...quote, data: { ...quote.data, symbol: 'MSFT' } });
     expect(render().textContent).toContain('No daily candles available');
     expect(render().textContent).toContain('MSFT');
   });
   it('handles a candle failure independently and retries the chart', async () => {
     await harness.navigateByUrl('/trade/AAPL');
+    vi.useFakeTimers();
     request('candles').flush({}, { status: 503, statusText: 'Unavailable' });
     request('quotes').flush(quote);
+    await vi.advanceTimersByTimeAsync(500);
+    request('candles').flush({}, { status: 503, statusText: 'Unavailable' });
+    vi.useRealTimers();
     const el = render();
     expect(el.textContent).toContain('$210.00');
     el.querySelector<HTMLButtonElement>('[data-retry-candles]')!.click();

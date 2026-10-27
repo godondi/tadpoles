@@ -1,0 +1,12 @@
+# Optional compatibility overlay. Standard local Compose now provides these defaults.
+services:
+  backend:
+    environment:
+      TRADING_LOCAL_DEMO_SETUP: "true"
+      TRADING_ADMISSION_ENABLED: "true"
+      TRADING_WORKER_ENABLED: "true"
+      OPERATIONS_ACCESS_ENABLED: "true"
+      OPERATIONS_ALLOWED_PURPOSES: ORDER_REVIEW
+      OPERATIONS_POLICY_VERSION: local-demo-v1
+      OPERATIONS_CONTEXT_SECONDS: "3600"
+      OPERATIONS_EXPORT_SECONDS: "3600"

@@ -11,7 +11,7 @@ mybatis:
     map-underscore-to-camel-case: true
 
 server:
-  port: ${SERVER_PORT}
+  port: ${SERVER_PORT:8080}
 
 jwt:
   secret: ${JWT_SECRET}
@@ -22,3 +22,28 @@ fauxnance:
   default-interval: ${FAUX_DEFAULT_INTERVAL}
   connect-timeout-seconds: ${FAUX_CONNECT_TIMEOUT_SECONDS}
   read-timeout-seconds: ${FAUX_READ_TIMEOUT_SECONDS}
+
+trading:
+  admission-enabled: ${TRADING_ADMISSION_ENABLED:false}
+  worker-enabled: ${TRADING_WORKER_ENABLED:false}
+  local-demo-setup: ${TRADING_LOCAL_DEMO_SETUP:false}
+
+# No account evidence is enabled until an approved purpose policy and grants are provisioned.
+operations:
+  access-enabled: ${OPERATIONS_ACCESS_ENABLED:false}
+  allowed-purposes: ${OPERATIONS_ALLOWED_PURPOSES:}
+  policy-version: ${OPERATIONS_POLICY_VERSION:}
+  context-seconds: ${OPERATIONS_CONTEXT_SECONDS:0}
+  export-seconds: ${OPERATIONS_EXPORT_SECONDS:0}
+
+# Compliance access is fail-closed until an approved policy and account grants exist.
+support:
+  workflow-enabled: ${SUPPORT_WORKFLOW_ENABLED:false}
+
+compliance:
+  access-enabled: ${COMPLIANCE_ACCESS_ENABLED:false}
+  allowed-purposes: ${COMPLIANCE_ALLOWED_PURPOSES:}
+  policy-version: ${COMPLIANCE_POLICY_VERSION:}
+  scope-label: ${COMPLIANCE_SCOPE_LABEL:Assigned accounts only}
+  context-seconds: ${COMPLIANCE_CONTEXT_SECONDS:0}
+  export-seconds: ${COMPLIANCE_EXPORT_SECONDS:0}

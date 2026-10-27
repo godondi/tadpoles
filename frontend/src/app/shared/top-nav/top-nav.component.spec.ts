@@ -1,3 +1,5 @@
+import { signal } from '@angular/core';
+import { AuthService } from '../../core/auth/auth.service';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -7,44 +9,62 @@ import { TopNavComponent } from './top-nav.component';
 describe('TopNavComponent', () => {
   beforeEach(async () => {
     localStorage.clear();
-    localStorage.setItem('tadpoles.auth.session', JSON.stringify({
-      token: 'stored-token',
-      tokenType: 'Bearer',
-      expiresIn: 3600,
-      userId: 24,
-      email: 'nav.tester@example.com',
-      displayName: 'Nav Tester',
-      clientId: 7,
-      onboardingComplete: true,
-    }));
+    localStorage.setItem(
+      'tadpoles.auth.session',
+      JSON.stringify({
+        token: 'stored-token',
+        tokenType: 'Bearer',
+        expiresIn: 3600,
+        userId: 24,
+        email: 'nav.tester@example.com',
+        displayName: 'Nav Tester',
+        clientId: 7,
+        onboardingComplete: true,
+      }),
+    );
     localStorage.setItem('tadpoles.auth.token', 'stored-token');
-    localStorage.setItem('tadpoles.user.profile', JSON.stringify({
-      userId: 24,
-      clientId: 7,
-      email: 'nav.tester@example.com',
-      displayName: 'Nav Tester',
-      clientName: 'Nav Tester Household',
-      phone: '',
-      dateOfBirth: '',
-      addressLine1: '',
-      addressLine2: '',
-      city: '',
-      state: '',
-      postalCode: '',
-      country: '',
-      employmentStatus: '',
-      netWorth: null,
-      riskTolerance: '',
-      investmentObjective: '',
-      preferredContactMethod: '',
-      paperlessStatements: true,
-      marketingOptIn: false,
-      onboardingComplete: true,
-    }));
+    localStorage.setItem(
+      'tadpoles.user.profile',
+      JSON.stringify({
+        userId: 24,
+        clientId: 7,
+        email: 'nav.tester@example.com',
+        displayName: 'Nav Tester',
+        clientName: 'Nav Tester Household',
+        phone: '',
+        dateOfBirth: '',
+        addressLine1: '',
+        addressLine2: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        country: '',
+        employmentStatus: '',
+        netWorth: null,
+        riskTolerance: '',
+        investmentObjective: '',
+        preferredContactMethod: '',
+        paperlessStatements: true,
+        marketingOptIn: false,
+        onboardingComplete: true,
+      }),
+    );
 
     await TestBed.configureTestingModule({
       imports: [TopNavComponent],
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: AuthService,
+          useValue: {
+            roles: signal(['CLIENT']),
+            hasCompletedOnboarding: () => true,
+            logout: vi.fn(),
+          },
+        },
+      ],
     }).compileComponents();
   });
 
@@ -52,17 +72,33 @@ describe('TopNavComponent', () => {
     localStorage.clear();
   });
 
-  it('renders the Tadpoles brand, ticker search, and account button', () => {
+  it('renders the clickable frog brand, ticker search, and account button', () => {
     const fixture = TestBed.createComponent(TopNavComponent);
     fixture.detectChanges();
 
     const host = fixture.nativeElement as HTMLElement;
 
-    expect(host.textContent).toContain('Tadpoles');
+    const brand = host.querySelector('.brand') as HTMLButtonElement;
+    expect(brand.getAttribute('aria-label')).toBe('Tadpoles dashboard');
+    expect(brand.querySelector('img')?.getAttribute('src')).toBe('/tadpole-yellow.png');
+    expect(brand.textContent?.trim()).toBe('');
     expect(host.querySelector('.search-input')?.getAttribute('placeholder')).toContain('Search');
     expect(host.querySelector('.search-button')?.textContent).toContain('Search');
     expect(host.querySelector('.profile-btn')?.textContent).toContain('Account');
     expect(host.textContent).not.toContain('Trades');
+  });
+
+  it('offers a text-only theme action and updates its label after toggling', () => {
+    const fixture = TestBed.createComponent(TopNavComponent);
+    fixture.componentInstance.toggleProfileMenu();
+    fixture.detectChanges();
+    const menu = fixture.nativeElement.querySelector('#account-menu') as HTMLElement;
+    const action = Array.from(menu.querySelectorAll('button')).find(button => button.textContent?.includes('Enable Dark Mode'))!;
+    expect(action.getAttribute('role')).toBe('menuitem');
+    action.click();
+    fixture.detectChanges();
+    expect(action.textContent).toContain('Disable Dark Mode');
+    expect(menu.querySelector('[role="switch"], .theme-switch')).toBeNull();
   });
 
   it.each([' aapl ', 'brk.b', 'BRK-B'])('submits ticker %s through the search form', (query) => {
@@ -100,15 +136,18 @@ describe('TopNavComponent', () => {
     expect(navigate).toHaveBeenCalledWith(['/']);
   });
 
-  it.each(['/', '/?view=holdings', '/#holdings'])('does nothing when the brand is clicked on dashboard %s', (url) => {
-    const fixture = TestBed.createComponent(TopNavComponent);
-    fixture.detectChanges();
-    const router = TestBed.inject(Router);
-    vi.spyOn(router, 'url', 'get').mockReturnValue(url);
-    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
-    fixture.nativeElement.querySelector('.brand').click();
-    expect(navigate).not.toHaveBeenCalled();
-  });
+  it.each(['/', '/?view=holdings', '/#holdings'])(
+    'does nothing when the brand is clicked on dashboard %s',
+    (url) => {
+      const fixture = TestBed.createComponent(TopNavComponent);
+      fixture.detectChanges();
+      const router = TestBed.inject(Router);
+      vi.spyOn(router, 'url', 'get').mockReturnValue(url);
+      const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+      fixture.nativeElement.querySelector('.brand').click();
+      expect(navigate).not.toHaveBeenCalled();
+    },
+  );
 
   it('opens and closes the account menu', () => {
     const fixture = TestBed.createComponent(TopNavComponent);
@@ -128,4 +167,3 @@ describe('TopNavComponent', () => {
     expect(host.querySelector('.profile-menu')).toBeNull();
   });
 });
-

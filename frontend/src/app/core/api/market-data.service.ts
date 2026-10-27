@@ -1,6 +1,15 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { buildApiUrl } from './api-url';
+import { retry, throwError, timer } from 'rxjs';
+
+// Retry only idempotent market-data reads, once, when transport/provider failure is transient.
+const transientMarketRetry = <T>() => retry<T>({
+  count: 1,
+  delay: (error) => [0, 500, 502, 503, 504].includes(error.status)
+    ? timer(500)
+    : throwError(() => error),
+});
 
 export interface Candle {
   date: string;
@@ -9,8 +18,8 @@ export interface Candle {
   low: number;
   close: number;
   adjclose: number;
-  volume: number | null;
-  synthetic: boolean;
+  volume?: number | null;
+  synthetic: boolean | null;
 }
 export interface MarketMeta {
   asOf: string;
@@ -39,7 +48,7 @@ export interface QuoteResponse {
     asOf: string;
     marketState: 'open' | 'closed' | 'pre' | 'post' | 'unknown';
   };
-  meta: MarketMeta & { spreadSource: string };
+  meta: MarketMeta & { spreadSource: string | null };
 }
 
 @Injectable({ providedIn: 'root' })
@@ -50,22 +59,24 @@ export class MarketDataService {
   getCandles(symbol: string) {
     const to = new Date();
     const from = new Date(to);
-    // Fetch extra calendar days so weekends/holidays do not shrink the 30-session view.
-    from.setUTCDate(from.getUTCDate() - 90);
+    // Fetch daily history for visible 1M/3M/1Y ranges; the interval remains one day.
+    from.setUTCDate(from.getUTCDate() - 366);
     return this.http.get<CandlesResponse>(this.url('candles', symbol), {
       params: {
         interval: '1d',
         from: from.toISOString().slice(0, 10),
         to: to.toISOString().slice(0, 10),
       },
-    });
+    }).pipe(transientMarketRetry());
   }
+
   getQuote(symbol: string) {
-    return this.http.get<QuoteResponse>(this.url('quotes', symbol));
+    return this.http.get<QuoteResponse>(this.url('quotes', symbol)).pipe(transientMarketRetry());
   }
+
   private url(kind: string, symbol: string) {
     return buildApiUrl(
-      `/${kind}/${encodeURIComponent(symbol.trim().toUpperCase())}`,
+      `/api/${kind}/${encodeURIComponent(symbol.trim().toUpperCase())}`,
       this.platformId,
     );
   }

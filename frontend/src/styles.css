@@ -1,8 +1,8 @@
 /* Global styles for Tadpoles */
 :root {
-  --primary-green: #76A923;
+  --primary-green: #76a923;
   --dark-green: #006044;
-  --bronze: #AF8A49;
+  --bronze: #af8a49;
   --white: #ffffff;
   --light-gray: #f5f7fa;
   --border-gray: #dbe2e8;
@@ -15,8 +15,20 @@
   --text-inverse: #f9fcfb;
   --positive: #1f9d55;
   --negative: #c0392b;
+  --return-positive: #005ea8;
   --danger: #b42318;
   --accent: #f0d7a9;
+  --action-bg: #006044;
+  --action-hover: #004d36;
+  --action-text: #ffffff;
+  --notice-bg: #faf6ed;
+  --notice-text: #655022;
+  --error-bg: #fdecec;
+  --error-text: #a92424;
+  --success-bg: #edf6ef;
+  --success-text: #245b38;
+  --page-bg: #f5f7fa;
+  --shadow-soft: 0 10px 30px rgba(23, 48, 66, .08);
   --font-family-sans: Arial, 'Helvetica Neue', Helvetica, sans-serif;
   --font-family-mono: Consolas, 'SFMono-Regular', Menlo, Monaco, monospace;
 }
@@ -28,11 +40,12 @@
   border-radius: 0;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   height: 100%;
-  background: var(--light-gray);
+  background: var(--page-bg);
   color: var(--text-primary);
   font-family: var(--font-family-sans);
 }
@@ -73,6 +86,8 @@ app-root {
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
 a:focus-visible {
   outline: 3px solid var(--primary-green);
   outline-offset: 2px;
@@ -156,8 +171,8 @@ a:focus-visible {
   font-size: 0.95rem;
 }
 
-.form-group input[type="radio"],
-.form-group input[type="checkbox"] {
+.form-group input[type='radio'],
+.form-group input[type='checkbox'] {
   width: auto;
   margin-right: 0.5rem;
 }
@@ -192,12 +207,12 @@ a:focus-visible {
 }
 
 .btn-submit {
-  background-color: var(--primary-green);
+  background-color: var(--action-bg);
   color: var(--white);
 }
 
 .btn-submit:hover {
-  background-color: #6a9419;
+  background-color: var(--action-hover);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(118, 169, 35, 0.3);
 }
@@ -205,3 +220,745 @@ a:focus-visible {
 .hidden {
   display: none;
 }
+
+/* Role workspaces: restrained hierarchy, readable tables and keyboard navigation. */
+.workspace-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  min-height: calc(100dvh - var(--workspace-header-height, 80px));
+}
+.workspace-sidebar {
+  position: sticky;
+  top: var(--workspace-header-height, 80px);
+  align-self: start;
+  height: calc(100dvh - var(--workspace-header-height, 80px));
+  max-height: calc(100dvh - var(--workspace-header-height, 80px));
+  overflow-y: auto;
+  background: var(--surface);
+  border-right: 1px solid var(--border-gray);
+  padding: 24px 16px;
+}
+.workspace-group {
+  margin-bottom: 20px;
+}
+.workspace-group p {
+  margin: 0 12px 10px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+.workspace-group a {
+  display: block;
+  padding: 12px;
+  color: var(--text-primary);
+  text-decoration: none;
+  border-left: 3px solid transparent;
+}
+.workspace-group a.active {
+  background: var(--success-bg);
+  color: var(--dark-green);
+  border-left-color: var(--dark-green);
+  font-weight: 700;
+}
+.workspace-group a:not(.active):hover {
+  background: var(--surface-muted);
+  color: var(--dark-green);
+}
+.workspace-content {
+  padding: 24px clamp(16px, 2vw, 28px);
+  max-width: none;
+  width: 100%;
+  min-width: 0;
+}
+.workspace-heading {
+  margin-bottom: 20px;
+}
+.workspace-heading h1 {
+  margin: 4px 0 8px;
+  font-size: clamp(1.7rem, 2.5vw, 2.3rem);
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+}
+.workspace-heading p {
+  max-width: 70ch;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+.eyebrow {
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  color: var(--dark-green);
+}
+.workspace-content h2 {
+  font-size: 1.2rem;
+  margin: 0 0 12px;
+}
+.workspace-content h3 {
+  font-size: 1.05rem;
+}
+.workspace-content p {
+  line-height: 1.6;
+}
+.workspace-content a,
+.standalone-page a {
+  color: var(--dark-green);
+  text-underline-offset: 3px;
+}
+.panel {
+  padding: 18px;
+  margin-bottom: 18px;
+  border: 1px solid var(--border-gray);
+  background: var(--surface);
+}
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+.summary-grid .panel {
+  margin-bottom: 0;
+  border-top: 3px solid var(--bronze);
+}
+.summary-grid h2 {
+  font-size: 1.55rem;
+  margin: 18px 0 10px;
+}
+.notice {
+  padding: 12px 16px;
+  margin: 16px 0;
+  background: var(--notice-bg);
+  color: var(--notice-text);
+  border-left: 3px solid var(--bronze);
+}
+.notice p:last-child {
+  margin-bottom: 0;
+}
+.muted,
+.as-of,
+table caption {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+.as-of {
+  margin: 16px 0;
+}
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.workspace-content table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: left;
+  white-space: nowrap;
+}
+.workspace-content caption {
+  text-align: left;
+  padding: 12px 0 16px;
+}
+.workspace-content th {
+  background: var(--surface-muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.025em;
+}
+.workspace-content th,
+.workspace-content td {
+  padding: 15px 14px;
+  border-bottom: 1px solid var(--border-gray);
+}
+.workspace-content td small {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-secondary);
+}
+.status-label {
+  font-size: 0.75rem;
+  padding: 5px 8px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-gray);
+}
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 24px;
+}
+.filters label {
+  display: grid;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.filters input,
+.filters select {
+  border: 1px solid var(--border-gray);
+  padding: 11px;
+  min-height: 44px;
+  background: var(--surface);
+  color: var(--text-primary);
+  max-width: 100%;
+}
+.workspace-content button,
+.standalone-page button,
+.navigation-toggle {
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 1px solid var(--dark-green);
+  background: var(--action-bg);
+  color: var(--action-text);
+  font-weight: 600;
+  cursor: pointer;
+}
+.workspace-content button:disabled,
+.standalone-page button:disabled {
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  border-color: var(--border-gray);
+  cursor: not-allowed;
+}
+.workspace-content button:not(:disabled):hover,
+.standalone-page button:not(:disabled):hover,
+.navigation-toggle:not(:disabled):hover {
+  background: var(--action-hover);
+  border-color: var(--action-hover);
+}
+.pagination,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  margin-top: 16px;
+}
+.pagination {
+  justify-content: space-between;
+}
+.empty {
+  padding: 28px 0;
+}
+.panel.empty {
+  padding: 24px;
+}
+.details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+.details dt {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+.details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.standalone-page {
+  max-width: 720px;
+  padding: 48px 20px;
+  margin: auto;
+}
+.standalone-page .panel {
+  margin-top: 16px;
+}
+.standalone-page a,
+.standalone-page button {
+  display: inline-block;
+  margin: 10px 20px 10px 0;
+}
+.navigation-toggle {
+  display: none;
+}
+.skip-link {
+  position: fixed;
+  top: -100px;
+  padding: 12px;
+  background: white;
+  z-index: 9999;
+}
+.skip-link:focus {
+  top: 0;
+}
+
+@media (max-width: 1000px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+  .workspace-layout {
+    grid-template-columns: 180px minmax(0, 1fr);
+  }
+}
+@media (max-width: 768px) {
+  /* The stacked header scrolls away on mobile; navigation uses the full viewport. */
+  .workspace-sidebar {
+    top: 0;
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+}
+@media (max-width: 700px) {
+  .workspace-layout {
+    display: block;
+  }
+  .workspace-sidebar {
+    height: auto;
+    z-index: 1100;
+    padding: 12px 16px;
+    border-right: none;
+    border-bottom: 1px solid var(--border-gray);
+  }
+  .navigation-toggle {
+    display: block;
+  }
+  #workspace-navigation {
+    display: none;
+    margin-top: 20px;
+  }
+  #workspace-navigation.mobile-open {
+    display: block;
+  }
+  .workspace-content {
+    padding: 24px 16px;
+  }
+  .panel {
+    padding: 18px;
+  }
+  .details {
+    grid-template-columns: 1fr;
+  }
+  .filters label {
+    width: 100%;
+  }
+  .filters input,
+  .filters select {
+    width: 100%;
+  }
+}
+
+/* The ticket keeps the instruction, estimate and final action in one reading column. */
+.order-ticket {
+  max-width: 760px;
+}
+.order-ticket fieldset {
+  border: 0;
+  margin: 24px 0;
+  padding: 0;
+}
+.order-ticket legend {
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+.order-ticket input[type='text'] {
+  display: block;
+  width: min(100%, 320px);
+  padding: 12px;
+  margin-top: 8px;
+  border: 1px solid var(--border-gray);
+}
+.side-options {
+  display: flex;
+  gap: 32px;
+  margin: 16px 0 24px;
+}
+.side-options label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.order-review {
+  border-top: 1px solid var(--border-gray);
+  padding-top: 24px;
+}
+.order-review .mono-value {
+  font-size: 1.5rem;
+}
+.order-timeline {
+  padding-left: 24px;
+}
+.order-timeline li {
+  padding: 8px 0 20px 8px;
+}
+.position-sell {
+  margin-left: 20px;
+}
+.workspace-content .button-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 12px 20px;
+  background: var(--surface-strong);
+  color: white;
+  text-decoration: none;
+}
+
+.workspace-content .button-link:hover,
+.workspace-content .button-link:focus-visible,
+.workspace-content button:not(:disabled):hover {
+  background: var(--action-hover);
+  border-color: var(--action-hover);
+  color: var(--action-text);
+}
+/* Keep labelled banking controls readable in one column on narrow displays. */
+app-banking-page form fieldset,
+.workspace-form fieldset {
+  display: grid;
+  gap: 12px;
+  max-width: 640px;
+  margin: 20px 0;
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.workspace-content input:not([type='checkbox']):not([type='radio']),
+.workspace-content select,
+.workspace-content textarea {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border-gray);
+  padding: 10px 12px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  line-height: 1.4;
+  min-width: 0;
+}
+.workspace-content textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+.workspace-content input:read-only {
+  background: var(--surface-muted);
+}
+.workspace-content form label,
+.workspace-form legend {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.workspace-form legend {
+  padding: 0;
+  margin-bottom: 16px;
+  font-size: 1rem;
+}
+.workspace-form fieldset {
+  gap: 20px;
+  margin: 24px 0;
+}
+.form-field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.field-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.field-action input {
+  flex: 1 1 180px;
+}
+.field-action button {
+  flex: 0 0 auto;
+}
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+}
+.checkbox-field input {
+  margin: 0;
+}
+.workspace-form p {
+  margin: 0;
+}
+.workspace-form .actions {
+  margin-top: 0;
+}
+
+/* Account cash and display estimates share the same panel spacing and form controls. */
+.account-balances {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin-bottom: 24px;
+}
+.account-balances .panel {
+  height: 100%;
+  margin-bottom: 0;
+  border-top: 3px solid var(--bronze);
+}
+.account-balances app-display-currency {
+  display: block;
+  min-width: 0;
+}
+.account-balances .metric-value {
+  font-size: 1.55rem;
+  margin: 18px 0 10px;
+}
+.section-heading {
+  flex-wrap: wrap;
+}
+.section-heading .actions {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+@media (max-width: 1000px) {
+  .account-balances {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.account-balances .eyebrow {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+}
+.account-balances > * {
+  min-width: 0;
+}
+.account-balances p {
+  overflow-wrap: anywhere;
+}
+.metric-status {
+  min-height: 1.6em;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+/* Keep operator guidance directly beneath each label, distinct from the input. */
+.workspace-form .field-hint {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.min-length-hint {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 400;
+}
+.return-positive {
+  color: var(--return-positive);
+}
+.return-negative {
+  color: var(--negative);
+}
+
+/* Read-only operational facts use the same detail grid and surface tokens as client receipts. */
+.evidence-details {
+  min-width: 0;
+  white-space: normal;
+}
+.evidence-json {
+  max-width: 100%;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 16px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-gray);
+  font-size: 0.85rem;
+}
+.filters .form-field {
+  flex: 1 1 200px;
+}
+
+.case-prose {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.case-workbench, .case-workbench > *, .workbench-grid > *, .evidence-facts, .evidence-facts > div {
+  min-width: 0;
+  max-width: 100%;
+}
+.case-workbench { overflow-wrap: anywhere; }
+.workbench-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: 1rem; }
+.evidence-facts { display: grid; gap: 0.75rem; }
+.evidence-facts dt { color: var(--text-secondary); font-weight: 600; }
+.evidence-facts dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.case-workbench fieldset, app-support-intake fieldset { display: grid; min-width: 0; gap: 1rem; }
+.case-workbench input, .case-workbench select, .case-workbench textarea, app-support-intake input,
+app-support-intake select, app-support-intake textarea { max-width: 100%; min-width: 0; }
+
+/* Theme colors describe their purpose; primary buttons never inherit link colors. */
+:root { color-scheme: light; }
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --primary-green: #a3ce7a;
+  --dark-green: #91d8b7;
+  --bronze: #d6ad69;
+  --light-gray: #111b17;
+  --page-bg: #111b17;
+  --surface: #1b2822;
+  --surface-muted: #24352c;
+  --surface-strong: #0d4b39;
+  --border-gray: #40564b;
+  --border-strong: #52685d;
+  --text-primary: #e8f0ec;
+  --text-secondary: #b5c5bc;
+  --text-inverse: #f9fcfb;
+  --positive: #88d5a6;
+  --negative: #ff9d93;
+  --return-positive: #82c5ff;
+  --danger: #ffaaa1;
+  --accent: #f0d7a9;
+  --action-bg: #006044;
+  --action-hover: #007652;
+  --action-text: #ffffff;
+  --notice-bg: #332c1e;
+  --notice-text: #eddbb4;
+  --error-bg: #3c2524;
+  --error-text: #ffb5ad;
+  --success-bg: #233c2d;
+  --success-text: #a6dcb6;
+}
+.workspace-group a.active { background:var(--success-bg); }
+.workspace-content p { margin-top:8px; margin-bottom:12px; }
+.workspace-content h1:focus { outline:none; }
+.workspace-content h1:focus-visible { outline:none; }
+.panel > :last-child { margin-bottom:0; }
+.workspace-content button { font:inherit; font-size:.85rem; font-weight:600; }
+.workspace-content button.secondary-button { background:var(--surface); color:var(--dark-green); border-color:var(--border-gray); }
+.workspace-content button.secondary-button:hover { background:var(--surface-muted); color:var(--text-primary); }
+.workspace-content input:not([type='checkbox']):not([type='radio']),
+.workspace-content select, .workspace-content textarea { font-weight:400; }
+.workspace-content input::placeholder, .workspace-content textarea::placeholder { color:var(--text-secondary); opacity:1; }
+.workspace-content input[type='checkbox'], .workspace-content input[type='radio'] { width:16px; height:16px; min-height:0; margin:0; accent-color:var(--action-bg); flex:none; }
+.filters { gap:12px; margin-bottom:18px; }
+.filters label { flex:1 1 180px; max-width:340px; min-width:0; gap:6px; }
+.filters .checkbox-field { display:flex; align-items:center; font-weight:400; }
+.actions { gap:10px; margin-top:14px; }
+.workspace-form > label { display:grid; gap:6px; margin-bottom:14px; }
+.workspace-form fieldset { gap:14px; margin:14px 0; }
+.workspace-form .field-hint { margin:0; }
+.support-heading { display:flex; align-items:center; justify-content:space-between; gap:20px; }
+.support-heading p { margin-bottom:0; }
+.support-updates { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 20px; }
+.support-updates h2,.support-updates p { grid-column:1; margin:0; }
+.support-updates p { color:var(--text-secondary); font-size:.85rem; }
+.support-updates .actions { grid-column:2; grid-row:1 / span 3; margin:0; align-content:center; justify-content:end; max-width:420px; }
+.case-filters { padding:14px; background:var(--surface); border:1px solid var(--border-gray); }
+.support-intake-form { max-width:none; }
+app-support-intake fieldset { max-width:none; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 18px; padding:16px; background:var(--surface-muted); border:1px solid var(--border-gray); }
+.support-intake-form app-support-intake fieldset { max-width:none; padding:16px; border:1px solid var(--border-gray); }
+app-support-intake label { display:grid; gap:6px; align-content:start; }
+app-support-intake .intake-wide, app-support-intake fieldset > p { grid-column:1 / -1; }
+.intake-heading {
+  grid-column: 1 / -1;
+  margin: 0 0 2px;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+.instrument-editor { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
+.instrument-editor fieldset { max-width:none; margin:0; align-content:start; }
+.instrument-editor fieldset:last-child { grid-column:1 / -1; grid-template-columns:repeat(3,minmax(0,1fr)); border-top:1px solid var(--border-gray); padding-top:14px; }
+.instrument-editor fieldset:last-child > p,.instrument-editor fieldset:last-child > .form-field,.instrument-editor fieldset:last-child > .actions { grid-column:1 / -1; }
+app-banking-page { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; align-items:start; }
+app-banking-page > header, app-banking-page > a, app-banking-page > p, app-banking-page > section:first-of-type, app-banking-page > section:last-of-type { grid-column:1 / -1; }
+app-banking-page > .panel { margin:0; }
+app-banking-page > header { margin:0; }
+app-banking-page > p:empty { display:none; }
+app-banking-page > section:first-of-type { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 16px; }
+app-banking-page > section:first-of-type > h2, app-banking-page > section:first-of-type > p { grid-column:1; margin:0; }
+app-banking-page > section:first-of-type > button { grid-column:2; grid-row:1 / span 3; align-self:center; }
+app-banking-page form fieldset { max-width:none; gap:6px; margin:14px 0 0; }
+app-banking-page form fieldset > label { margin-top:8px; }
+app-banking-page form fieldset > p { margin:0; font-size:.8rem; color:var(--text-secondary); }
+app-banking-page .bank-reference { padding:12px 0; border-bottom:1px solid var(--border-gray); }
+app-banking-page .bank-reference .actions { margin-top:8px; }
+.advisor-search-row { display:flex; gap:12px; align-items:center; margin-top:8px; }
+.advisor-search-row input { flex:1; min-width:0; }
+.advisor-search-row button { flex:none; }
+.order-ticket { max-width:none; }
+.ticket-workspace { display:grid; grid-template-columns:minmax(240px,.8fr) minmax(0,1.3fr); gap:24px; align-items:start; }
+.ticket-workspace fieldset { margin:12px 0 0; }
+.ticket-workspace .order-review { border-top:0; border-left:1px solid var(--border-gray); padding:0 0 0 24px; }
+.case-action-form {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  margin: 14px 0 20px;
+  min-width: 0;
+}
+.case-action-form label {
+  display: grid;
+  gap: 6px;
+  width: min(100%, 760px);
+  min-width: 0;
+}
+.case-action-form textarea,
+.case-action-form select { width: 100%; min-width: 0; }
+.support-case-detail > h2 { margin-bottom: 10px; }
+.support-case-detail > p { margin: 8px 0 12px; }
+.support-case-detail > app-operations-context { display: block; margin: 18px 0 22px; }
+.support-case-detail > app-operations-context > .panel { margin: 0; }
+.case-conversation { display: grid; gap: 12px; margin: 22px 0; min-width: 0; }
+.case-conversation h3 { margin: 0 0 2px; }
+.case-conversation > .panel { margin: 0; }
+.case-conversation > .actions { margin: 0; align-items: center; }
+.support-case-detail > .case-action-form { padding-top: 16px; border-top: 1px solid var(--border-gray); }
+.support-case-detail > h3 { margin: 26px 0 8px; }
+.support-case-detail > h3 + p { margin: 0 0 12px; }
+.support-case-detail > .case-action-form + h3 { margin-top: 28px; }
+.support-case-detail > .case-action-form label { width: min(100%, 760px); }
+.case-workbench > .workspace-heading { align-items: flex-start; }
+.case-workbench .workbench-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  margin: 20px 0;
+}
+.case-workbench .workbench-grid > .workspace-form {
+  max-width: none;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border-gray);
+  background: var(--surface-muted);
+}
+.case-workbench .workspace-form > label { width: 100%; }
+.case-workbench .workbench-section {
+  margin: 18px 0;
+  border: 1px solid var(--border-gray);
+  background: var(--surface-muted);
+}
+.case-workbench .workbench-section > summary {
+  padding: 14px 16px;
+  cursor: pointer;
+  font-weight: 700;
+}
+.case-workbench .workbench-section[open] > :not(summary) { margin-left: 16px; margin-right: 16px; }
+.case-workbench .workbench-section[open] > :last-child { margin-bottom: 16px; }
+.case-workbench .workbench-section > .workspace-form { max-width: none; }
+.case-workbench .workbench-section > .workspace-form > label { width: 100%; }
+.support-intake-form { display: grid; gap: 16px; }
+.support-intake-form > label { display: grid; gap: 6px; width: min(100%, 760px); }
+app-support-intake { display: block; min-width: 0; }
+app-support-intake fieldset { margin: 0; }
+@media (max-width: 760px) {
+  .case-workbench .workbench-grid { grid-template-columns: minmax(0, 1fr); }
+  .support-updates { grid-template-columns: minmax(0, 1fr); }
+  .support-updates .actions { grid-column: 1; grid-row: auto; justify-content: start; }
+}
+.order-review .details { gap:12px 16px; }
+.order-review .details dt { margin-bottom:4px; }
+.order-review .mono-value { font-size:1.2rem; }
+.order-review .notice { font-size:.85rem; padding:10px 12px; }
+@media(min-width:1001px) { .account-balances { gap:16px; } }
+@media(max-width:1000px) { .account-balances { grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; } .account-balances > :last-child { grid-column:1 / -1; } }
+@media(max-width:900px) { .support-updates { grid-template-columns:1fr; } .support-updates .actions { grid-column:1; grid-row:auto; justify-content:start; max-width:none; margin-top:8px; } .instrument-editor, app-banking-page { grid-template-columns:1fr; } }
+@media(max-width:700px) { .support-heading { align-items:start; flex-direction:column; gap:14px; } app-support-intake fieldset,.ticket-workspace,.account-balances { grid-template-columns:1fr; } .ticket-workspace .order-review { padding:16px 0 0; border-left:0; border-top:1px solid var(--border-gray); } .filters label { max-width:none; } .instrument-editor fieldset:last-child { grid-template-columns:1fr; } }
+input::placeholder, textarea::placeholder { color:var(--text-secondary); opacity:1; }
+.workspace-content app-profile, .workspace-content app-trades { min-height:0; }
+.workspace-content .profile-main, .workspace-content .trades-main { padding:0; max-width:none; }
+.workspace-content .profile-header { padding:18px; margin-bottom:18px; }
+.workspace-content .profile-card { padding:18px; }
+.workspace-content .profile-card h2 { margin-bottom:16px; }
+.workspace-content .info-grid { gap:16px; }
+.workspace-content .profile-content { gap:18px; }
+@media(max-width:700px) { app-banking-page > section:first-of-type { grid-template-columns:1fr; } app-banking-page > section:first-of-type > button { grid-column:1; grid-row:auto; justify-self:start; margin-top:8px; } }

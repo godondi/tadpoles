@@ -33,6 +33,29 @@ class ClientServiceImplTest {
     }
 
     @Test
+    void scalarFundingCannotBeCreatedOrEditedThroughClientMetadata() {
+        assertEquals(
+                "Use the banking cash-movement workflow to fund a client.",
+                assertThrows(
+                                IllegalArgumentException.class,
+                                () ->
+                                        clientService.createClient(
+                                                new CreateClientRequestDto(
+                                                        "Test",
+                                                        null,
+                                                        null,
+                                                        null,
+                                                        new BigDecimal("10"))))
+                        .getMessage());
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        clientService.updateClient(
+                                7, new UpdateClientRequestDto(null, null, null, BigDecimal.ZERO)));
+        org.mockito.Mockito.verifyNoInteractions(clientMapper);
+    }
+
+    @Test
     void getClientReturnsClientWhenFound() {
         Client client = buildClient();
         when(clientMapper.getClient(7)).thenReturn(client);
@@ -55,19 +78,16 @@ class ClientServiceImplTest {
 
     @Test
     void createClientUsesDefaultBalanceWhenMissing() {
-        CreateClientRequestDto request = new CreateClientRequestDto(
-                "Alice Investor",
-                3,
-                5,
-                1,
-                null
-        );
+        CreateClientRequestDto request =
+                new CreateClientRequestDto("Alice Investor", 3, 5, 1, null);
 
-        when(clientMapper.insertClient(any())).thenAnswer(invocation -> {
-            Client toInsert = invocation.getArgument(0, Client.class);
-            toInsert.setClientId(7);
-            return 1;
-        });
+        when(clientMapper.insertClient(any()))
+                .thenAnswer(
+                        invocation -> {
+                            Client toInsert = invocation.getArgument(0, Client.class);
+                            toInsert.setClientId(7);
+                            return 1;
+                        });
         when(clientMapper.getClient(7)).thenReturn(buildClient());
 
         Client result = clientService.createClient(request);
@@ -80,15 +100,10 @@ class ClientServiceImplTest {
 
     @Test
     void updateClientReturnsUpdatedClient() {
-        UpdateClientRequestDto request = new UpdateClientRequestDto(
-                "Alice Updated",
-                null,
-                null,
-                new BigDecimal("2000.00")
-        );
+        UpdateClientRequestDto request =
+                new UpdateClientRequestDto("Alice Updated", null, null, null);
         Client updated = buildClient();
         updated.setClientName("Alice Updated");
-        updated.setCashBalance(new BigDecimal("2000.00"));
 
         when(clientMapper.updateClient(any())).thenReturn(1);
         when(clientMapper.getClient(7)).thenReturn(updated);
@@ -96,7 +111,10 @@ class ClientServiceImplTest {
         Client result = clientService.updateClient(7, request);
 
         assertEquals("Alice Updated", result.getClientName());
-        assertEquals(0, new BigDecimal("2000.00").compareTo(result.getCashBalance()));
+        assertEquals(0, new BigDecimal("1200.50").compareTo(result.getCashBalance()));
+        ArgumentCaptor<Client> captor = ArgumentCaptor.forClass(Client.class);
+        verify(clientMapper).updateClient(captor.capture());
+        org.junit.jupiter.api.Assertions.assertNull(captor.getValue().getCashBalance());
     }
 
     @Test
@@ -117,8 +135,11 @@ class ClientServiceImplTest {
     @Test
     void updateClientThrowsWhenMissing() {
         when(clientMapper.updateClient(any())).thenReturn(0);
-        assertThrows(ClientNotFoundException.class,
-                () -> clientService.updateClient(99, new UpdateClientRequestDto("A", null, null, null)));
+        assertThrows(
+                ClientNotFoundException.class,
+                () ->
+                        clientService.updateClient(
+                                99, new UpdateClientRequestDto("A", null, null, null)));
     }
 
     @Test
@@ -148,4 +169,3 @@ class ClientServiceImplTest {
         return client;
     }
 }
-

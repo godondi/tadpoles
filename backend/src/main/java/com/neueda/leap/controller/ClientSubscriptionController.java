@@ -33,7 +33,7 @@ public class ClientSubscriptionController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR', 'ANALYST', 'ADVISOR', 'CLIENT')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AUDITOR', 'ADVISOR', 'CLIENT')")
     public ClientSubscriptionListResponseDto listClientSubscriptions(
             @PathVariable Integer clientId,
             @AuthenticationPrincipal Jwt jwt

@@ -102,7 +102,8 @@ const EMPTY_PROFILE: UserProfile = {
 export class UserService {
   private readonly http = inject(HttpClient);
   private readonly platformId = inject(PLATFORM_ID);
-  private readonly userProfile = signal<UserProfile>(this.readStoredProfile());
+  private readonly userProfile = signal<UserProfile>(EMPTY_PROFILE);
+  private generation = 0;
   readonly loading = signal(false);
   readonly errorMessage = signal('');
 
@@ -116,17 +117,16 @@ export class UserService {
 
   setProfile(profile: UserProfile): void {
     this.userProfile.set(profile);
-    this.persistProfile(profile);
   }
 
   updateProfile(updates: Partial<UserProfile>): void {
     const current = this.userProfile();
     const nextProfile = { ...current, ...updates };
     this.userProfile.set(nextProfile);
-    this.persistProfile(nextProfile);
   }
 
   async loadCurrentProfile(): Promise<UserProfile> {
+    const generation = this.generation;
     this.loading.set(true);
     this.errorMessage.set('');
 
@@ -138,39 +138,51 @@ export class UserService {
       );
 
       const profile = this.mapProfile(response);
+      if (generation !== this.generation) throw new Error('Account changed');
       this.setProfile(profile);
       return profile;
     } catch (error) {
-      this.errorMessage.set(this.toErrorMessage(error, 'Unable to load your profile right now.'));
+      if (generation === this.generation)
+        this.errorMessage.set(this.toErrorMessage(error, 'Unable to load your profile right now.'));
       throw error;
     } finally {
-      this.loading.set(false);
+      if (generation === this.generation) this.loading.set(false);
     }
   }
 
   async completeOnboarding(request: CompleteClientOnboardingRequest): Promise<UserProfile> {
+    const generation = this.generation;
     this.loading.set(true);
     this.errorMessage.set('');
 
     try {
       const response = await firstValueFrom(
-        this.http.put<UserProfileResponse>(buildApiUrl('/api/users/me/onboarding', this.platformId), request, {
-          headers: this.buildAuthHeaders(),
-        }),
+        this.http.put<UserProfileResponse>(
+          buildApiUrl('/api/users/me/onboarding', this.platformId),
+          request,
+          {
+            headers: this.buildAuthHeaders(),
+          },
+        ),
       );
 
       const profile = this.mapProfile(response);
+      if (generation !== this.generation) throw new Error('Account changed');
       this.setProfile(profile);
       return profile;
     } catch (error) {
-      this.errorMessage.set(this.toErrorMessage(error, 'Unable to complete onboarding.'));
+      if (generation === this.generation)
+        this.errorMessage.set(this.toErrorMessage(error, 'Unable to complete onboarding.'));
       throw error;
     } finally {
-      this.loading.set(false);
+      if (generation === this.generation) this.loading.set(false);
     }
   }
 
   clearProfile(): void {
+    this.generation++;
+    this.errorMessage.set('');
+    this.loading.set(false);
     this.userProfile.set(EMPTY_PROFILE);
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(PROFILE_STORAGE_KEY);
@@ -204,7 +216,8 @@ export class UserService {
   }
 
   private buildAuthHeaders(): HttpHeaders {
-    const token = typeof localStorage === 'undefined' ? null : localStorage.getItem('tadpoles.auth.token');
+    const token =
+      typeof localStorage === 'undefined' ? null : localStorage.getItem('tadpoles.auth.token');
     return new HttpHeaders(token ? { Authorization: `Bearer ${token}` } : {});
   }
 

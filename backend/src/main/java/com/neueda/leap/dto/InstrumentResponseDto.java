@@ -9,6 +9,7 @@ public record InstrumentResponseDto(
         String currency,
         String assetClass,
         String securityType,
+        String exchange,
         Boolean isActive
 ) {
     public static InstrumentResponseDto fromEntity(Instrument instrument) {
@@ -19,8 +20,8 @@ public record InstrumentResponseDto(
                 instrument.getCurrency(),
                 instrument.getAssetClass(),
                 instrument.getSecurityType(),
+                instrument.getExchange(),
                 instrument.getIsActive()
         );
     }
 }
-

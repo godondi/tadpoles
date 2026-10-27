@@ -28,7 +28,8 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     private final RefreshTokenMapper refreshTokenMapper;
     private final AppUserService appUserService;
 
-    public RefreshTokenServiceImpl(RefreshTokenMapper refreshTokenMapper, AppUserService appUserService) {
+    public RefreshTokenServiceImpl(
+            RefreshTokenMapper refreshTokenMapper, AppUserService appUserService) {
         this.refreshTokenMapper = refreshTokenMapper;
         this.appUserService = appUserService;
     }
@@ -53,7 +54,8 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     }
 
     @Override
-    public IssuedRefreshTokenResponseDto issueRefreshToken(Integer userId, CreateRefreshTokenRequestDto request) {
+    public IssuedRefreshTokenResponseDto issueRefreshToken(
+            Integer userId, CreateRefreshTokenRequestDto request) {
         validateUserId(userId);
         appUserService.getUser(userId);
         long ttlSeconds = resolveTtlSeconds(request);
@@ -62,26 +64,9 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 
     @Override
     public AuthTokensResponseDto refreshAccessToken(RefreshTokenRequestDto request) {
-        RefreshToken stored = resolveUsableRefreshToken(request);
-        appUserService.getUser(stored.getUserId());
-
-        LocalDateTime revokedAt = LocalDateTime.now();
-        int rows = refreshTokenMapper.revokeRefreshToken(stored.getRefreshTokenId(), revokedAt);
-        if (rows == 0) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token is no longer active.");
-        }
-
-        IssuedRefreshTokenResponseDto rotatedToken = issueRefreshTokenInternal(
-                stored.getUserId(),
-                DEFAULT_REFRESH_TOKEN_TTL_SECONDS
-        );
-
-        return new AuthTokensResponseDto(
-                generateOpaqueToken("access"),
-                rotatedToken.refreshToken(),
-                rotatedToken.tokenType(),
-                DEFAULT_ACCESS_TOKEN_TTL_SECONDS
-        );
+        throw new ResponseStatusException(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "Automatic refresh is unavailable. Sign in again to start a revocable session.");
     }
 
     @Override
@@ -91,9 +76,12 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
             return;
         }
 
-        int rows = refreshTokenMapper.revokeRefreshToken(stored.getRefreshTokenId(), LocalDateTime.now());
+        int rows =
+                refreshTokenMapper.revokeRefreshToken(
+                        stored.getRefreshTokenId(), LocalDateTime.now());
         if (rows == 0) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token is no longer active.");
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED, "Refresh token is no longer active.");
         }
     }
 
@@ -101,7 +89,8 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         return hashToken(rawToken);
     }
 
-    private IssuedRefreshTokenResponseDto issueRefreshTokenInternal(Integer userId, long ttlSeconds) {
+    private IssuedRefreshTokenResponseDto issueRefreshTokenInternal(
+            Integer userId, long ttlSeconds) {
         String rawRefreshToken = generateOpaqueToken("refresh");
         LocalDateTime expiresAt = LocalDateTime.now().plusSeconds(ttlSeconds);
 
@@ -120,17 +109,19 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
                 "Bearer",
                 ttlSeconds,
                 stored.getExpiresAt(),
-                stored.getCreatedAt()
-        );
+                stored.getCreatedAt());
     }
 
     private RefreshToken resolveUsableRefreshToken(RefreshTokenRequestDto request) {
         RefreshToken refreshToken = resolveRefreshToken(request);
         if (refreshToken.getRevokedAt() != null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token has been revoked.");
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED, "Refresh token has been revoked.");
         }
-        if (refreshToken.getExpiresAt() == null || !refreshToken.getExpiresAt().isAfter(LocalDateTime.now())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token has expired.");
+        if (refreshToken.getExpiresAt() == null
+                || !refreshToken.getExpiresAt().isAfter(LocalDateTime.now())) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED, "Refresh token has expired.");
         }
         return refreshToken;
     }
@@ -154,7 +145,8 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
             return DEFAULT_REFRESH_TOKEN_TTL_SECONDS;
         }
         if (request.expiresInSeconds() < 1) {
-            throw new IllegalArgumentException("Refresh token expiry must be greater than zero seconds.");
+            throw new IllegalArgumentException(
+                    "Refresh token expiry must be greater than zero seconds.");
         }
         return request.expiresInSeconds();
     }
@@ -185,4 +177,3 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         }
     }
 }
-

@@ -1,0 +1,19 @@
+# Explicit synthetic market data for local UI testing; never an automatic fallback.
+# Add this after docker-compose.operations-demo.yml when live data is unavailable.
+services:
+  backend:
+    environment:
+      FAUX_SERVER_URL: http://market-fixture:8080
+      FAUX_API_KEY: isolated-test-key
+      FAUX_DEFAULT_INTERVAL: 1d
+      FAUX_CONNECT_TIMEOUT_SECONDS: "2"
+      FAUX_READ_TIMEOUT_SECONDS: "2"
+    depends_on:
+      market-fixture:
+        condition: service_started
+
+  market-fixture:
+    image: node:22-bookworm-slim
+    volumes:
+      - ./scripts/fixtures/fauxnance-http.mjs:/fixture.mjs:ro
+    command: ["node", "/fixture.mjs"]

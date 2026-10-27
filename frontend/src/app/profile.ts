@@ -1,6 +1,9 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { UserService } from './user.service';
+import { ClientAdvisoryApi } from './features/client/advisory/client-advisory-api.service';
+import { ClientAssignment } from './features/client/advisory/client-advisory-models';
+import { PageResource } from './shared/workspace/page-resource';
 
 @Component({
   selector: 'app-profile',
@@ -25,6 +28,26 @@ import { UserService } from './user.service';
         @if (errorMessage()) {
           <div class="error-message" role="alert">{{ errorMessage() }}</div>
         }
+
+        <div class="profile-card" aria-labelledby="assigned-advisor-heading">
+          <h2 id="assigned-advisor-heading">Assigned advisor</h2>
+          @if (assignment.loading() && !assignment.data()) {
+            <p class="status-card">Loading advisor assignment…</p>
+          } @else if (assignment.error()) {
+            <p class="error-message" role="alert">Assignment unavailable.</p>
+            <button type="button" (click)="loadAssignment()">Retry assignment</button>
+          } @else if (assignment.data(); as assigned) {
+            @if (assigned.advisor; as advisor) {
+              <p>{{ advisor.name }}</p>
+              @if (assigned.assignedAt) {
+                <p class="subtle-text">Assigned {{ assigned.assignedAt | date: 'medium' : 'UTC' }} UTC</p>
+              }
+            } @else {
+              <p>Assignment pending</p>
+              <p class="subtle-text">An advisor will be assigned by the server when one is eligible.</p>
+            }
+          }
+        </div>
 
         <div class="profile-content">
           <div class="profile-card">
@@ -107,7 +130,7 @@ import { UserService } from './user.service';
               </div>
               <div class="info-item">
                 <label>Net worth</label>
-                <p>{{ profile().netWorth !== null ? (profile().netWorth | number:'1.0-2') : 'Not provided' }}</p>
+                <p>{{ profile().netWorth !== null ? (profile().netWorth | number:'1.2-2') : 'Not provided' }}</p>
               </div>
               <div class="info-item">
                 <label>Risk tolerance</label>
@@ -128,7 +151,7 @@ import { UserService } from './user.service';
       display: block;
       width: 100%;
       min-height: 100vh;
-      background: #f8f9fa;
+      background: var(--page-bg);
     }
 
     .profile-container {
@@ -146,7 +169,7 @@ import { UserService } from './user.service';
     }
 
     .profile-header {
-      background: white;
+      background: var(--surface);
       padding: 2rem;
       border-radius: 0;
       margin-bottom: 2rem;
@@ -168,13 +191,13 @@ import { UserService } from './user.service';
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #006044;
+      background: var(--action-bg);
       border-radius: 0;
       color: white;
     }
 
     .header-text h1 {
-      color: #006044;
+      color: var(--dark-green);
       margin: 0;
       font-size: 1.75rem;
        font-weight: 700;
@@ -182,7 +205,7 @@ import { UserService } from './user.service';
 
     .email-text,
     .subtle-text {
-      color: #666;
+      color: var(--text-secondary);
       margin: 0.5rem 0 0 0;
       font-size: 1rem;
     }
@@ -198,14 +221,14 @@ import { UserService } from './user.service';
     }
 
     .profile-card {
-      background: white;
+      background: var(--surface);
       padding: 1.5rem;
       border-radius: 0;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     .profile-card h2 {
-      color: #006044;
+      color: var(--dark-green);
       margin: 0 0 1.5rem 0;
       font-size: 1.25rem;
       border-bottom: 2px solid #76A923;
@@ -228,7 +251,7 @@ import { UserService } from './user.service';
     }
 
     .info-item label {
-      color: #999;
+      color: var(--text-secondary);
       font-weight: 600;
       font-size: 0.75rem;
       margin-bottom: 0.5rem;
@@ -237,7 +260,7 @@ import { UserService } from './user.service';
     }
 
     .info-item p {
-      color: #006044;
+      color: var(--dark-green);
       font-size: 1rem;
       margin: 0;
         font-weight: 500;
@@ -250,23 +273,23 @@ import { UserService } from './user.service';
       border-radius: 0;
       font-size: 0.875rem;
       font-weight: 600;
-      background-color: #76A923;
-      color: white;
+      background-color: var(--success-bg);
+      color: var(--success-text);
     }
 
     .error-message {
       padding: 1rem;
-      background-color: #f8d7da;
-      color: #721c24;
-      border: 1px solid #f5c6cb;
+      background-color: var(--error-bg);
+      color: var(--error-text);
+      border: 1px solid var(--border-gray);
       border-radius: 0;
       font-size: 0.95rem;
     }
 
     .status-card {
       padding: 1rem;
-      background-color: #eef7ef;
-      color: #006044;
+      background-color: var(--success-bg);
+      color: var(--dark-green);
       border-radius: 0;
       margin-bottom: 1rem;
     }
@@ -300,15 +323,18 @@ import { UserService } from './user.service';
 })
 export class ProfileComponent implements OnInit {
   private readonly userService = inject(UserService);
+  private readonly advisoryApi = inject(ClientAdvisoryApi);
 
   readonly profile = this.userService.getProfile();
   readonly errorMessage = signal('');
   readonly isLoading = signal(false);
+  readonly assignment = new PageResource<ClientAssignment>();
 
   readonly initials = signal('CP');
 
   async ngOnInit(): Promise<void> {
     this.setInitials();
+    this.loadAssignment();
     if (this.profile().onboardingComplete && this.profile().email) {
       return;
     }
@@ -322,6 +348,10 @@ export class ProfileComponent implements OnInit {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  loadAssignment(): void {
+    this.assignment.load(this.advisoryApi.assignment());
   }
 
   private setInitials(): void {

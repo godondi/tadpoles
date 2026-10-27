@@ -1,3 +1,4 @@
+import { TwoDecimalsPipe, twoDecimals } from './shared/two-decimals.pipe';
 import { Component, signal, ViewChild, ElementRef, AfterViewInit, effect, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -30,7 +31,7 @@ interface OrderForm {
   selector: 'app-dashboard',
   templateUrl: './dashboard.html',
   styleUrl: './app.css',
-  imports: [FormsModule],
+  imports: [FormsModule, TwoDecimalsPipe],
   host: {
     'role': 'main',
   },
@@ -129,6 +130,7 @@ export class DashboardComponent implements AfterViewInit {
             responsive: true,
             maintainAspectRatio: true,
             plugins: {
+              tooltip: { callbacks: { label: (context: { dataset: { label?: string }; parsed: unknown }) => `${context.dataset.label ?? ''}: ${twoDecimals(typeof context.parsed === 'object' && context.parsed !== null && 'y' in context.parsed ? context.parsed.y : context.parsed)}` } },
               legend: {
                 display: true,
                 position: 'top',
@@ -142,7 +144,7 @@ export class DashboardComponent implements AfterViewInit {
                 beginAtZero: false,
                 ticks: {
                   callback: function(value) {
-                    return '$' + value.toLocaleString();
+                    return '$' + Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                   },
                 },
               },
@@ -186,6 +188,7 @@ export class DashboardComponent implements AfterViewInit {
             responsive: true,
             maintainAspectRatio: true,
             plugins: {
+              tooltip: { callbacks: { label: (context: { dataset: { label?: string }; parsed: unknown }) => `${context.dataset.label ?? ''}: ${twoDecimals(typeof context.parsed === 'object' && context.parsed !== null && 'y' in context.parsed ? context.parsed.y : context.parsed)}` } },
               legend: {
                 display: true,
                 position: 'right',
@@ -202,7 +205,7 @@ export class DashboardComponent implements AfterViewInit {
 
   formatCurrency(value: number | string): string {
     const num = typeof value === 'string' ? parseFloat(value) : value;
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(num);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
   }
 
   getChangeSign(value: number | string): string {

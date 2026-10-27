@@ -1,7 +1,6 @@
 package com.neueda.leap.controller;
 
 import com.neueda.leap.domain.Client;
-import com.neueda.leap.dto.ClientBalanceResponseDto;
 import com.neueda.leap.dto.ClientListResponseDto;
 import com.neueda.leap.dto.ClientResponseDto;
 import com.neueda.leap.dto.CreateClientRequestDto;
@@ -40,36 +39,29 @@ public class ClientController {
 
     @PostMapping("/clients")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ADMIN') and !hasRole('CLIENT')")
     public ClientResponseDto createClient(@RequestBody CreateClientRequestDto request) {
         Client client = clientService.createClient(request);
         return ClientResponseDto.fromEntity(client);
     }
 
     @GetMapping("/clients/{clientId}")
-    @PreAuthorize("isAuthenticated()")
-    public ClientResponseDto getClient(@PathVariable Integer clientId, @AuthenticationPrincipal Jwt jwt) {
+    @PreAuthorize("hasAnyRole('ADMIN', 'CLIENT')")
+    public ClientResponseDto getClient(
+            @PathVariable Integer clientId, @AuthenticationPrincipal Jwt jwt) {
         SecurityRoleSupport.requireClientOwnership(jwt, appUserService, clientId);
         Client client = clientService.getClient(clientId);
         return ClientResponseDto.fromEntity(client);
     }
 
     @PatchMapping("/clients/{clientId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ADMIN') and !hasRole('CLIENT')")
     public ClientResponseDto updateClient(
             @PathVariable Integer clientId,
             @RequestBody UpdateClientRequestDto request,
-            @AuthenticationPrincipal Jwt jwt
-    ) {
+            @AuthenticationPrincipal Jwt jwt) {
         SecurityRoleSupport.requireClientOwnership(jwt, appUserService, clientId);
         Client client = clientService.updateClient(clientId, request);
         return ClientResponseDto.fromEntity(client);
-    }
-
-    @GetMapping("/clients/{clientId}/balance")
-    @PreAuthorize("isAuthenticated()")
-    public ClientBalanceResponseDto getClientBalance(@PathVariable Integer clientId, @AuthenticationPrincipal Jwt jwt) {
-        SecurityRoleSupport.requireClientOwnership(jwt, appUserService, clientId);
-        return new ClientBalanceResponseDto(clientId, clientService.getClientBalance(clientId));
     }
 }

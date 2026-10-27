@@ -1,0 +1,341 @@
+{
+  "checkedAt": "2026-10-16T07:29:09.652088+00:00",
+  "results": [
+    {
+      "symbol": "AAPL",
+      "quotes": {
+        "symbol": "AAPL",
+        "currency": "USD",
+        "asOf": "2026-10-15T20:00:01Z",
+        "source": "cache",
+        "stale": false,
+        "marketState": "unknown",
+        "spreadSource": "modelled",
+        "bidPresent": true,
+        "askPresent": true
+      },
+      "candles": {
+        "symbol": "AAPL",
+        "currency": "USD",
+        "asOf": "2026-10-15T00:00:00Z",
+        "source": "stored",
+        "stale": null,
+        "interval": "1d",
+        "bars": 11,
+        "partial": null
+      }
+    },
+    {
+      "symbol": "MSFT",
+      "quotes": {
+        "symbol": "MSFT",
+        "currency": "USD",
+        "asOf": "2026-10-15T20:00:01Z",
+        "source": "cache",
+        "stale": false,
+        "marketState": "unknown",
+        "spreadSource": "modelled",
+        "bidPresent": true,
+        "askPresent": true
+      },
+      "candles": {
+        "symbol": "MSFT",
+        "currency": "USD",
+        "asOf": "2026-10-15T00:00:00Z",
+        "source": "stored",
+        "stale": null,
+        "interval": "1d",
+        "bars": 11,
+        "partial": null
+      }
+    },
+    {
+      "symbol": "GOOGL",
+      "quotes": {
+        "symbol": "GOOGL",
+        "currency": "USD",
+        "asOf": "2026-10-15T20:00:01Z",
+        "source": "cache",
+        "stale": false,
+        "marketState": "unknown",
+        "spreadSource": "modelled",
+        "bidPresent": true,
+        "askPresent": true
+      },
+      "candles": {
+        "symbol": "GOOGL",
+        "currency": "USD",
+        "asOf": "2026-10-15T00:00:00Z",
+        "source": "stored",
+        "stale": null,
+        "interval": "1d",
+        "bars": 11,
+        "partial": null
+      }
+    },
+    {
+      "symbol": "AMZN",
+      "quotes": {
+        "symbol": "AMZN",
+        "currency": "USD",
+        "asOf": "2026-10-15T20:00:01Z",
+        "source": "cache",
+        "stale": false,
+        "marketState": "unknown",
+        "spreadSource": "modelled",
+        "bidPresent": true,
+        "askPresent": true
+      },
+      "candles": {
+        "symbol": "AMZN",
+        "currency": "USD",
+        "asOf": "2026-10-15T00:00:00Z",
+        "source": "stored",
+        "stale": null,
+        "interval": "1d",
+        "bars": 11,
+        "partial": null
+      }
+    },
+    {
+      "symbol": "TSLA",
+      "quotes": {
+        "symbol": "TSLA",
+        "currency": "USD",
+        "asOf": "2026-10-15T20:00:00Z",
+        "source": "cache",
+        "stale": false,
+        "marketState": "unknown",
+        "spreadSource": "modelled",
+        "bidPresent": true,
+        "askPresent": true
+      },
+      "candles": {
+        "symbol": "TSLA",
+        "currency": "USD",
+        "asOf": "2026-10-15T00:00:00Z",
+        "source": "stored",
+        "stale": null,
+        "interval": "1d",
+        "bars": 11,
+        "partial": null
+      }
+    },
+    {
+      "symbol": "VOO",
+      "quotes": {
+        "symbol": "VOO",
+        "currency": "USD",
+        "asOf": "2026-10-15T20:00:00Z",
+        "source": "upstream:yahoo",
+        "stale": false,
+        "marketState": "unknown",
+        "spreadSource": "modelled",
+        "bidPresent": true,
+        "askPresent": true
+      },
+      "candles": {
+        "symbol": "VOO",
+        "currency": "USD",
+        "asOf": "2026-10-15T00:00:00Z",
+        "source": "stored",
+        "stale": null,
+        "interval": "1d",
+        "bars": 11,
+        "partial": null
+      }
+    },
+    {
+      "symbol": "AGG",
+      "quotes": {
+        "symbol": "AGG",
+        "currency": "USD",
+        "asOf": "2026-10-15T20:00:00Z",
+        "source": "upstream:yahoo",
+        "stale": false,
+        "marketState": "unknown",
+        "spreadSource": "modelled",
+        "bidPresent": true,
+        "askPresent": true
+      },
+      "candles": {
+        "symbol": null,
+        "currency": null,
+        "asOf": null,
+        "source": null,
+        "stale": null,
+        "interval": null,
+        "bars": 0,
+        "partial": null
+      }
+    },
+    {
+      "symbol": "JNJ",
+      "quotes": {
+        "symbol": "JNJ",
+        "currency": "USD",
+        "asOf": "2026-10-15T20:00:02Z",
+        "source": "cache",
+        "stale": false,
+        "marketState": "unknown",
+        "spreadSource": "modelled",
+        "bidPresent": true,
+        "askPresent": true
+      },
+      "candles": {
+        "symbol": "JNJ",
+        "currency": "USD",
+        "asOf": "2026-10-15T00:00:00Z",
+        "source": "stored",
+        "stale": null,
+        "interval": "1d",
+        "bars": 11,
+        "partial": null
+      }
+    },
+    {
+      "symbol": "PG",
+      "quotes": {
+        "symbol": "PG",
+        "currency": "USD",
+        "asOf": "2026-10-15T20:03:27Z",
+        "source": "upstream:yahoo",
+        "stale": false,
+        "marketState": "unknown",
+        "spreadSource": "modelled",
+        "bidPresent": true,
+        "askPresent": true
+      },
+      "candles": {
+        "symbol": "PG",
+        "currency": "USD",
+        "asOf": "2026-10-15T00:00:00Z",
+        "source": "stored",
+        "stale": null,
+        "interval": "1d",
+        "bars": 11,
+        "partial": null
+      }
+    },
+    {
+      "symbol": "NVDA",
+      "quotes": {
+        "symbol": "NVDA",
+        "currency": "USD",
+        "asOf": "2026-10-15T20:00:00Z",
+        "source": "cache",
+        "stale": false,
+        "marketState": "unknown",
+        "spreadSource": "modelled",
+        "bidPresent": true,
+        "askPresent": true
+      },
+      "candles": {
+        "symbol": "NVDA",
+        "currency": "USD",
+        "asOf": "2026-10-15T00:00:00Z",
+        "source": "stored",
+        "stale": null,
+        "interval": "1d",
+        "bars": 11,
+        "partial": null
+      }
+    },
+    {
+      "symbol": "JPM",
+      "quotes": {
+        "symbol": "JPM",
+        "currency": "USD",
+        "asOf": "2026-10-15T20:00:02Z",
+        "source": "cache",
+        "stale": false,
+        "marketState": "unknown",
+        "spreadSource": "modelled",
+        "bidPresent": true,
+        "askPresent": true
+      },
+      "candles": {
+        "symbol": "JPM",
+        "currency": "USD",
+        "asOf": "2026-10-15T00:00:00Z",
+        "source": "stored",
+        "stale": null,
+        "interval": "1d",
+        "bars": 11,
+        "partial": null
+      }
+    },
+    {
+      "symbol": "UNH",
+      "quotes": {
+        "symbol": "UNH",
+        "currency": "USD",
+        "asOf": "2026-10-15T20:00:02Z",
+        "source": "upstream:yahoo",
+        "stale": false,
+        "marketState": "unknown",
+        "spreadSource": "modelled",
+        "bidPresent": true,
+        "askPresent": true
+      },
+      "candles": {
+        "symbol": "UNH",
+        "currency": "USD",
+        "asOf": "2026-10-15T00:00:00Z",
+        "source": "stored",
+        "stale": null,
+        "interval": "1d",
+        "bars": 11,
+        "partial": null
+      }
+    },
+    {
+      "symbol": "XOM",
+      "quotes": {
+        "symbol": "XOM",
+        "currency": "USD",
+        "asOf": "2026-10-15T20:03:58Z",
+        "source": "cache",
+        "stale": false,
+        "marketState": "unknown",
+        "spreadSource": "modelled",
+        "bidPresent": true,
+        "askPresent": true
+      },
+      "candles": {
+        "symbol": "XOM",
+        "currency": "USD",
+        "asOf": "2026-10-15T00:00:00Z",
+        "source": "mixed",
+        "stale": null,
+        "interval": "1d",
+        "bars": 11,
+        "partial": null
+      }
+    },
+    {
+      "symbol": "BRK.B",
+      "quotes": {
+        "symbol": "BRK.B",
+        "currency": "USD",
+        "asOf": "2026-10-15T20:04:28Z",
+        "source": "upstream:yahoo",
+        "stale": false,
+        "marketState": "unknown",
+        "spreadSource": "modelled",
+        "bidPresent": true,
+        "askPresent": true
+      },
+      "candles": {
+        "symbol": "BRK.B",
+        "currency": "USD",
+        "asOf": "2026-10-15T00:00:00Z",
+        "source": "stored",
+        "stale": null,
+        "interval": "1d",
+        "bars": 11,
+        "partial": null
+      }
+    }
+  ]
+}

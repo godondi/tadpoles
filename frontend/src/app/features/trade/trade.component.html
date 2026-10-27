@@ -1,4 +1,4 @@
-<main class="trade-page">
+<section class="trade-page" [class.trade-page--embedded]="embedded">
   @if (notFound()) {
     <section class="not-found" role="alert">
       <svg width="64" height="64" viewBox="0 0 64 64" aria-label="Warning" role="img">
@@ -12,15 +12,17 @@
         <path d="M32 23v16" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
         <circle cx="32" cy="47" r="2.5" fill="currentColor" />
       </svg>
-      <h1>Instrument unavailable</h1>
+      <h2>Market data unavailable</h2>
       <p>{{ notFound() }}</p>
     </section>
   } @else {
-    <header class="page-heading">
-      <p class="eyebrow">MARKET OVERVIEW</p>
-      <h1>{{ symbol() }}</h1>
-      <p>Daily price history and the latest quote</p>
-    </header>
+    @if (!embedded) {
+      <header class="page-heading">
+        <p class="eyebrow">MARKET OVERVIEW</p>
+        <h1>{{ symbol() }}</h1>
+        <p>Daily price history and the latest quote</p>
+      </header>
+    }
     <div class="trade-layout">
       <section
         class="chart-panel"
@@ -29,7 +31,18 @@
       >
         <div class="panel-heading">
           <h2 id="chart-title">Daily chart</h2>
-          <span class="range">30 candles · 1D</span>
+          <span class="range">Daily bars</span>
+          <div class="actions" aria-label="Visible date range">
+            @for (range of [30, 90, 365]; track range) {
+              <button
+                type="button"
+                [attr.aria-pressed]="rangeDays() === range"
+                (click)="rangeDays.set(range)"
+              >
+                {{ range === 30 ? '1M' : range === 90 ? '3M' : '1Y' }}
+              </button>
+            }
+          </div>
         </div>
         @if (loadingCandles()) {
           <app-loading label="Loading daily candles…" />
@@ -94,6 +107,9 @@
           @if (response.meta.stale) {
             <p class="stale">Stale quote · refresh to check for updates</p>
           }
+          @if (response.meta.stale == null) {
+            <p class="note">Quote freshness is unknown.</p>
+          }
           <dl>
             <div>
               <dt>Bid</dt>
@@ -135,7 +151,7 @@
             </div>
             <div>
               <dt>Spread source</dt>
-              <dd>{{ response.meta.spreadSource }}</dd>
+              <dd>{{ response.meta.spreadSource || 'Unknown' }}</dd>
             </div>
           </dl>
           <p class="note">{{ response.meta.disclaimer }}</p>
@@ -143,4 +159,4 @@
       </aside>
     </div>
   }
-</main>
+</section>

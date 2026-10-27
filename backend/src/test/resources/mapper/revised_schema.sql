@@ -58,6 +58,7 @@ CREATE TABLE instruments (
     currency VARCHAR(50) NOT NULL,
     asset_class VARCHAR(255),
     security_type VARCHAR(255),
+    exchange VARCHAR(255),
     is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
 
