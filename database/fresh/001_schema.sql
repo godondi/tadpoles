@@ -999,23 +999,6 @@ CREATE TABLE public.users (
     )
 );
 
--- Keep fresh installs aligned with migration 020_user_trade_access.sql.
-CREATE TABLE public.client_trade_access_events (
-    event_id bigserial PRIMARY KEY,
-    client_id integer NOT NULL REFERENCES public.clients(client_id),
-    actor_subject text NOT NULL,
-    action text NOT NULL CHECK (action IN ('REVOKE_INDEFINITE', 'REVOKE_TIMED', 'RESTORE')),
-    revoked_until timestamp with time zone,
-    reason text,
-    recorded_at timestamp with time zone NOT NULL DEFAULT now()
-);
-CREATE INDEX client_trade_access_events_client_time
-    ON public.client_trade_access_events(client_id, recorded_at DESC);
-CREATE INDEX users_trade_access_revoked ON public.users(user_id)
-    WHERE trade_access_revoked_at IS NOT NULL;
-CREATE TRIGGER immutable_evidence BEFORE UPDATE OR DELETE ON public.client_trade_access_events
-    FOR EACH ROW EXECUTE FUNCTION public.reject_evidence_change();
-
 --
 -- Name: users_user_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
@@ -2879,6 +2862,24 @@ CREATE TRIGGER immutable_projection_truncate BEFORE TRUNCATE ON advisor_recommen
 REVOKE ALL ON FUNCTION append_advisor_history() FROM PUBLIC;
 REVOKE ALL ON FUNCTION guard_advisor_projection() FROM PUBLIC;
 REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON advisor_guidance_history, advisor_recommendation_history FROM PUBLIC;
+
+-- Keep fresh installs aligned with migration 020_user_trade_access.sql.
+CREATE TABLE public.client_trade_access_events (
+    event_id bigserial PRIMARY KEY,
+    client_id integer NOT NULL REFERENCES public.clients(client_id),
+    actor_subject text NOT NULL,
+    action text NOT NULL CHECK (action IN ('REVOKE_INDEFINITE', 'REVOKE_TIMED', 'RESTORE')),
+    revoked_until timestamp with time zone,
+    reason text,
+    recorded_at timestamp with time zone NOT NULL DEFAULT now()
+);
+CREATE INDEX client_trade_access_events_client_time
+    ON public.client_trade_access_events(client_id, recorded_at DESC);
+CREATE INDEX users_trade_access_revoked ON public.users(user_id)
+    WHERE trade_access_revoked_at IS NOT NULL;
+CREATE TRIGGER immutable_evidence BEFORE UPDATE OR DELETE ON public.client_trade_access_events
+    FOR EACH ROW EXECUTE FUNCTION public.reject_evidence_change();
+
 INSERT INTO schema_migrations(version) VALUES (18);
 INSERT INTO schema_migrations(version) VALUES (19);
 INSERT INTO schema_migrations(version) VALUES (20);
