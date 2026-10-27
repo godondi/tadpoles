@@ -59,4 +59,61 @@ describe('versioned category intake', () => {
       http.verify();
     },
   );
+
+  it(
+    'reloads intake policy after a client session change and allows OTHER/GENERAL without a duplicate reference',
+    () => {
+      const sessionChanged = new Subject<void>();
+      const identity = signal<{ userId: number } | null>({ userId: 17 });
+      TestBed.configureTestingModule({
+        imports: [SupportIntakeComponent],
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          {
+            provide: AuthService,
+            useValue: { identity, sessionChanged },
+          },
+          {
+            provide: ActivatedRoute,
+            useValue: { snapshot: { queryParamMap: convertToParamMap({}) } },
+          },
+        ],
+      });
+      const f = TestBed.createComponent(SupportIntakeComponent);
+      f.componentRef.setInput('category', 'OTHER');
+      const emitted: {
+        enabled: boolean;
+        valid: boolean;
+        intake: Record<string, string | number>;
+      }[] = [];
+      f.componentInstance.changed.subscribe((value) => emitted.push(value));
+      f.detectChanges();
+      const http = TestBed.inject(HttpTestingController);
+      const policy = {
+        intakeEnabled: true,
+        schemaVersion: 1,
+        categories: [{ code: 'OTHER', reasons: ['GENERAL'] }],
+      };
+      http.expectOne((r) => r.url.endsWith('/intake-policy')).flush(policy);
+      f.componentInstance.reason = 'GENERAL';
+      f.componentInstance.publish();
+      expect(emitted.at(-1)?.valid).toBe(true);
+      expect(emitted.at(-1)?.intake.duplicateReference).toBeUndefined();
+
+      identity.set(null);
+      sessionChanged.next();
+      f.detectChanges();
+      identity.set({ userId: 18 });
+      f.detectChanges();
+      const reload = http.expectOne((r) => r.url.endsWith('/intake-policy'));
+      reload.flush(policy);
+      expect(f.componentInstance.reason).toBe('');
+      f.componentInstance.reason = 'GENERAL';
+      f.componentInstance.publish();
+      expect(emitted.at(-1)?.valid).toBe(true);
+      expect(emitted.at(-1)?.intake.duplicateReference).toBeUndefined();
+      http.verify();
+    },
+  );
 });

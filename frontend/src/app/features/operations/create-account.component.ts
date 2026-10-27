@@ -33,7 +33,8 @@ import { OperationsUsersApi } from '../../core/api/operations-users-api.service'
           </select></label
         >
         <label
-          >Username<input
+          ><span>Username <small class="min-length-hint">(minimum 3 characters)</small></span
+          ><input
             name="username"
             required
             minlength="3"
@@ -58,7 +59,8 @@ import { OperationsUsersApi } from '../../core/api/operations-users-api.service'
             autocomplete="email"
         /></label>
         <label
-          >Password<input
+          ><span>Password <small class="min-length-hint">(minimum 8 characters)</small></span
+          ><input
             name="password"
             type="password"
             required

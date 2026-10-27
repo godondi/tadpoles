@@ -82,6 +82,7 @@ describe('Onboarding dropdowns', () => {
 
   it('formats phone input, limits phone and postal code to digits, and omits preference checkboxes', async () => {
     const { fixture } = await setup();
+    expect(fixture.nativeElement.textContent).toContain('Phone (10 digits)');
     const phone = fixture.nativeElement.querySelector('input[name="phone"]') as HTMLInputElement;
     phone.value = 'abc+1 (123) 456-7890';
     phone.dispatchEvent(new Event('input'));

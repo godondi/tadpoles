@@ -66,6 +66,8 @@ describe('owned support journey', () => {
     expect(paths.indexOf('app/support/new')).toBeGreaterThan(-1);
     expect(paths.indexOf('app/support/new')).toBeLessThan(paths.indexOf('app/support/:reference'));
     const { fixture: f, http } = await setup('app/support/new');
+    expect(f.nativeElement.textContent).toContain('Subject (minimum 5 characters)');
+    expect(f.nativeElement.textContent).toContain('Description (minimum 10 characters)');
     http.expectOne((r) => r.url.endsWith('/intake-policy')).flush({intakeEnabled:false,schemaVersion:1,categories:[]});
     f.detectChanges();
     http

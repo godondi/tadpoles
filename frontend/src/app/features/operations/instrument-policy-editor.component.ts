@@ -239,7 +239,9 @@ import {
               </p>
             }
             <div class="form-field">
-              <label for="policy-reason">Reason for change (8–500 characters)</label>
+              <label for="policy-reason"
+                >Reason for change <small class="min-length-hint">(minimum 8 characters)</small></label
+              >
               <p class="field-hint" id="policy-reason-hint">
                 Explain why this policy is changing. Enter 8–500 characters for the audit record.
               </p>

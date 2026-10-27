@@ -45,6 +45,7 @@ describe('independent account resources', () => {
         totalValue: '1000',
         holdingsValue: '0',
         cashBalance: '1000',
+        allTimeReturnPercent: null,
         unpricedTickers: [],
       });
     http
@@ -98,6 +99,7 @@ describe('independent account resources', () => {
       unpricedTickers: [],
       snapshotAt: '2026-10-22T18:00:00Z',
       quoteAsOf: null,
+      allTimeReturnPercent: null,
     });
     http.expectOne((request) => request.url.endsWith('/orders')).flush({ items: [], total: 0 });
     fixture.detectChanges();
@@ -130,6 +132,7 @@ describe('account background updates', () => {
         totalValue: '1200',
         holdingsValue: '200',
         cashBalance: '1000',
+        allTimeReturnPercent: null,
         unpricedTickers: [],
       });
     const portfolio = {
@@ -179,6 +182,7 @@ describe('account background updates', () => {
         totalValue: '1000',
         holdingsValue: '0',
         cashBalance: '1000',
+        allTimeReturnPercent: null,
         unpricedTickers: [],
       });
     http
@@ -206,6 +210,7 @@ describe('account background updates', () => {
         totalValue: '1000',
         holdingsValue: '0',
         cashBalance: '1000',
+        allTimeReturnPercent: null,
         unpricedTickers: [],
       });
     http
@@ -317,6 +322,7 @@ describe('Investing estimates', () => {
         cashBalance: '1000.01',
         snapshotAt: '2026-10-16T20:00:00Z',
         quoteAsOf: '2026-10-16T19:59:50Z',
+        allTimeReturnPercent: '4.25',
         unpricedTickers: [],
       });
     http
@@ -325,7 +331,15 @@ describe('Investing estimates', () => {
     fixture.detectChanges();
     const panel = fixture.nativeElement.querySelector('[aria-labelledby="investing-heading"]');
     expect(panel.textContent).toContain('9,007,199,254,740,993.02');
-    expect(panel.textContent).toContain('Oldest quote');
+    expect(panel.textContent).not.toContain('Oldest quote');
+    expect(panel.textContent).toContain('All Time +4.25%');
+    expect(panel.querySelector('.return-positive')).not.toBeNull();
+    fixture.componentInstance.valuation.data.update((value) =>
+      value ? { ...value, allTimeReturnPercent: '-1.25' } : value,
+    );
+    fixture.detectChanges();
+    expect(panel.textContent).toContain('All Time -1.25%');
+    expect(panel.querySelector('.return-negative')).not.toBeNull();
     const currency = fixture.nativeElement.querySelector('select');
     panel.querySelector('button').click();
     fixture.detectChanges();
@@ -339,10 +353,12 @@ describe('Investing estimates', () => {
         cashBalance: '1000.01',
         snapshotAt: '2026-10-16T20:01:00Z',
         quoteAsOf: null,
+        allTimeReturnPercent: null,
         unpricedTickers: ['AAPL'],
       });
     fixture.detectChanges();
     expect(panel.textContent).toContain('Prices unavailable for AAPL');
+    expect(panel.textContent).toContain('All Time —');
     expect(panel.textContent).not.toContain('9,007,199,254,740,993.02');
     expect(
       fixture.nativeElement.querySelector('[aria-labelledby="settled-balance-heading"]')

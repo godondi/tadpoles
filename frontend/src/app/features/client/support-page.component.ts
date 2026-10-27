@@ -84,7 +84,7 @@ import { SupportWorkbenchComponent } from '../operations/support-workbench.compo
               (changed)="intakeState = $event"
             />
             <label
-              >Subject
+              ><span>Subject <small class="min-length-hint">(minimum 5 characters)</small></span>
               <input
                 name="subject"
                 [(ngModel)]="subject"
@@ -94,7 +94,7 @@ import { SupportWorkbenchComponent } from '../operations/support-workbench.compo
                 [readonly]="busy() || uncertain()"
             /></label>
             <label
-              >Description
+              ><span>Description <small class="min-length-hint">(minimum 10 characters)</small></span>
               <textarea
                 name="description"
                 [(ngModel)]="description"
@@ -180,7 +180,7 @@ import { SupportWorkbenchComponent } from '../operations/support-workbench.compo
           @if (!staff || item.actions?.reply || item.actions?.transitions?.length) {
             <div class="case-action-form">
               <label
-                >Public message
+                ><span>Public message <small class="min-length-hint">(minimum 10 characters)</small></span>
                 <textarea
                   name="reply"
                   [(ngModel)]="reply"
@@ -249,7 +249,7 @@ import { SupportWorkbenchComponent } from '../operations/support-workbench.compo
             @if (item.actions?.note) {
               <div class="case-action-form">
                 <label
-                  >Internal note
+                  ><span>Internal note <small class="min-length-hint">(minimum 10 characters)</small></span>
                   <textarea
                     name="internalNote"
                     [(ngModel)]="internalNote"

@@ -43,7 +43,9 @@ import { DisplayCodePipe } from '../../shared/display-code.pipe';
             </select>
           </div>
           <div class="form-field">
-            <label for="compliance-case">Case reference (8–200 characters)</label>
+            <label for="compliance-case"
+              >Case reference <small class="min-length-hint">(minimum 8 characters)</small></label
+            >
             <input
               id="compliance-case"
               name="caseReference"

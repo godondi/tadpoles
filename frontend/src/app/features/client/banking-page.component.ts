@@ -73,8 +73,10 @@ interface PendingMovement {
       <form (ngSubmit)="saveBank()">
         <fieldset [disabled]="busy() || !!pending()">
           <legend>{{ editing ? 'Edit bank reference' : 'Add bank reference' }}</legend>
-          <label for="bank-nickname">Nickname</label
-          ><input
+          <label for="bank-nickname">
+            Nickname <small class="min-length-hint">(minimum 2 characters)</small>
+          </label>
+          <input
             id="bank-nickname"
             name="nickname"
             [(ngModel)]="nickname"
@@ -87,8 +89,10 @@ interface PendingMovement {
                 'For example: Fictitious test account. Choose a unique name for each account.'
             }}
           </p>
-          <label for="bank-routing">Routing number (9 digits)</label
-          ><input
+          <label for="bank-routing">
+            Routing number <small class="min-length-hint">(9 digits)</small>
+          </label>
+          <input
             id="bank-routing"
             name="routing"
             [(ngModel)]="routing"
@@ -105,8 +109,10 @@ interface PendingMovement {
                 'Enter all nine digits, including leading zeroes. Use fictitious details for this internal demonstration.'
             }}
           </p>
-          <label for="bank-account">Account number (4–17 digits)</label
-          ><input
+          <label for="bank-account">
+            Account number <small class="min-length-hint">(4–17 digits)</small>
+          </label>
+          <input
             id="bank-account"
             name="account"
             [(ngModel)]="account"

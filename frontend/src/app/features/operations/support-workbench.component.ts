@@ -88,7 +88,8 @@ import { DisplayCodePipe } from '../../shared/display-code.pipe';
                 </select></label
               >
               <label
-                >Priority reason<textarea
+                ><span>Priority reason <small class="min-length-hint">(minimum 10 characters)</small></span
+                ><textarea
                   name="priorityReason"
                   [(ngModel)]="priorityReason"
                   minlength="10"
@@ -110,7 +111,8 @@ import { DisplayCodePipe } from '../../shared/display-code.pipe';
                 </select></label
               >
               <label
-                >Classification reason<textarea
+                ><span>Classification reason <small class="min-length-hint">(minimum 10 characters)</small></span
+                ><textarea
                   name="classificationReason"
                   [(ngModel)]="classificationReason"
                   minlength="10"
@@ -122,7 +124,8 @@ import { DisplayCodePipe } from '../../shared/display-code.pipe';
             </form>
             <form class="workspace-form" (ngSubmit)="next()">
               <label
-                >Next action<textarea
+                ><span>Next action <small class="min-length-hint">(minimum 10 characters)</small></span
+                ><textarea
                   name="nextAction"
                   [(ngModel)]="nextAction"
                   minlength="10"
@@ -252,7 +255,8 @@ import { DisplayCodePipe } from '../../shared/display-code.pipe';
                   </select></label
                 >
                 <label
-                  >Check / unavailable reason<textarea
+                  ><span>Check / unavailable reason <small class="min-length-hint">(minimum 10 characters)</small></span
+                  ><textarea
                     [name]="task.code + 'reason'"
                     [(ngModel)]="task.reason"
                     minlength="10"
@@ -275,9 +279,16 @@ import { DisplayCodePipe } from '../../shared/display-code.pipe';
                   </select></label
                 >
                 <label
-                  >Owned evidence reference<input
+                  ><span
+                    >Owned evidence reference
+                    @if (task.evidenceKind === 'EXTERNAL_REFERENCE') {
+                      <small class="min-length-hint">(minimum 8 characters)</small>
+                    }
+                  </span
+                  ><input
                     [name]="task.code + 'reference'"
                     [(ngModel)]="task.evidenceReference"
+                    [attr.minlength]="task.evidenceKind === 'EXTERNAL_REFERENCE' ? 8 : null"
                     maxlength="200"
                 /></label>
                 <button [disabled]="locked()">Retain task result</button>
@@ -328,7 +339,8 @@ import { DisplayCodePipe } from '../../shared/display-code.pipe';
               </select></label
             >
             <label
-              >Approved referral summary only<textarea
+              ><span>Approved referral summary only <small class="min-length-hint">(minimum 10 characters)</small></span
+              ><textarea
                 name="summary"
                 [(ngModel)]="summary"
                 minlength="10"
@@ -360,7 +372,8 @@ import { DisplayCodePipe } from '../../shared/display-code.pipe';
               </select></label
             >
             <label
-              >Client-safe public explanation<textarea
+              ><span>Client-safe public explanation <small class="min-length-hint">(minimum 10 characters)</small></span
+              ><textarea
                 name="explanation"
                 [(ngModel)]="explanation"
                 minlength="10"

@@ -85,11 +85,17 @@ import { ClientRecommendationsComponent } from './advisory/client-recommendation
                   cannot be calculated.
                 </p>
               }
-              @if (estimate.quoteAsOf) {
-                <p class="as-of">
-                  Oldest quote {{ estimate.quoteAsOf | date: 'medium' : 'UTC' }} UTC
-                </p>
-              }
+              <p
+                class="as-of"
+                title="Modified Dietz estimate; deposits and withdrawals are weighted by time invested."
+              >
+                <span
+                  [class.return-positive]="returnTone(estimate.allTimeReturnPercent) === 'positive'"
+                  [class.return-negative]="returnTone(estimate.allTimeReturnPercent) === 'negative'"
+                >
+                  {{ formatAllTimeReturn(estimate.allTimeReturnPercent) }}
+                </span>
+              </p>
             }
           } @else {
             <p class="mono-value metric-value">
@@ -284,6 +290,16 @@ export class AccountPageComponent {
 
   hasUnits(value: string) {
     return /[1-9]/.test(value);
+  }
+
+  formatAllTimeReturn(value: string | null | undefined): string {
+    if (typeof value !== 'string') return 'All Time —';
+    return `All Time ${value.startsWith('-') ? '' : '+'}${value}%`;
+  }
+
+  returnTone(value: string | null | undefined): 'positive' | 'negative' | 'neutral' {
+    if (typeof value !== 'string' || value === '0.00') return 'neutral';
+    return value.startsWith('-') ? 'negative' : 'positive';
   }
 
   guidanceStatus(instrumentId: number): string {

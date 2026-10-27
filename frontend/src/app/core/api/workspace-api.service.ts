@@ -62,6 +62,7 @@ export interface PortfolioValuation {
   cashBalance: string | null;
   snapshotAt: string;
   quoteAsOf: string | null;
+  allTimeReturnPercent: string | null;
   unpricedTickers: string[];
 }
 

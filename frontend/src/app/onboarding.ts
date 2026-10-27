@@ -33,7 +33,7 @@ import { CompleteClientOnboardingRequest, UserService } from './user.service';
             />
           </label>
           <label>
-            <span>Phone</span>
+            <span>Phone <small class="min-length-hint">(10 digits)</small></span>
             <input
               type="tel"
               name="phone"

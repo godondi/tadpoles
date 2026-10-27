@@ -83,6 +83,15 @@ describe('private Operations workbench', () => {
     f.detectChanges();
     await f.whenStable();
     const kind = f.nativeElement.querySelectorAll('article form select')[1] as HTMLSelectElement;
+    kind.value = 'EXTERNAL_REFERENCE';
+    kind.dispatchEvent(new Event('change'));
+    await f.whenStable();
+    f.detectChanges();
+    expect(f.nativeElement.textContent).toContain(
+      'Owned evidence reference (minimum 8 characters)',
+    );
+    expect(f.nativeElement.querySelector('article input').getAttribute('minlength')).toBe('8');
+
     kind.value = 'ACCOUNT';
     kind.dispatchEvent(new Event('change'));
     await f.whenStable();

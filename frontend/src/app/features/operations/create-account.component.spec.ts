@@ -12,6 +12,13 @@ describe('Operations create account UI', () => {
       providers: [{ provide: OperationsUsersApi, useValue: api }],
     });
   });
+  it('shows minimum lengths beside the constrained account fields', () => {
+    const fixture = TestBed.createComponent(OperationsCreateAccountComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Username (minimum 3 characters)');
+    expect(fixture.nativeElement.textContent).toContain('Password (minimum 8 characters)');
+  });
   it('creates the selected supported staff role and resets the form', async () => {
     const fixture = TestBed.createComponent(OperationsCreateAccountComponent);
     fixture.componentInstance.staff = {

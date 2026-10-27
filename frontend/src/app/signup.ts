@@ -45,7 +45,7 @@ interface SignupForm {
           </label>
 
           <label>
-            <span>Password</span>
+            <span>Password <small class="min-length-hint">(minimum 8 characters)</small></span>
             <input
               type="password"
               [value]="form().password"

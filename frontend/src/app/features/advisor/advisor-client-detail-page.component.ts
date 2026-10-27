@@ -172,7 +172,9 @@ type GuidanceDraft = { status: GuidanceStatus; reasoning: string; expectedVersio
                     <tr>
                       <th scope="col">Ticker / Instrument</th>
                       <th scope="col">Company / instrument name</th>
-                      <th scope="col">Reasoning</th>
+                      <th scope="col">
+                        Reasoning <small class="min-length-hint">(minimum 1 character)</small>
+                      </th>
                       <th scope="col">Action</th>
                     </tr>
                   </thead>
@@ -182,11 +184,12 @@ type GuidanceDraft = { status: GuidanceStatus; reasoning: string; expectedVersio
                         <th scope="row">{{ recommendation.ticker }}</th>
                         <td>{{ recommendation.instrumentName }}</td>
                         <td>
-                          <label class="sr-only" [for]="'recommendation-reasoning-' + recommendation.recommendationId">Reasoning for {{ recommendation.ticker }}</label>
+                          <label class="sr-only" [for]="'recommendation-reasoning-' + recommendation.recommendationId">Reasoning for {{ recommendation.ticker }} (minimum 1 character)</label>
                           <textarea
                             [id]="'recommendation-reasoning-' + recommendation.recommendationId"
                             [disabled]="recommendationSaveState(recommendation.recommendationId).saving || recommendationMutation().saving"
                             rows="2"
+                            minlength="1"
                             maxlength="2000"
                             [value]="recommendationDraft(recommendation).reasoning"
                             (input)="updateRecommendationReasoning(recommendation.recommendationId, $event)"
@@ -233,12 +236,15 @@ type GuidanceDraft = { status: GuidanceStatus; reasoning: string; expectedVersio
                   <option [value]="instrument.instrumentId">{{ instrument.ticker }} · {{ instrument.instrumentName }}</option>
                 }
               </select>
-              <label for="new-recommendation-reasoning">Reasoning</label>
+              <label for="new-recommendation-reasoning"
+                >Reasoning <small class="min-length-hint">(minimum 1 character)</small></label
+              >
               <textarea
                 id="new-recommendation-reasoning"
                 name="reasoning"
                 [disabled]="recommendationMutation().saving"
                 rows="3"
+                minlength="1"
                 maxlength="2000"
                 [(ngModel)]="newRecommendationReasoning"
               ></textarea>

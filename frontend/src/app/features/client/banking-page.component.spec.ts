@@ -40,8 +40,13 @@ describe('BankingPageComponent', () => {
       );
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('No money moves through a real bank');
+    expect(fixture.nativeElement.textContent).toContain('Nickname (minimum 2 characters)');
+    expect(fixture.nativeElement.textContent).toContain('Routing number (9 digits)');
+    expect(fixture.nativeElement.textContent).toContain('Account number (4–17 digits)');
     expect(fixture.nativeElement.querySelector('label[for="bank-routing"]')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('label[for="movement-amount"]')).not.toBeNull();
+    const savedAccountsPanel = fixture.nativeElement.querySelectorAll('section.panel')[1];
+    expect(savedAccountsPanel.textContent).not.toContain('>');
     expect(fixture.nativeElement.textContent).toContain('75');
     expect(fixture.nativeElement.textContent).not.toContain('A completed sale credits this account');
     expect(fixture.nativeElement.textContent).not.toContain('Format checked references');

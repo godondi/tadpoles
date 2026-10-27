@@ -6,6 +6,7 @@ import {
   OnChanges,
   Output,
   SimpleChanges,
+  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -114,13 +115,28 @@ export class SupportIntakeComponent implements OnChanges {
   values: Record<string, string | number> = {};
   reason = '';
   constructor() {
+    this.loadPolicy();
+    let activeUserId = this.auth.identity()?.userId ?? null;
+    effect(() => {
+      const userId = this.auth.identity()?.userId ?? null;
+      if (userId === activeUserId) return;
+      activeUserId = userId;
+      this.values = {};
+      this.reason = '';
+      this.policy.set(null);
+      this.message.set('');
+      this.changed.emit({ enabled: false, intake: {}, valid: false });
+      if (userId !== null) this.loadPolicy(false);
+    });
+  }
+  private loadPolicy(restoreHints = true) {
     this.api
       .intakePolicy()
-      .pipe(takeUntilDestroyed())
+      .pipe(takeUntilDestroyed(this.destroy))
       .subscribe({
         next: (policy) => {
           this.policy.set(policy);
-          this.hints();
+          if (restoreHints) this.hints();
           this.publish();
         },
         error: () => {
@@ -130,12 +146,6 @@ export class SupportIntakeComponent implements OnChanges {
           this.changed.emit({ enabled: false, intake: {}, valid: false });
         },
       });
-    this.auth.sessionChanged.pipe(takeUntilDestroyed(this.destroy)).subscribe(() => {
-      this.values = {};
-      this.reason = '';
-      this.policy.set(null);
-      this.changed.emit({ enabled: false, intake: {}, valid: false });
-    });
   }
   ngOnChanges(changes: SimpleChanges) {
     if (changes['category']) {

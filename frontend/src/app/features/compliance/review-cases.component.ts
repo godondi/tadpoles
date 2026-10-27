@@ -112,7 +112,8 @@ import { ComplianceApi } from './compliance-api.service';
               </select></label
             >
             <label
-              >Assignment reason<textarea
+              ><span>Assignment reason <small class="min-length-hint">(minimum 10 characters)</small></span
+              ><textarea
                 name="assignmentReason"
                 [(ngModel)]="assignmentReason"
                 minlength="10"
@@ -132,7 +133,8 @@ import { ComplianceApi } from './compliance-api.service';
               </select></label
             >
             <label
-              >Review / information-request / decision reason<textarea
+              ><span>Review / information-request / decision reason <small class="min-length-hint">(minimum 10 characters)</small></span
+              ><textarea
                 name="reason"
                 [(ngModel)]="reason"
                 minlength="10"
@@ -142,7 +144,8 @@ import { ComplianceApi } from './compliance-api.service';
             </label>
             @if (target === 'DECIDED') {
               <label
-                >Decision disposition<input
+                ><span>Decision disposition <small class="min-length-hint">(minimum 3 characters)</small></span
+                ><input
                   name="disposition"
                   [(ngModel)]="disposition"
                   minlength="3"

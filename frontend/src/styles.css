@@ -15,6 +15,7 @@
   --text-inverse: #f9fcfb;
   --positive: #1f9d55;
   --negative: #c0392b;
+  --return-positive: #005ea8;
   --danger: #b42318;
   --accent: #f0d7a9;
   --action-bg: #006044;
@@ -737,6 +738,17 @@ app-banking-page form fieldset,
   font-weight: 400;
   line-height: 1.5;
 }
+.min-length-hint {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 400;
+}
+.return-positive {
+  color: var(--return-positive);
+}
+.return-negative {
+  color: var(--negative);
+}
 
 /* Read-only operational facts use the same detail grid and surface tokens as client receipts. */
 .evidence-details {
@@ -794,6 +806,7 @@ app-support-intake select, app-support-intake textarea { max-width: 100%; min-wi
   --text-inverse: #f9fcfb;
   --positive: #88d5a6;
   --negative: #ff9d93;
+  --return-positive: #82c5ff;
   --danger: #ffaaa1;
   --accent: #f0d7a9;
   --action-bg: #006044;
