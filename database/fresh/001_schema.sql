@@ -638,7 +638,7 @@ CREATE TABLE public.instrument_trading_policies (
     CONSTRAINT instrument_trading_policies_price_multiplier_check CHECK ((price_multiplier > (0)::numeric)),
     CONSTRAINT instrument_trading_policies_quantity_step_check CHECK ((quantity_step > (0)::numeric)),
     CONSTRAINT instrument_trading_policies_quote_max_age_seconds_check CHECK (((quote_max_age_seconds >= 1)
-    AND (quote_max_age_seconds <= 1200))),
+    AND (quote_max_age_seconds <= 1800))),
     CONSTRAINT instrument_trading_policies_retry_seconds_check CHECK (((retry_seconds >= 1) AND (retry_seconds <= 3600))),
     CONSTRAINT provider_session CHECK ((session = ANY (ARRAY['PROVIDER_OPEN'::text, 'CLOSED'::text])))
 );

@@ -4,6 +4,11 @@ VALUES (1, 'admin', 'admin@tadpoles.dev', 'hash', 'Admin User', TRUE, CURRENT_TI
 INSERT INTO users (user_id, username, email, password_hash, display_name, enabled, created_at, updated_at)
 VALUES (2, 'alice', 'alice@tadpoles.dev', 'hash', 'Alice Investor', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
+INSERT INTO roles (role_id, role_name) VALUES (1, 'ADVISOR'), (2, 'CLIENT');
+INSERT INTO user_roles (user_id, role_id) VALUES (1, 1);
+INSERT INTO user_roles (user_id, role_id) VALUES (2, 2);
+ALTER TABLE users ALTER COLUMN user_id RESTART WITH 3;
+
 INSERT INTO advisors (advisor_id, advisor_name, user_id)
 VALUES (3, 'Advisor One', 1);
 
