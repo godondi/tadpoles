@@ -164,6 +164,30 @@ class TradingPostgresTest {
     }
 
     @Test
+    void policyMappingKeepsAssetClassAfterPolicyColumns() {
+        var policy = db.policy(instrument);
+
+        assertEquals("AAPL", policy.ticker());
+        assertEquals("EQUITY", policy.assetClass());
+        assertEquals("test-provider-v1", policy.version());
+        assertEquals("NASDAQ", policy.venue());
+        assertEquals("shares", policy.quantityUnit());
+        assertEquals("USD", policy.currency());
+        assertEquals(0, BigDecimal.ONE.compareTo(policy.quantityStep()));
+        assertEquals("AAPL", policy.providerSymbol());
+        assertTrue(policy.enabled());
+    }
+
+    @Test
+    void externalCashFlowQueryMapsDatedOpeningContributions() {
+        var flows = db.externalCashFlows(client);
+
+        assertEquals(1, flows.size());
+        assertEquals(0, new BigDecimal("10000").compareTo(flows.get(0).amount()));
+        assertNotNull(flows.get(0).recordedAt());
+    }
+
+    @Test
     void thirtyMinuteQuoteMigrationWidensOldDefaultsAndKeepsCustomLimits() throws Exception {
         sql("ALTER TABLE instrument_trading_policies DROP CONSTRAINT"
                 + " instrument_trading_policies_quote_max_age_seconds_check");

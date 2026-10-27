@@ -128,7 +128,6 @@ class SupportWorkflowPostgresTest {
         script("database/demo/role_workspaces.sql");
         script("database/demo/operations_workspace.sql");
         script("database/demo/compliance_workspace.sql");
-        script("database/migrations/020_user_trade_access.sql");
         if (runtimeRole != null) {
             String grants = Files.readString(Path.of("../database/runtime-grants.sql"));
             sql(
@@ -430,6 +429,30 @@ WHERE s.username='demo.compliance' AND a.username='demo.finance' AND u.username=
         var invalid = new HashMap<>(body);
         invalid.put("intakeSchemaVersion", 4294967297L);
         post(client, "/api/support/cases", UUID.randomUUID().toString(), invalid, 400);
+    }
+
+    @Test
+    void generalClientReportAppearsInDefaultOperationsQueueWithoutSearch() throws Exception {
+        var body =
+                Map.<String, Object>of(
+                        "category",
+                        "OTHER",
+                        "subject",
+                        "Support form issue",
+                        "description",
+                        "The client report should appear in the operations queue.",
+                        "intakeSchemaVersion",
+                        1,
+                        "intake",
+                        Map.of("reason", "GENERAL"));
+        var created = post(client, "/api/support/cases", UUID.randomUUID().toString(), body, 200);
+
+        var queue = read(staff, "/api/operations/cases", 200);
+        assertTrue(queue.path("workflowEnabled").asBoolean());
+        assertEquals(1, queue.path("total").asInt());
+        assertEquals(
+                created.path("reference").asText(),
+                queue.path("items").get(0).path("reference").asText());
     }
 
     @Test

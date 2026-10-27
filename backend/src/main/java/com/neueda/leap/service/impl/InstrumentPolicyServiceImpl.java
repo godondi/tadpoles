@@ -90,7 +90,12 @@ public class InstrumentPolicyServiceImpl implements InstrumentPolicyService {
         }
     }
 
-    private Policy policy(int id, InstrumentPolicyRequest r, String ticker, String providerSymbol) {
+    private Policy policy(
+            int id,
+            InstrumentPolicyRequest r,
+            String ticker,
+            String providerSymbol,
+            String assetClass) {
         return new Policy(
                 id,
                 ticker,
@@ -114,7 +119,8 @@ public class InstrumentPolicyServiceImpl implements InstrumentPolicyService {
                 BigDecimal.ONE,
                 providerSymbol,
                 r.buyAllowed(),
-                r.sellAllowed());
+                r.sellAllowed(),
+                assetClass);
     }
 
     public Map<String, Object> test(String value) {
@@ -134,7 +140,7 @@ public class InstrumentPolicyServiceImpl implements InstrumentPolicyService {
                         true,
                         "Test",
                         0);
-        var p = policy(1, r, s, s);
+        var p = policy(1, r, s, s, null);
         Quote q = fetch(p);
         if (q == null)
             throw new ResponseStatusException(
@@ -201,7 +207,8 @@ public class InstrumentPolicyServiceImpl implements InstrumentPolicyService {
             throw new IllegalArgumentException(
                     "Enter a name, venue and a meaningful change reason (8–500 characters)");
         String ticker = symbol(r.ticker()), providerSymbol = symbol(r.providerSymbol());
-        var p = policy(id == null ? 1 : id, r, ticker, providerSymbol);
+        String assetClass = id == null ? null : Objects.toString(get(id).get("assetClass"), null);
+        var p = policy(id == null ? 1 : id, r, ticker, providerSymbol, assetClass);
         if (p.quantityStep().signum() <= 0
                 || p.quantityStep().scale() > 8
                 || p.maxQuantity().compareTo(p.quantityStep()) < 0
@@ -247,7 +254,8 @@ public class InstrumentPolicyServiceImpl implements InstrumentPolicyService {
                             p.priceMultiplier(),
                             p.providerSymbol(),
                             true,
-                            true);
+                            true,
+                            p.assetClass());
             var e =
                     TradingRules.evaluate(
                             new Command(

@@ -56,10 +56,12 @@ public interface TradingMapper {
 
     @Select(
             """
-SELECT p.instrument_id,i.ticker,i.is_active AS active,p.policy_version AS version,p.venue,p.quantity_unit,
+SELECT p.instrument_id,i.ticker,i.is_active AS active,p.policy_version AS version,p.venue,
+       p.quantity_unit,
        p.price_unit,p.currency, p.quantity_step,p.currency_scale,p.max_quantity,p.max_notional,
        p.quote_max_age_seconds,p.future_skew_seconds, p.retry_seconds,p.max_attempts,p.session,p.enabled,
-       p.raw_price_unit,p.price_multiplier,p.provider_symbol,p.buy_allowed,p.sell_allowed
+       p.raw_price_unit,p.price_multiplier,p.provider_symbol,p.buy_allowed,p.sell_allowed,
+       i.asset_class AS "assetClass"
 FROM instrument_trading_policies p
 JOIN instruments i USING(instrument_id)
 WHERE p.instrument_id = #{id}
@@ -325,6 +327,23 @@ WHERE client_id = #{client}
 ORDER BY currency
 """)
     List<Map<String, Object>> balances(int client);
+
+    @Select(
+            """
+            SELECT recorded_at,delta AS amount
+            FROM cash_journal
+            WHERE client_id = #{client}
+                AND currency = 'USD'
+                AND (movement_id IS NOT NULL OR setup_reference IS NOT NULL)
+            ORDER BY recorded_at,posting_id
+            """)
+    @ConstructorArgs({
+        @Arg(column = "recorded_at", javaType = Instant.class),
+        @Arg(column = "amount", javaType = BigDecimal.class)
+    })
+    List<ExternalCashFlow> externalCashFlows(@Param("client") int client);
+
+    record ExternalCashFlow(Instant recordedAt, BigDecimal amount) {}
 
     // Keep closed rows in the ledger, but only expose currently owned positions.
     @Select(

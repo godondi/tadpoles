@@ -41,7 +41,8 @@ class FauxnanceTradingQuotesTest {
                 BigDecimal.ONE,
                 "BRK-B",
                 true,
-                true);
+                true,
+                "Equity");
     }
 
     FauxnanceQuoteResponse response() throws Exception {
@@ -105,7 +106,7 @@ class FauxnanceTradingQuotesTest {
         assertEquals("unknown", q.marketState());
         var result = TradingRules.evaluate(new Command(1, "BUY", "1", "MARKET"), policy(), q, now);
         assertTrue(result.eligible());
-        assertTrue(result.reason().contains("scheduled core session"));
+        assertTrue(result.reason().contains("supported scheduled market session"));
         r.getMeta().setStale(true);
         assertEquals(
                 "QUOTE_STALE",

@@ -163,18 +163,22 @@ public final class TradingRules {
         if (trace.failed("12_QUOTE_METADATA", q.source().isBlank()))
             return reject("QUOTE_METADATA", "The provider did not identify the quote source");
         if (trace.failed(
-                "13_SESSION_CLOSED", !TradingSession.isOpen(q.marketState(), p.venue(), now)))
+                "13_SESSION_CLOSED",
+                !TradingSession.isOpen(q.marketState(), p.venue(), p.assetClass(), now)))
             return reject(
                     "SESSION_CLOSED",
                     "unknown".equals(q.marketState())
-                            ? "Provider market status is unknown and no supported scheduled core"
+                            ? "Provider market status is unknown and no supported scheduled market"
                                     + " session is open"
+                            : TradingSession.usesScheduledSession(q.marketState(), p.assetClass())
+                                    ? "The supported scheduled FX session is closed"
                             : "The provider does not report an open market");
         if (trace.failed(
                 "14_QUOTE_METADATA_TIME",
-                q.metadataTime().isBefore(now.minusSeconds(p.quoteMaxAgeSeconds()))
-                        || q.metadataTime().isAfter(now.plusSeconds(p.futureSkewSeconds()))))
-            return reject("QUOTE_METADATA_TIME", "Provider metadata is stale or future-dated");
+                q.metadataTime().isAfter(now.plusSeconds(p.futureSkewSeconds()))))
+            return reject(
+                    "QUOTE_METADATA_TIME",
+                    "Provider metadata timestamp is ahead of the server clock");
         if (trace.failed(
                 "15_QUOTE_MAPPING",
                 q.instrumentId() != c.instrumentId()
@@ -219,9 +223,11 @@ public final class TradingRules {
         return new Evaluation(
                 true,
                 "ELIGIBLE",
-                "unknown".equals(q.marketState())
-                        ? "Eligible during the scheduled core session; provider market status is"
-                                + " unknown"
+                TradingSession.usesScheduledSession(q.marketState(), p.assetClass())
+                        ? "Eligible during the supported scheduled market session"
+                                + ("unknown".equals(q.marketState())
+                                        ? "; provider market status is unknown"
+                                        : "; provider status is not FX-specific")
                         : "Eligible under the trading policy",
                 price,
                 gross);

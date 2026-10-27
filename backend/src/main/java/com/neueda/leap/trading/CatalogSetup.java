@@ -74,7 +74,8 @@ public class CatalogSetup {
                             BigDecimal.ONE,
                             item[0],
                             true,
-                            true);
+                            true,
+                            Objects.toString(catalogItem.get("assetClass"), null));
             Quote q;
             try {
                 q = new FauxnanceTradingQuotes(provider, clock).quote(p);
