@@ -10,7 +10,7 @@ import { SupportApiService, CaseUpdate } from '../../core/api/support-api.servic
   standalone: true,
   imports: [DatePipe, RouterLink],
   template: `
-    <section class="panel" aria-label="Case updates">
+    <section class="panel support-updates" aria-label="Case updates">
       <h2>Case updates · {{ unread() }} unread</h2>
       <p>Updates are in-app only. Loading them does not mark them read.</p>
       @if (lastSuccess()) {

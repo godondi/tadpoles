@@ -15,6 +15,7 @@ public class OperationsResponseHeaders extends OncePerRequestFilter {
             HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         if (request.getRequestURI().startsWith("/api/support/")
+                || request.getRequestURI().startsWith("/api/compliance/")
                 || request.getRequestURI().startsWith("/api/operations/")
                 || request.getRequestURI().startsWith("/api/workspace/operations/")) {
             response.setHeader("Cache-Control", "no-store");

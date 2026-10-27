@@ -1,5 +1,5 @@
 -- Explicit local fixture: evidence access for the primary local client; case access for both local clients.
--- Requires migration 012 and role_workspaces.sql. Standard local Compose runs this
+-- Requires migrations through 017 and role_workspaces.sql. Standard local Compose runs this
 -- only when local demo setup and Operations access are enabled.
 BEGIN;
 
@@ -27,7 +27,7 @@ CROSS JOIN users approver
 CROSS JOIN clients client
 JOIN users owner ON owner.user_id = client.user_id
 CROSS JOIN (VALUES ('ORDER_READ'), ('EVIDENCE_READ'),
-    ('RECONCILIATION_READ'), ('EVIDENCE_EXPORT'), ('CASE_READ'), ('CASE_UPDATE')) requested(permission)
+    ('RECONCILIATION_READ'), ('EVIDENCE_EXPORT'), ('CASE_READ'), ('CASE_UPDATE'), ('ACCOUNT_DIAGNOSTICS')) requested(permission)
 WHERE staff.username = 'demo.operations' AND staff.email = 'demo.operations@tadpoles.test'
     AND approver.username = 'demo.finance' AND approver.email = 'demo.finance@tadpoles.test'
     AND owner.username IN ('demo.client', 'demo.client2')

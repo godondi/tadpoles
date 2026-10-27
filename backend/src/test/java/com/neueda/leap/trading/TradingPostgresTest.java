@@ -134,6 +134,15 @@ class TradingPostgresTest {
         script("database/migrations/010_quote_cache_twenty_minutes.sql");
         script("database/migrations/011_operations_workspace.sql");
         script("database/migrations/012_managed_support.sql");
+        script("database/migrations/013_compliance_workspace.sql");
+        script("database/migrations/014_compliance_context_scope.sql");
+        script("database/migrations/015_compliance_scope_compatibility.sql");
+        script("database/migrations/016_support_workflow.sql");
+        script("database/migrations/017_compliance_referrals.sql");
+        script("database/migrations/018_advisor_workspace.sql");
+        script("database/migrations/019_instrument_exchange.sql");
+        script("database/migrations/020_user_trade_access.sql");
+        script("database/migrations/021_quote_stale_after_thirty_minutes.sql");
         script("backend/src/test/resources/provider_accounts.sql");
         client =
                 Integer.parseInt(
@@ -152,6 +161,59 @@ class TradingPostgresTest {
                 new com.neueda.leap.dto.BankingDtos.BankRequest(
                         "Fixture reference", "000000001", "00005678", true, null));
         when(quotes.quote(any())).thenAnswer(i -> quote(i.getArgument(0), "49", "50"));
+    }
+
+    @Test
+    void policyMappingKeepsAssetClassAfterPolicyColumns() {
+        var policy = db.policy(instrument);
+
+        assertEquals("AAPL", policy.ticker());
+        assertEquals("EQUITY", policy.assetClass());
+        assertEquals("test-provider-v1", policy.version());
+        assertEquals("NASDAQ", policy.venue());
+        assertEquals("shares", policy.quantityUnit());
+        assertEquals("USD", policy.currency());
+        assertEquals(0, BigDecimal.ONE.compareTo(policy.quantityStep()));
+        assertEquals("AAPL", policy.providerSymbol());
+        assertTrue(policy.enabled());
+    }
+
+    @Test
+    void externalCashFlowQueryMapsDatedOpeningContributions() {
+        var flows = db.externalCashFlows(client);
+
+        assertEquals(1, flows.size());
+        assertEquals(0, new BigDecimal("10000").compareTo(flows.get(0).amount()));
+        assertNotNull(flows.get(0).recordedAt());
+    }
+
+    @Test
+    void thirtyMinuteQuoteMigrationWidensOldDefaultsAndKeepsCustomLimits() throws Exception {
+        sql("ALTER TABLE instrument_trading_policies DROP CONSTRAINT"
+                + " instrument_trading_policies_quote_max_age_seconds_check");
+        sql("ALTER TABLE instrument_trading_policies ADD CONSTRAINT"
+                + " instrument_trading_policies_quote_max_age_seconds_check"
+                + " CHECK (quote_max_age_seconds BETWEEN 1 AND 1200)");
+        sql("UPDATE instrument_trading_policies SET quote_max_age_seconds = 1200"
+                + " WHERE provider_symbol = 'AAPL'");
+        sql("INSERT INTO instruments(instrument_name,ticker,currency,asset_class,security_type)"
+                + " VALUES ('Custom age test','CUSTOM','USD','EQUITY','STOCK')");
+        String customInstrument = scalar(
+                "SELECT instrument_id FROM instruments WHERE ticker='CUSTOM'");
+        sql("INSERT INTO instrument_trading_policies (instrument_id,policy_version,venue,"
+                + "quantity_unit,price_unit,currency,quantity_step,currency_scale,max_quantity,"
+                + "max_notional,quote_max_age_seconds,future_skew_seconds,retry_seconds,"
+                + "max_attempts,session,enabled,raw_price_unit,price_multiplier,provider_symbol,"
+                + "buy_allowed,sell_allowed) SELECT " + customInstrument + ",policy_version,venue,"
+                + "quantity_unit,price_unit,currency,quantity_step,currency_scale,max_quantity,"
+                + "max_notional,30,future_skew_seconds,retry_seconds,max_attempts,session,enabled,"
+                + "raw_price_unit,price_multiplier,'CUSTOM',buy_allowed,sell_allowed "
+                + "FROM instrument_trading_policies WHERE provider_symbol='AAPL'");
+        script("database/migrations/021_quote_stale_after_thirty_minutes.sql");
+        assertEquals("1800", scalar("SELECT quote_max_age_seconds FROM"
+                + " instrument_trading_policies WHERE provider_symbol = 'AAPL'"));
+        assertEquals("30", scalar("SELECT quote_max_age_seconds FROM"
+                + " instrument_trading_policies WHERE provider_symbol = 'CUSTOM'"));
     }
 
     Quote quote(Policy p, String bid, String ask) {
@@ -1186,7 +1248,7 @@ class TradingPostgresTest {
                                 .content(payload))
                 .andExpect(
                         org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
-                                .isForbidden());
+                                .isMethodNotAllowed());
         mvc.perform(
                         org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(
                                         "/api/workspace/operations/instruments/" + target)
@@ -1410,6 +1472,7 @@ class TradingPostgresTest {
         script("database/fresh/001_schema.sql");
         script("database/fresh/002_reference.sql");
         script("database/demo/role_workspaces.sql");
+        script("database/migrations/020_user_trade_access.sql");
         int second =
                 Integer.parseInt(
                         scalar(
@@ -1472,8 +1535,17 @@ class TradingPostgresTest {
         script("database/migrations/008_trading_controls.sql");
         script("database/migrations/009_quote_cache_age.sql");
         script("database/migrations/010_quote_cache_twenty_minutes.sql");
+        script("database/migrations/021_quote_stale_after_thirty_minutes.sql");
         script("database/migrations/011_operations_workspace.sql");
         script("database/migrations/012_managed_support.sql");
+        script("database/migrations/013_compliance_workspace.sql");
+        script("database/migrations/014_compliance_context_scope.sql");
+        script("database/migrations/015_compliance_scope_compatibility.sql");
+        script("database/migrations/016_support_workflow.sql");
+        script("database/migrations/017_compliance_referrals.sql");
+        script("database/migrations/018_advisor_workspace.sql");
+        script("database/migrations/019_instrument_exchange.sql");
+        script("database/migrations/020_user_trade_access.sql");
         demoSetup.initialize();
         equalDecimal(
                 "10000",
@@ -1496,6 +1568,83 @@ class TradingPostgresTest {
                         + " AND currency='USD'");
         assertEquals(1, banking.banks(client).size());
         reconciled();
+    }
+
+    @Test
+    void financeSummaryUsesSettledMovementsBookedFillsAndUtcDateBoundaries() throws Exception {
+        var bankId = banking.banks(client).get(0).bankId();
+        assertEquals(
+                "SETTLED",
+                banking.move(
+                                client,
+                                actor,
+                                key(),
+                                new com.neueda.leap.dto.BankingDtos.MovementRequest(
+                                        bankId, "DEPOSIT", "125.25"))
+                        .status());
+
+        int buyOrder = id(submit(key(), buy("1")));
+        fill(buyOrder, "50", "51");
+        int sellOrder =
+                id(submit(key(), new Command(instrument, "SELL", "1", "MARKET")));
+        fill(sellOrder, "52", "53");
+
+        assertEquals(
+                "SETTLED",
+                banking.move(
+                                client,
+                                actor,
+                                key(),
+                                new com.neueda.leap.dto.BankingDtos.MovementRequest(
+                                        bankId, "WITHDRAW", "100.00"))
+                        .status());
+        assertEquals(
+                "SETTLED",
+                banking.move(
+                                client,
+                                actor,
+                                key(),
+                                new com.neueda.leap.dto.BankingDtos.MovementRequest(
+                                        bankId, "WITHDRAW", "10000.00"))
+                        .status());
+        assertEquals(
+                "REJECTED",
+                banking.move(
+                                client,
+                                actor,
+                                key(),
+                                new com.neueda.leap.dto.BankingDtos.MovementRequest(
+                                        bankId, "WITHDRAW", "30.00"))
+                        .status());
+
+        String token = login("demo.finance");
+        mvc.perform(
+                        get("/api/finance/summary")
+                                .param("from", "2026-10-14")
+                                .param("to", "2026-10-14")
+                                .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totals.settledDeposits").value("125.25"))
+                .andExpect(jsonPath("$.totals.settledWithdrawals").value("10100.00"))
+                .andExpect(jsonPath("$.totals.grossBuyConsideration").value("51.00"))
+                .andExpect(jsonPath("$.totals.grossSellConsideration").value("52.00"))
+                .andExpect(jsonPath("$.totals.bookedFillCount").value(2))
+                .andExpect(jsonPath("$.totals.fees").doesNotExist())
+                .andExpect(jsonPath("$.clientId").doesNotExist())
+                .andExpect(jsonPath("$.dataAsOf").isString())
+                .andExpect(jsonPath("$.generatedAt").value("2026-10-14T14:00:00Z"));
+
+        mvc.perform(
+                        get("/api/finance/summary")
+                                .param("from", "2026-10-01")
+                                .param("to", "2026-10-01")
+                                .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totals.settledDeposits").value("0.00"))
+                .andExpect(jsonPath("$.totals.settledWithdrawals").value("0.00"))
+                .andExpect(jsonPath("$.totals.grossBuyConsideration").value("0.00"))
+                .andExpect(jsonPath("$.totals.grossSellConsideration").value("0.00"))
+                .andExpect(jsonPath("$.totals.bookedFillCount").value(0));
     }
 
     @Test
@@ -1562,6 +1711,8 @@ class TradingPostgresTest {
 
     @Test
     void startupMapsProviderIdentityWithoutOverwritingAnOperationsHalt() throws Exception {
+        sql("INSERT INTO instruments(instrument_name,ticker,currency,asset_class,security_type,exchange)"
+                + " VALUES('Microsoft Corporation','MSFT','USD','EQUITY','STOCK','NASDAQ')");
         var q = new FauxnanceTradingQuotesTest().response();
         q.getData().setSymbol("MSFT");
         q.getMeta().setSymbol("MSFT");
@@ -1585,6 +1736,9 @@ class TradingPostgresTest {
 
     @Test
     void startupRetainsDistinctBondAndEquityFundClassification() throws Exception {
+        sql("INSERT INTO instruments(instrument_name,ticker,currency,asset_class,security_type,exchange)"
+                + " VALUES ('Vanguard S&P 500 ETF','VOO','USD','ETF','ETF','NYSE Arca'),"
+                + " ('iShares Core U.S. Aggregate Bond ETF','AGG','USD','Fixed Income','ETF','NYSE Arca')");
         for (String symbol : java.util.List.of("VOO", "AGG")) {
             var q = new FauxnanceTradingQuotesTest().response();
             q.getData().setSymbol(symbol);
@@ -2611,7 +2765,7 @@ class TradingPostgresTest {
                     table,
                     scalar(
                             "SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),"
-                                + " '[]'::jsonb)::text FROM "
+                                    + " '[]'::jsonb)::text FROM "
                                     + table
                                     + " t"));
         for (int order : new int[] {pending, filled, rejected}) {
@@ -2647,7 +2801,7 @@ class TradingPostgresTest {
                         before.get(table),
                         scalar(
                                 "SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),"
-                                    + " '[]'::jsonb)::text FROM "
+                                        + " '[]'::jsonb)::text FROM "
                                         + table
                                         + " t"),
                         table);

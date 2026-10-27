@@ -8,8 +8,13 @@ class Settings:
     jwt_issuer: str | None = os.getenv("ANALYTICS_JWT_ISSUER") or None
     jwt_audience: str | None = os.getenv("ANALYTICS_JWT_AUDIENCE") or None
     reporting_database_url: str = os.getenv("ANALYTICS_DATABASE_URL", "")
+    data_mode: str = os.getenv("ANALYTICS_DATA_MODE", "authoritative").lower()
     max_range_days: int = int(os.getenv("ANALYTICS_MAX_RANGE_DAYS", "366"))
     max_page_size: int = int(os.getenv("ANALYTICS_MAX_PAGE_SIZE", "100"))
+
+    def __post_init__(self) -> None:
+        if self.data_mode not in {"demo", "authoritative"}:
+            raise ValueError("ANALYTICS_DATA_MODE must be 'demo' or 'authoritative'")
 
 
 settings = Settings()

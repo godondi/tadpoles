@@ -15,6 +15,7 @@ export interface Instrument {
   currency: string;
   assetClass: string | null;
   securityType: string | null;
+  exchange: string | null;
   isActive: boolean;
 }
 export interface Position {
@@ -61,6 +62,7 @@ export interface PortfolioValuation {
   cashBalance: string | null;
   snapshotAt: string;
   quoteAsOf: string | null;
+  allTimeReturnPercent: string | null;
   unpricedTickers: string[];
 }
 

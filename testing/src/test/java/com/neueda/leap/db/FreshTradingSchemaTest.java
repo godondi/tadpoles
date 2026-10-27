@@ -17,7 +17,7 @@ class FreshTradingSchemaTest extends AbstractPostgresIntegrationTest {
                             "SELECT"
                                 + " table_name,column_name,data_type,coalesce(column_default,''),is_nullable,coalesce(numeric_precision,0),coalesce(numeric_scale,0)"
                                 + " FROM information_schema.columns WHERE table_schema='public'"
-                                + " ORDER BY table_name,ordinal_position",
+                                + " ORDER BY table_name,column_name",
                             "SELECT c.relname,t.tgname,pg_get_triggerdef(t.oid) FROM pg_trigger t"
                                 + " JOIN pg_class c ON c.oid=t.tgrelid WHERE NOT t.tgisinternal AND"
                                 + " c.relnamespace='public'::regnamespace ORDER BY"
@@ -58,7 +58,16 @@ class FreshTradingSchemaTest extends AbstractPostgresIntegrationTest {
                     "009_quote_cache_age.sql",
                     "010_quote_cache_twenty_minutes.sql",
                     "011_operations_workspace.sql",
-                    "012_managed_support.sql"
+                    "012_managed_support.sql",
+                    "013_compliance_workspace.sql",
+                    "014_compliance_context_scope.sql",
+                    "015_compliance_scope_compatibility.sql",
+                    "016_support_workflow.sql",
+                    "017_compliance_referrals.sql",
+                    "018_advisor_workspace.sql",
+                    "019_instrument_exchange.sql",
+                    "020_user_trade_access.sql",
+                    "021_quote_stale_after_thirty_minutes.sql"
                 }) executeSqlScript(Path.of("../database/migrations/" + file));
         var upgraded = shape();
         try (var c = newConnection();
@@ -71,9 +80,14 @@ class FreshTradingSchemaTest extends AbstractPostgresIntegrationTest {
         executeSqlScript(Path.of("../database/fresh/002_reference.sql"));
         try (var c = newConnection();
                 var s = c.createStatement();
-                var r = s.executeQuery("SELECT count(*) FROM schema_migrations")) {
+                var r =
+                        s.executeQuery(
+                                "SELECT array_agg(version ORDER BY version)::text FROM"
+                                    + " schema_migrations")) {
             r.next();
-            assertEquals(10, r.getInt(1));
+            assertEquals(
+                    "{3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21}",
+                    r.getString(1));
         }
     }
 }

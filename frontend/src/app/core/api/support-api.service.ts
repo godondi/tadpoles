@@ -5,6 +5,14 @@ import { AuthService } from '../auth/auth.service';
 import { buildApiUrl } from './api-url';
 import { Page } from './workspace-api.service';
 export type CaseStatus = 'OPEN' | 'IN_REVIEW' | 'AWAITING_CLIENT' | 'RESOLVED';
+export type CaseQueueView =
+  | 'ACTIONABLE'
+  | 'ALL'
+  | 'UNASSIGNED'
+  | 'MINE'
+  | 'AWAITING_CLIENT'
+  | 'AWAITING_REVIEW'
+  | 'RESOLVED';
 export interface CaseEvent {
   id: number;
   version: number;
@@ -16,6 +24,13 @@ export interface CaseEvent {
   recordedAt: string;
 }
 export interface SupportCase {
+  assignee?: number | null;
+  assigneeLabel?: string | null;
+  priority?: string;
+  nextAction?: string | null;
+  dueAt?: string | null;
+  effectiveCategory?: string;
+  workflowVersion?: number;
   reference: string;
   orderId: number | null;
   category: string;
@@ -27,10 +42,15 @@ export interface SupportCase {
   detailUrl: string;
 }
 export interface CaseDetail extends SupportCase {
+  workflowEnabled?: boolean;
+  actions?: { reply: boolean; note: boolean; transitions: CaseStatus[] };
   events: CaseEvent[];
   totalEvents: number;
   page: number;
   pageSize: number;
+}
+export interface SupportCasePage extends Page<SupportCase> {
+  workflowEnabled?: boolean;
 }
 export interface CaseUpdate {
   id: number;
@@ -52,6 +72,13 @@ export interface NewCase {
   subject: string;
   description: string;
   orderId?: number;
+  intakeSchemaVersion?: number;
+  intake?: Record<string, string | number>;
+}
+export interface IntakePolicy {
+  intakeEnabled: boolean;
+  schemaVersion: number;
+  categories: { code: string; reasons: string[] }[];
 }
 export const CASE_CATEGORIES = [
   'ORDER_QUESTION',
@@ -69,15 +96,38 @@ export class SupportApiService {
   private url(staff = false) {
     return buildApiUrl(staff ? '/api/operations/cases' : '/api/support/cases', this.platform);
   }
-  list(staff: boolean, status = '', search = '', page = 0) {
+  intakePolicy() {
     return this.http
-      .get<Page<SupportCase>>(this.url(staff), {
-        params: new HttpParams()
-          .set('page', page)
-          .set('pageSize', 20)
-          .set('search', search)
-          .set('status', status)
-          .delete('status', ''),
+      .get<IntakePolicy>(this.url() + '/intake-policy')
+      .pipe(takeUntil(this.auth.sessionChanged));
+  }
+  list(
+    staff: boolean,
+    status = '',
+    search = '',
+    page = 0,
+    filters: {
+      assignee?: number;
+      priority?: string;
+      category?: string;
+      view?: CaseQueueView;
+      overdueOnly?: boolean;
+    } = {},
+  ) {
+    let params = new HttpParams()
+      .set('page', page)
+      .set('pageSize', 20)
+      .set('search', search)
+      .set('status', status)
+      .delete('status', '');
+    if (staff && filters.assignee !== undefined) params = params.set('assignee', filters.assignee);
+    if (staff && filters.priority) params = params.set('priority', filters.priority);
+    if (staff && filters.category) params = params.set('category', filters.category);
+    if (staff && filters.view) params = params.set('view', filters.view);
+    if (staff && filters.overdueOnly) params = params.set('overdueOnly', true);
+    return this.http
+      .get<SupportCasePage>(this.url(staff), {
+        params,
       })
       .pipe(
         takeUntil(this.auth.sessionChanged),

@@ -1,14 +1,52 @@
 from datetime import date
-from typing import Annotated, Literal
+from collections.abc import Callable
+from typing import Annotated, Literal, TypeVar
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
 from app.auth import CurrentAnalyst, get_current_analyst
-from app.schemas import AnalyticsFilters, PerformancePeriod
+from app.config import settings
+from app.db import reporting_session
+from app.reporting import (
+    ReportingUnavailable,
+    freshness as report_freshness,
+    holdings as report_holdings,
+    instruments as report_instruments,
+    portfolio_performance as report_portfolio_performance,
+    summary as report_summary,
+    trends as report_trends,
+    validate_segment_scope,
+)
+from app.schemas import (
+    AnalyticsFilters,
+    AnalyticsMeasure,
+    FreshnessResponse,
+    InstrumentsResponse,
+    PerformancePeriod,
+    PortfolioHoldingsResponse,
+    PortfolioPerformanceResponse,
+    SummaryResponse,
+    TrendsResponse,
+)
 from app.services import unavailable, validate_filters
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 Analyst = Annotated[CurrentAnalyst, Depends(get_current_analyst)]
+ReportingSession = Annotated[Session, Depends(reporting_session)]
+ReportResult = TypeVar("ReportResult")
+
+
+def run_report(operation: Callable[[Session], ReportResult]) -> ReportResult:
+    session_iterator = reporting_session()
+    try:
+        session = next(session_iterator)
+        return operation(session)
+    except (ReportingUnavailable, SQLAlchemyError):
+        unavailable()
+    finally:
+        session_iterator.close()
 
 
 def filters(
@@ -37,41 +75,61 @@ def filters(
     )
 
 
-@router.get("/summary")
-def summary(_: Analyst, report_filters: Annotated[AnalyticsFilters, Depends(filters)]) -> None:
-    unavailable()
+@router.get("/summary", response_model=SummaryResponse)
+def summary(
+    _: Analyst,
+    report_filters: Annotated[AnalyticsFilters, Depends(filters)],
+) -> SummaryResponse:
+    validate_segment_scope(report_filters)
+    return run_report(lambda session: report_summary(session, report_filters))
 
 
-@router.get("/trends")
-def trends(_: Analyst, report_filters: Annotated[AnalyticsFilters, Depends(filters)]) -> None:
-    unavailable()
+@router.get("/trends", response_model=TrendsResponse)
+def trends(
+    _: Analyst,
+    report_filters: Annotated[AnalyticsFilters, Depends(filters)],
+    measure: AnalyticsMeasure = Query(default="fills_booked"),
+) -> TrendsResponse:
+    validate_segment_scope(report_filters)
+    return run_report(lambda session: report_trends(session, report_filters, measure))
 
 
-@router.get("/instruments")
+@router.get("/instruments", response_model=InstrumentsResponse)
 def instruments(
     _: Analyst,
     report_filters: Annotated[AnalyticsFilters, Depends(filters)],
-    measure: Literal["fills_booked", "orders_filled", "executed_quantity"] = "fills_booked",
+    measure: AnalyticsMeasure = "fills_booked",
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=25, ge=1, le=100),
-) -> None:
-    unavailable()
+) -> InstrumentsResponse:
+    if page_size > settings.max_page_size:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"page_size must not exceed {settings.max_page_size}.",
+        )
+    validate_segment_scope(report_filters)
+    return run_report(lambda session: report_instruments(session, report_filters, measure, page, page_size))
 
 
-@router.get("/freshness")
-def freshness(_: Analyst) -> None:
-    unavailable()
+@router.get("/freshness", response_model=FreshnessResponse)
+def freshness(_: Analyst) -> FreshnessResponse:
+    return run_report(lambda session: report_freshness(session))
 
 
-@router.get("/portfolio-performance")
+@router.get("/portfolio-performance", response_model=PortfolioPerformanceResponse)
 def portfolio_performance(
     _: Analyst,
     report_filters: Annotated[AnalyticsFilters, Depends(filters)],
     period: PerformancePeriod = "1m",
-) -> None:
-    unavailable()
+) -> PortfolioPerformanceResponse:
+    validate_segment_scope(report_filters)
+    return run_report(lambda session: report_portfolio_performance(session, report_filters, period))
 
 
-@router.get("/holdings")
-def holdings(_: Analyst, report_filters: Annotated[AnalyticsFilters, Depends(filters)]) -> None:
-    unavailable()
+@router.get("/holdings", response_model=PortfolioHoldingsResponse)
+def holdings(
+    _: Analyst,
+    report_filters: Annotated[AnalyticsFilters, Depends(filters)],
+) -> PortfolioHoldingsResponse:
+    validate_segment_scope(report_filters)
+    return run_report(lambda session: report_holdings(session, report_filters))

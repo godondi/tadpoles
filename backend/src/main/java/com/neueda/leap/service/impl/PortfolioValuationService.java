@@ -4,13 +4,17 @@ import com.neueda.leap.domain.FauxnanceQuoteResponse;
 import com.neueda.leap.dto.PortfolioValuationDto;
 import com.neueda.leap.mapper.TradingMapper;
 import com.neueda.leap.service.FauxnanceQuoteService;
+import com.neueda.leap.mapper.TradingMapper.ExternalCashFlow;
 import com.neueda.leap.trading.TradingModels.Policy;
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
@@ -68,18 +72,23 @@ public class PortfolioValuationService {
         }
 
         boolean complete = snapshot.cash() != null && unpriced.isEmpty();
+        BigDecimal totalValue = snapshot.cash() == null ? null : snapshot.cash().add(holdingsValue);
         return new PortfolioValuationDto(
                 "USD",
                 complete ? "COMPLETE" : "UNAVAILABLE",
-                complete ? money(snapshot.cash().add(holdingsValue)) : null,
+                complete ? money(totalValue) : null,
                 unpriced.isEmpty() ? money(holdingsValue) : null,
                 snapshot.cash() == null ? null : money(snapshot.cash()),
                 snapshot.at(),
                 oldestQuote,
+                complete
+                        ? allTimeReturnPercent(totalValue, snapshot.externalCashFlows(), snapshot.at())
+                        : null,
                 List.copyOf(unpriced));
     }
 
     private Snapshot snapshot(int clientId) {
+        Instant at = clock.instant();
         var balances = mapper.balances(clientId);
         BigDecimal cash =
                 balances.isEmpty()
@@ -97,7 +106,42 @@ public class PortfolioValuationService {
                                                         ((Number) row.get("instrumentId"))
                                                                 .intValue())))
                         .toList();
-        return new Snapshot(cash, holdings, clock.instant());
+        return new Snapshot(cash, holdings, mapper.externalCashFlows(clientId), at);
+    }
+
+    private String allTimeReturnPercent(
+            BigDecimal endingValue, List<ExternalCashFlow> cashFlows, Instant at) {
+        if (endingValue == null || cashFlows.isEmpty()) return null;
+
+        List<ExternalCashFlow> ordered =
+                cashFlows.stream()
+                        .sorted(Comparator.comparing(ExternalCashFlow::recordedAt))
+                        .toList();
+        Instant start = ordered.get(0).recordedAt();
+        long periodMillis = Duration.between(start, at).toMillis();
+        if (periodMillis <= 0
+                || ordered.stream().anyMatch(flow -> flow.recordedAt().isAfter(at))) return null;
+
+        BigDecimal period = BigDecimal.valueOf(periodMillis);
+        BigDecimal netFlows = BigDecimal.ZERO;
+        BigDecimal weightedFlows = BigDecimal.ZERO;
+        for (ExternalCashFlow flow : ordered) {
+            long remainingMillis = Duration.between(flow.recordedAt(), at).toMillis();
+            BigDecimal weight =
+                    BigDecimal.valueOf(remainingMillis)
+                            .divide(period, MathContext.DECIMAL128);
+            netFlows = netFlows.add(flow.amount());
+            weightedFlows = weightedFlows.add(flow.amount().multiply(weight));
+        }
+        if (weightedFlows.signum() <= 0) return null;
+
+        BigDecimal percentage =
+                endingValue
+                        .subtract(netFlows)
+                        .divide(weightedFlows, MathContext.DECIMAL128)
+                        .multiply(BigDecimal.valueOf(100));
+        BigDecimal rounded = percentage.setScale(2, RoundingMode.HALF_UP);
+        return (rounded.signum() == 0 ? BigDecimal.ZERO.setScale(2) : rounded).toPlainString();
     }
 
     private FauxnanceQuoteResponse fetchQuote(Policy policy) {
@@ -146,7 +190,7 @@ public class PortfolioValuationService {
             return false;
         }
         Instant value = timestamp.toInstant();
-        return !value.isBefore(now.minusSeconds(Math.min(1200, policy.quoteMaxAgeSeconds())))
+        return !value.isBefore(now.minusSeconds(Math.min(1800, policy.quoteMaxAgeSeconds())))
                 && !value.isAfter(now.plusSeconds(policy.futureSkewSeconds()));
     }
 
@@ -156,7 +200,11 @@ public class PortfolioValuationService {
 
     private record Holding(String ticker, String currency, BigDecimal owned, Policy policy) {}
 
-    private record Snapshot(BigDecimal cash, List<Holding> holdings, Instant at) {}
+    private record Snapshot(
+            BigDecimal cash,
+            List<Holding> holdings,
+            List<ExternalCashFlow> externalCashFlows,
+            Instant at) {}
 
     private record PricedHolding(Holding holding, FauxnanceQuoteResponse quote) {}
 }

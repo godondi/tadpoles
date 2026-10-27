@@ -15,17 +15,27 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TopNavComponent } from '../shared/top-nav/top-nav.component';
 import { AuthService } from '../core/auth/auth.service';
 import { routeRole, WORKSPACES } from '../core/auth/workspace-policy';
+import { TradeAccessNoticeComponent } from '../shared/workspace/trade-access-notice.component';
 
 @Component({
   selector: 'app-authenticated-shell',
   host: { '[style.--workspace-header-height.px]': 'headerHeight()' },
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, TopNavComponent],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    TopNavComponent,
+    TradeAccessNoticeComponent,
+  ],
   template: `
     @if (auth.isAuthenticated()) {
       <a class="skip-link" href="#workspace-content" (click)="skipToContent($event)">
         Skip to page content
       </a>
       <app-top-nav #header />
+      @if (auth.roles().includes('CLIENT')) {
+        <app-trade-access-notice />
+      }
       <div class="workspace-layout">
         <aside class="workspace-sidebar">
           <button
@@ -58,11 +68,6 @@ import { routeRole, WORKSPACES } from '../core/auth/workspace-policy';
               </div>
             }
           </nav>
-          <p class="sidebar-note">
-            Clear records.
-            <br />
-            Informed decisions.
-          </p>
         </aside>
         <main id="workspace-content" class="workspace-content" tabindex="-1">
           <router-outlet />

@@ -12,9 +12,10 @@
 }
 
 .nav-container {
-  max-width: 1600px;
-  margin: 0 auto;
-  padding: 0.9rem 2rem;
+  width: 100%;
+  box-sizing: border-box;
+  /* Match the sidebar label inset: 16px sidebar padding + 12px group inset. */
+  padding: 0.7rem 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -22,6 +23,10 @@
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
   border: none;
   background: transparent;
   padding: 0;
@@ -33,6 +38,13 @@
   font-weight: 700;
   letter-spacing: 0.02em;
   white-space: nowrap;
+}
+
+.brand-logo {
+  display: block;
+  width: 58px;
+  height: 36px;
+  object-fit: contain;
 }
 
 .nav-actions {
@@ -59,7 +71,7 @@
   border: none;
   outline: none;
   border-radius: 0;
-  background: rgba(255, 255, 255, 0.97);
+  background: var(--surface);
   color: var(--text-primary, #111827);
   padding: 0.7rem 0.95rem;
 }
@@ -82,7 +94,7 @@
 
 .search-button {
   background: var(--accent, #af8a49);
-  color: var(--text-primary, #111827);
+  color: #173042;
   padding: 0.7rem 1rem;
   box-shadow: inset 0 0 0 1px rgba(175, 138, 73, 0.15);
 }
@@ -185,7 +197,7 @@
   }
 
   .nav-container {
-    padding: 1rem;
+    padding: 1rem 28px;
     flex-direction: column;
     align-items: stretch;
   }

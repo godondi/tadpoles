@@ -103,6 +103,18 @@ GRANT SELECT, INSERT ON operations_access_contexts, operations_access_events,
 REVOKE UPDATE, DELETE, TRUNCATE ON operations_access_contexts, operations_access_events,
     operations_evidence_exports, order_decision_contexts, reconciliation_findings FROM :"runtime_role";
 
+GRANT SELECT, INSERT ON client_trade_access_events TO :"runtime_role";
+REVOKE UPDATE, DELETE, TRUNCATE ON client_trade_access_events FROM :"runtime_role";
+
+-- Compliance access is separate from Operations and cannot provision or widen grants.
+GRANT SELECT ON compliance_access_grants, compliance_grant_events TO :"runtime_role";
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON compliance_access_grants, compliance_grant_events
+    FROM :"runtime_role";
+GRANT SELECT, INSERT ON compliance_access_contexts, compliance_access_events,
+    compliance_evidence_exports TO :"runtime_role";
+REVOKE UPDATE, DELETE, TRUNCATE ON compliance_access_contexts, compliance_access_events,
+    compliance_evidence_exports FROM :"runtime_role";
+
 GRANT SELECT, INSERT ON support_cases, support_case_events, support_case_notes, support_case_requests, support_case_exports TO :"runtime_role";
 REVOKE UPDATE ON support_cases FROM :"runtime_role";
 GRANT UPDATE(status,version,updated_at) ON support_cases TO :"runtime_role";
@@ -113,6 +125,30 @@ REVOKE UPDATE ON support_read_state FROM :"runtime_role";
 GRANT UPDATE(last_event) ON support_read_state TO :"runtime_role";
 GRANT SELECT, INSERT ON support_read_state TO :"runtime_role";
 REVOKE DELETE, TRUNCATE ON support_read_state FROM :"runtime_role";
+
+-- Advisory writes append their own history through a narrowly scoped SECURITY DEFINER trigger.
+GRANT SELECT, INSERT, UPDATE ON advisor_guidance, advisor_recommendations TO :"runtime_role";
+REVOKE DELETE, TRUNCATE ON advisor_guidance, advisor_recommendations FROM :"runtime_role";
+GRANT SELECT ON advisor_guidance_history, advisor_recommendation_history TO :"runtime_role";
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON advisor_guidance_history, advisor_recommendation_history FROM :"runtime_role";
+REVOKE ALL ON FUNCTION append_advisor_history(), guard_advisor_projection() FROM :"runtime_role";
+
+GRANT SELECT, INSERT ON support_case_intake, support_case_workflow, support_case_workflow_events,
+    support_case_workflow_requests, support_case_tasks, support_case_resolutions,
+    support_case_referrals, compliance_investigations, compliance_investigation_events,
+    compliance_investigation_requests, compliance_investigation_exports TO :"runtime_role";
+REVOKE UPDATE, DELETE, TRUNCATE ON support_case_intake, support_case_workflow_events,
+    support_case_workflow_requests, support_case_resolutions, support_case_referrals,
+    compliance_investigation_events, compliance_investigation_requests,
+    compliance_investigation_exports FROM :"runtime_role";
+REVOKE UPDATE, DELETE, TRUNCATE ON support_case_workflow, support_case_tasks, compliance_investigations
+    FROM :"runtime_role";
+GRANT UPDATE(effective_category,assignee,priority,next_action,due_at,version,checklist_revision,updated_at)
+    ON support_case_workflow TO :"runtime_role";
+GRANT UPDATE(state,reason,evidence_kind,evidence_reference,actor,recorded_at)
+    ON support_case_tasks TO :"runtime_role";
+GRANT UPDATE(reviewer,status,version,disposition,findings,client_safe_explanation,updated_at)
+    ON compliance_investigations TO :"runtime_role";
 
 REVOKE TRUNCATE, TRIGGER ON ALL TABLES IN SCHEMA public FROM :"runtime_role";
 

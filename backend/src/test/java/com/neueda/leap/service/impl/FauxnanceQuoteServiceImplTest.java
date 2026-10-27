@@ -168,4 +168,25 @@ class FauxnanceQuoteServiceImplTest {
                 "Unknown spread provenance must not become modelled");
         server.verify();
     }
+
+    @Test
+    void providerServerFailureIsReportedAsBadGateway() {
+        server.expect(requestTo("http://localhost:9090/v1/quotes/SPY"))
+                .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
+        var error = assertThrows(ResponseStatusException.class, () -> service.getQuote("SPY"));
+        assertEquals(HttpStatus.BAD_GATEWAY, error.getStatusCode());
+        assertEquals("Market data provider is temporarily unavailable. Please retry shortly.", error.getReason());
+        server.verify();
+    }
+
+    @Test
+    void providerTimeoutIsReportedAsServiceUnavailable() {
+        server.expect(requestTo("http://localhost:9090/v1/quotes/SPY"))
+                .andRespond(org.springframework.test.web.client.response.MockRestResponseCreators.withException(
+                        new java.net.SocketTimeoutException("upstream timeout")));
+        var error = assertThrows(ResponseStatusException.class, () -> service.getQuote("SPY"));
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, error.getStatusCode());
+        assertEquals("Market data provider could not be reached. Please retry shortly.", error.getReason());
+        server.verify();
+    }
 }

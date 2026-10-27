@@ -40,9 +40,41 @@ describe('BankingPageComponent', () => {
       );
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('No money moves through a real bank');
+    expect(fixture.nativeElement.textContent).toContain('Nickname (minimum 2 characters)');
+    expect(fixture.nativeElement.textContent).toContain('Routing number (9 digits)');
+    expect(fixture.nativeElement.textContent).toContain('Account number (4–17 digits)');
     expect(fixture.nativeElement.querySelector('label[for="bank-routing"]')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('label[for="movement-amount"]')).not.toBeNull();
+    const savedAccountsPanel = fixture.nativeElement.querySelectorAll('section.panel')[1];
+    expect(savedAccountsPanel.textContent).not.toContain('>');
     expect(fixture.nativeElement.textContent).toContain('75');
+    expect(fixture.nativeElement.textContent).not.toContain('A completed sale credits this account');
+    expect(fixture.nativeElement.textContent).not.toContain('Format checked references');
+    expect(fixture.nativeElement.textContent).not.toContain('Withdrawals use settled, available cash');
+    expect(fixture.nativeElement.textContent).not.toContain('USD 10,000.00 maximum per movement');
+  });
+
+  it('restricts number fields to digits and formats movement amounts as grouped USD decimals', () => {
+    const fixture = TestBed.createComponent(BankingPageComponent);
+    fixture.detectChanges();
+    TestBed.inject(HttpTestingController)
+      .match(() => true)
+      .forEach((r) => r.flush(r.request.url.includes('portfolio') ? { balances: [] } : []));
+    const routing = fixture.nativeElement.querySelector('#bank-routing') as HTMLInputElement;
+    routing.value = '00a0123-456';
+    routing.dispatchEvent(new Event('input'));
+    expect(routing.value).toBe('000123456');
+    expect(fixture.componentInstance.routing).toBe('000123456');
+
+    const amount = fixture.nativeElement.querySelector('#movement-amount') as HTMLInputElement;
+    amount.value = '1a,234.5x';
+    amount.dispatchEvent(new Event('input'));
+    expect(amount.value).toBe('1,234.5');
+    amount.dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+    expect(amount.value).toBe('1,234.50');
+    expect(fixture.componentInstance.amount).toBe('1,234.50');
+    expect(fixture.componentInstance.validAmount()).toBe(true);
   });
   it('returns to the exact order route with its side query intact', () => {
     TestBed.overrideProvider(ActivatedRoute, {
@@ -110,14 +142,14 @@ describe('BankingPageComponent', () => {
     c.review();
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain(
-      'Estimated available after movement: 10000000000000.02 USD',
+      'Estimated available after movement: 10,000,000,000,000.02 USD',
     );
     c.direction = 'WITHDRAW';
     c.amount = '0.01';
     c.review();
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain(
-      'Estimated available after movement: 10000000000000.00 USD',
+      'Estimated available after movement: 10,000,000,000,000.00 USD',
     );
     http.expectNone((r) => r.method === 'POST');
   });

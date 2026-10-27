@@ -79,9 +79,11 @@ public class WorkspaceClientController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int pageSize,
             @RequestParam(defaultValue = "") String search,
-            @RequestParam(required = false) String assetClass) {
+            @RequestParam(required = false) String assetClass,
+            @RequestParam(required = false) String market,
+            @RequestParam(required = false) String exchange) {
         return trading.catalog(
-                clientId(jwt), reads.instruments(page, pageSize, search, assetClass));
+                clientId(jwt), reads.instruments(page, pageSize, search, assetClass, market, exchange));
     }
 
     @GetMapping("/workspace/client/trading-availability")
@@ -89,6 +91,13 @@ public class WorkspaceClientController {
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(required = false) Integer instrumentId) {
         return trading.availability(clientId(jwt), instrumentId);
+    }
+
+    @GetMapping("/workspace/client/trade-access")
+    public Object tradeAccess(@AuthenticationPrincipal Jwt jwt) {
+        int client = clientId(jwt);
+        var state = trading.tradeAccessState(client);
+        return state;
     }
 
     @PostMapping("/orders/preview")

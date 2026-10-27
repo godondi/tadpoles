@@ -1,9 +1,12 @@
+README.md
 pyproject.toml
 app/__init__.py
 app/api.py
 app/auth.py
 app/config.py
+app/db.py
 app/main.py
+app/reporting.py
 app/schemas.py
 app/services.py
 tadpoles_analytics_service.egg-info/PKG-INFO

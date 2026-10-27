@@ -49,4 +49,24 @@ describe('MarketDataService with application HTTP configuration', () => {
     expect(req.request.params.keys()).toEqual([]);
     req.flush({});
   });
+
+  it('recovers from one transient provider failure and stops after the second failure', async () => {
+    vi.useFakeTimers();
+    const failed = vi.fn();
+    service.getQuote('X:BTC-USD').subscribe({ error: failed });
+    http.expectOne(r => r.url.endsWith('/quotes/X%3ABTC-USD')).flush({}, { status: 502, statusText: 'Bad Gateway' });
+    await vi.advanceTimersByTimeAsync(500);
+    http.expectOne(r => r.url.endsWith('/quotes/X%3ABTC-USD')).flush({}, { status: 503, statusText: 'Unavailable' });
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(failed).toHaveBeenCalledOnce();
+    http.expectNone(r => r.url.endsWith('/quotes/X%3ABTC-USD'));
+  });
+
+  it('does not retry missing instruments', () => {
+    const failed = vi.fn();
+    service.getCandles('BAD').subscribe({ error: failed });
+    http.expectOne(r => r.url.endsWith('/candles/BAD')).flush({}, { status: 404, statusText: 'Not found' });
+    expect(failed).toHaveBeenCalledOnce();
+    http.expectNone(r => r.url.endsWith('/candles/BAD'));
+  });
 });

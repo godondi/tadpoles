@@ -1,12 +1,12 @@
 # Database guide
 
-This directory contains **15 SQL files**, but a normal new installation does not execute all of them. PostgreSQL 15 is the supported database. There are two ways to reach the current schema: initialize an empty database from `fresh/`, or upgrade an existing database through `migrations/`.
+This directory contains SQL files, but a normal new installation does not execute all of them. PostgreSQL 15 is the supported database. The current schema includes private Support workflow, Compliance review, Advisor records, instrument listing venues, and client trade-access revocation through migration **020**. Initialize an empty database from `fresh/`, or upgrade an existing database through `migrations/`.
 
 The split is intentional. A fresh schema describes the final structure; a migration describes how to reach that structure while preserving older data. Demo and historical test data are optional. Runtime grants are a separate security step.
 
 ## What was simplified
 
-The duplicate `schema/003_workspace_roles.sql` and `schema/004_client_simulation.sql` were removed. Tests and the upgrade rehearsal now use their single authoritative copies in `migrations/`. This reduces the directory from 17 SQL files to 15 and removes the need to keep identical files synchronized.
+The duplicate `schema/003_workspace_roles.sql` and `schema/004_client_simulation.sql` were removed during the original cleanup. Tests and the upgrade rehearsal use their single authoritative copies in `migrations/`. Subsequent additive workspace migrations are listed below.
 
 The remaining migrations were retained, including 009 and 010. An existing volume may already have applied one but not the other. Combining or renumbering them would make that upgrade history ambiguous. Historical fixtures remain because tests use them to prove old balances and records survive an upgrade correctly.
 
@@ -17,7 +17,7 @@ SQL and PL/pgSQL now have expanded statements, indentation and comments. This cl
 ```mermaid
 flowchart TD
     Empty[Empty PostgreSQL data directory] --> F1["fresh/001_schema.sql<br/>Current tables, indexes, functions and guards"]
-    F1 --> F2["fresh/002_reference.sql<br/>Roles and applied versions 003–010"]
+    F1 --> F2["fresh/002_reference.sql<br/>Roles and versions 003-013<br/>Schema itself records 014-019"]
     F2 --> Runner["migrate.sh<br/>Lock deployment and check schema_migrations"]
     Existing[Existing database volume] --> Runner
     Runner --> Missing{Missing versions?}
@@ -29,7 +29,18 @@ flowchart TD
     M7 --> M8["008 controls and reconciliation"]
     M8 --> M9["009 quote-age ceiling: 600 seconds"]
     M9 --> M10["010 quote-age ceiling: 1200 seconds"]
-    M10 --> Current[Current schema]
+    M10 --> M11["011 Operations grants and evidence"]
+    M11 --> M12["012 managed Support"]
+    M12 --> M13["013 Compliance evidence"]
+    M13 --> M14["014 compatible context scope"]
+    M14 --> M15["015 canonical scope normalization"]
+    M15 --> M16["016 private Support workflow"]
+    M16 --> M17["017 independent Compliance reviews"]
+    M17 --> M18["018 Advisor guidance, recommendations and immutable history"]
+    M18 --> M19["019 instrument listing venue"]
+    M19 --> M20["020 client trade access revocation"]
+    M20 --> M21["021 quote-age ceiling and default: 1800 seconds"]
+    M21 --> Current[Current schema]
     Missing -->|None| Current
     Current --> Demo["Optional local startup:<br/>demo/role_workspaces.sql"]
     Demo --> Local[Backend with local demo setup enabled]
@@ -50,7 +61,8 @@ The migration branch is ordered, but the runner skips each already-recorded vers
 1. PostgreSQL executes `fresh/*.sql` in filename order **only when its data directory is empty**. A retained volume skips this initialization.
 2. The `database-migrate` service runs `migrate.sh` with `migrations/` mounted at `/migrations`.
 3. The `database-demo-seed` service loads the optional local role accounts.
-4. The backend starts after successful migration and demo seeding. With `TRADING_LOCAL_DEMO_SETUP=true`, application code performs the controlled USD demo opening and provider catalog setup. Those operations are not hidden inside the fresh SQL files.
+4. The catalog seeder imports `us-v1.json`, `crypto-v1.json`, and `fx-v1.json` as reference instruments and listing venues. It runs on existing volumes too, inserts missing instruments, and only refreshes the exchange field for existing matching symbols.
+5. Local role accounts are seeded, then the backend starts. With `TRADING_LOCAL_DEMO_SETUP=true`, application code performs the controlled USD demo opening and provider validation for its supported trading instruments. Catalog import does not enable trading.
 
 The hardened Compose override omits demo seeding/auth-stub dependencies and disables application demo setup. Its runtime role must be provisioned separately and granted access by the schema owner before the backend can use it. `runtime-grants.sql` is not automatically executed by Compose.
 
@@ -60,8 +72,8 @@ Paths below are relative to this directory. “Repeatable” means safe to rerun
 
 | File | What it does | Requires / when used | Repeatable? |
 | --- | --- | --- | --- |
-| [fresh/001_schema.sql](fresh/001_schema.sql) | Current schema: identity and portfolio tables, exact-decimal cash/positions, orders/jobs, journals, banking, audit records, constraints, indexes and guard functions. Includes the structure through migration 010. No demo rows. | Empty database; normal Compose initialization and current-schema tests. Run before `002_reference.sql`. | No: tables already existing will conflict. |
-| [fresh/002_reference.sql](fresh/002_reference.sql) | Adds the seven current application roles and records versions 3–10 already represented by the fresh snapshot. Prevents the runner from applying old structural changes again. | Fresh schema from the preceding file. **Never use this to mark an incomplete legacy upgrade as done.** | Yes; inserts use conflict handling. |
+| [fresh/001_schema.sql](fresh/001_schema.sql) | Current schema through migration 019, including instrument listing venue, Advisor projections, attribution/eligibility/version guards and immutable history. No demo rows. | Empty database; normal Compose initialization and current-schema tests. Run before `002_reference.sql`. | No: tables already existing will conflict. |
+| [fresh/002_reference.sql](fresh/002_reference.sql) | Adds the seven current application roles and records versions 3–13 represented by the fresh snapshot; `001_schema.sql` records versions 14–19. Prevents the runner from applying old structural changes again. | Fresh schema from the preceding file. **Never use this to mark an incomplete legacy upgrade as done.** | Yes; inserts use conflict handling. |
 | [migrations/003_workspace_roles.sql](migrations/003_workspace_roles.sql) | Adds `TRADING_OPS` and `FINANCE`, plus indexes for ordered client trades and latest dated holdings. Preserves old `OPERATIONS` assignments. | Legacy base tables, before 004. The runner records version 3. | Yes, although the runner normally skips it afterward. |
 | [migrations/004_client_simulation.sql](migrations/004_client_simulation.sql) | Introduces the self-directed order lifecycle, cash/position projections, reservations, quotes/decisions, fills, journals, durable jobs, events/outbox, sessions and database guards. Also introduces historical simulation policy fields. | Legacy schema; normally after 003. Foundation used by 005–010. | No; run once through the runner. |
 | [migrations/005_client_banking.sql](migrations/005_client_banking.sql) | Adds encrypted bank references, internal USD movements and movement events. Gives cash-journal postings a movement source while requiring exactly one source. | 004, including its journal and guard functions. | No. |
@@ -69,8 +81,13 @@ Paths below are relative to this directory. “Repeatable” means safe to rerun
 | [migrations/007_trading_openings.sql](migrations/007_trading_openings.sql) | Records historical balances/holdings/policies as evidence and quarantines uncertain balances. Creates missing zero USD accounts; disables old synthetic instruments/policies, removes fixture prices and blocks historical financial writes. Does not infer spendable USD from old scalar cash. | 006. Old simulation fixtures, if used by a test, must have been loaded before cutover. | No. |
 | [migrations/008_trading_controls.sql](migrations/008_trading_controls.sql) | Adds provider setup results, stored reconciliation reports, system audit actors, and guards against changing ticker/currency/provider identity in place. | 007. | No. |
 | [migrations/009_quote_cache_age.sql](migrations/009_quote_cache_age.sql) | Historical change to permit quote-age limits between 1 and 600 seconds. Changes a constraint, not existing policy values. | 008; retained so existing volumes have an ordered upgrade path. | No. |
-| [migrations/010_quote_cache_twenty_minutes.sql](migrations/010_quote_cache_twenty_minutes.sql) | Raises the configurable ceiling to 1200 seconds. Does not change individual policy values or make explicitly stale quotes usable. | 009. Current final migration. | No. |
-| [demo/role_workspaces.sql](demo/role_workspaces.sql) | Creates six fictitious local users, role assignments and client profiles, plus empty USD accounts when the ledger tables exist. Uses `pgcrypto` for password hashes. Existing passwords and balances are retained. | Identity/client tables; normal local startup runs it after all migrations. Upgrade fixtures can use it after 004. | Yes; does not refill spent cash. |
+| [migrations/010_quote_cache_twenty_minutes.sql](migrations/010_quote_cache_twenty_minutes.sql) | Historical step raising the configurable ceiling to 1200 seconds. | 009. | No. |
+| [migrations/021_quote_stale_after_thirty_minutes.sql](migrations/021_quote_stale_after_thirty_minutes.sql) | Raises the quote-age ceiling and widens policies at the prior 1200-second default to 1800 seconds. Explicit provider stale flags still reject a quote. | Existing trading policy table. | No; preserves lower customized limits. |
+| [migrations/018_advisor_workspace.sql](migrations/018_advisor_workspace.sql) | Adds dedicated guidance (including versioned NONE clears), active/archived recommendations and immutable attributed history. Projection triggers enforce advisor assignment/role, exact ownership eligibility and versions; history is appended atomically by a fixed-search-path security-definer trigger. No financial writes or automatic assignment. | Current chain through 017. Review/reapply runtime grants as the schema owner before a restricted runtime uses these APIs. | Runner skips recorded version 18; do not rerun its DDL manually. |
+| [migrations/019_instrument_exchange.sql](migrations/019_instrument_exchange.sql) | Adds nullable listing-exchange metadata, separate from trading policy and provider venue. | Current chain through 018. | Runner skips recorded version 19; do not rerun manually. |
+| [migrations/020_user_trade_access.sql](migrations/020_user_trade_access.sql) | Adds durable indefinite/timed client trade-access revocation fields and immutable operator-attributed access events. Expired timed revocations become eligible automatically. | Current chain through 019. Reapply runtime grants to enable the access-event insert. | Runner skips recorded version 20; do not rerun manually. |
+| [catalog/seed.sql](catalog/seed.sql) | Imports the US equity/ETF, crypto and forex manifests. Crypto and forex are identified as OTC; US listings use sourced exchange names. Existing policies and other instrument fields are not overwritten. | Compose catalog-seed service, after migrations; database container mounts the three root JSON files at `/catalog`. | Yes; inserts are idempotent and existing rows only have exchange refreshed. |
+| [demo/role_workspaces.sql](demo/role_workspaces.sql) | Creates seven fictitious local users, role assignments and client profiles, plus empty USD accounts when ledger tables exist. Includes `demo.advisor` / `Demo Advisor`, ADVISOR role and linked advisor; assigns only `demo.client` if unassigned, and rejects a conflicting existing advisor. Leaves `demo.client2` untouched. Uses `pgcrypto`; existing passwords and balances are retained. | Identity/client/advisor tables; normal local startup runs it after all migrations. Upgrade fixtures can use it after 004. | Yes; does not refill spent cash or overwrite assignments. |
 | [demo/simulation.sql](demo/simulation.sql) | Historical fixture: synthetic instruments, deterministic prices and fictitious multi-currency openings. Lets tests reconstruct a pre-provider database and verify upgrade behavior. | 003/004 and role demo accounts, **before 006/007**. Incompatible with the current fresh schema because old columns have been removed. | Yes only at the old schema stage; opening references prevent refills. |
 | [schema/001_tadpoles_schema.sql](schema/001_tadpoles_schema.sql) | Original identity/advisor/portfolio schema, dated holdings, scalar cash and legacy trades. Baseline for regression and upgrade tests. | Empty disposable database for historical tests. New application installs use `fresh/`. | No. |
 | [schema/002_tadpoles_test_data.sql](schema/002_tadpoles_test_data.sql) | Historical rows with fixed IDs across the original portfolio model. Used by the Compose upgrade rehearsal to prove populated data survives. Password hashes are placeholders, not working demo logins. | Legacy base schema before migrations; not normal startup. | No; fixed IDs conflict on replay. |
@@ -86,7 +103,7 @@ Paths below are relative to this directory. “Repeatable” means safe to rerun
 
 **Outbox and jobs.** Execution jobs retain worker retry/lease state so accepted orders survive a restart. An outbox stores committed event facts with the financial transaction; delivery bookkeeping can change afterward. Neither is a disposable quote cache.
 
-**Quote age is not caching.** Files 009/010 only alter the permitted `quote_max_age_seconds` range. There is no quote-cache table created by them. `order_quote_observations` stores audit evidence. An instrument's actual age limit, quote timestamp and explicit provider stale/session flags still determine eligibility in application code. Widening a database ceiling does not refresh prices.
+**Quote age is not caching.** Files 009/010/021 alter the permitted `quote_max_age_seconds` range and 021 widens prior-default policies. There is no quote-cache table created by them. `order_quote_observations` stores audit evidence. The 30-minute quote-age policy and explicit provider stale/session flags still determine eligibility in application code. Widening this age limit does not refresh prices.
 
 **Permissions.** Application roles such as `TRADING_OPS` are rows in `roles`/`user_roles`. A PostgreSQL runtime role is the database login used by the backend. They solve different problems. `runtime-grants.sql` configures the latter; it does not grant a user an application role.
 
@@ -96,12 +113,18 @@ Paths below are relative to this directory. “Repeatable” means safe to rerun
 
 The runner tracks versions, **not file checksums**. Editing a recorded migration's behavior would not update an existing database. For future behavior changes:
 
-1. Add the next numbered migration (currently `013_<purpose>.sql`), with preconditions, a transaction and its version marker.
-2. Update the fresh snapshot to the same final structure and add that version to fresh reference bookkeeping.
+1. Add the next numbered migration (currently `019_<purpose>.sql`), with preconditions, a transaction and its version marker.
+2. Update the fresh snapshot to the same final structure and record its version marker alongside the corresponding DDL.
 3. Update fresh-versus-upgrade tests and any explicit migration lists in backend tests. Test with existing data, not only an empty database.
 4. Review runtime grants for new tables and update this guide/diagram.
 
-Keep historical migrations as the upgrade contract. Formatting/comments may improve, but do not rewrite applied operations or renumber versions. The fresh snapshot is derived from the upgrade chain; its long dependency-ordered DDL is intentional. When regenerating it, use PostgreSQL 15 schema-only output without owner/privilege statements and review the result. Keep demo data, role grants and migration markers outside that schema dump.
+Keep historical migrations as the upgrade contract. Formatting/comments may improve, but do not rewrite applied operations or renumber versions. The fresh snapshot is derived from the upgrade chain; its long dependency-ordered DDL is intentional. When regenerating it, use PostgreSQL 15 schema-only output without owner/privilege statements and review the result. Keep demo data and role grants outside the snapshot; include the migration markers that correspond to its DDL.
+
+### Advisor deployment and privacy
+
+Migration 018 is additive. Run the normal migration service before deploying the new backend; keep retained volumes. For hardened deployments, reapply this guide's owner-executed runtime-grants step: runtime gets SELECT/INSERT/UPDATE on advisory projections and SELECT-only on history, with direct history mutation and trigger-helper execution explicitly revoked. The history append trigger executes as its trusted schema owner with a fixed search path. Owner/superuser administration remains trusted; do not run the application as owner in hardened environments.
+
+No history-browsing API is exposed to advisors or clients. History is retained for approved audit/support access under existing database access procedures; operators must not dump rationale/identity data into logs. Recommendations that become held are omitted from active API reads without deleting prior advice. Roll back application admission/routes without dropping tables/history or deleting volumes. Historical assignment timestamps remain unknown/null, and automatic production assignment is not part of 018.
 
 ## Choosing a startup path
 
@@ -159,12 +182,12 @@ ORDER BY kind;
 | Symptom | Where to look |
 | --- | --- |
 | “Relation already exists” during initialization | Check whether fresh DDL was run over an existing schema. Init scripts run only for empty PostgreSQL data directories. |
-| Missing current tables | Confirm migration service success and versions 3–10. Do not manually insert version markers to bypass an incomplete migration. |
+| Missing current tables | Confirm migration service success and versions 3-19. Do not manually insert version markers to bypass an incomplete migration. |
 | Cutover blocked by jobs/reservations | Migration 006 is protecting accepted commitments. Stop new admission and drain with the previous application before retrying. |
 | Historical cash exists but is unavailable | Inspect availability flags and `financial_migration_exceptions`; 007 deliberately quarantines uncertain funds. |
 | “Permission denied” after hardened startup | Check the configured database login and owner-applied runtime grants, rather than adding application roles. |
 | Demo login does not exist | Current demo identities come from `demo/role_workspaces.sql`; historical test hashes are not login credentials. |
-| New instrument is absent | Check active/enabled/provider policy fields and catalog filters. Seed SQL is not the normal instrument-management workflow. |
+| Catalog instrument is absent | Confirm `database-catalog-seed` completed, then check `is_active` and the catalog filters. Catalog import does not enable trading; provider/trading policy setup remains an Operations workflow. |
 
 ## Verification
 

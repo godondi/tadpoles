@@ -105,6 +105,9 @@ export class TradeComponent implements OnDestroy {
   }
 
   private errorMessage(error: HttpErrorResponse) {
+    if (error.status >= 500 || error.status === 0) {
+      return 'Market data is temporarily unavailable. Please retry in a moment.';
+    }
     const message =
       typeof error.error?.message === 'string' && error.error.message.trim()
         ? error.error.message

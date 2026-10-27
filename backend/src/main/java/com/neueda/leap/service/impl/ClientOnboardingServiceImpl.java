@@ -5,6 +5,7 @@ import com.neueda.leap.domain.Client;
 import com.neueda.leap.domain.ClientProfile;
 import com.neueda.leap.dto.ClientOnboardingResponseDto;
 import com.neueda.leap.dto.CompleteClientOnboardingRequestDto;
+import com.neueda.leap.mapper.AdvisorMapper;
 import com.neueda.leap.mapper.ClientMapper;
 import com.neueda.leap.mapper.ClientProfileMapper;
 import com.neueda.leap.service.ClientOnboardingService;
@@ -20,14 +21,18 @@ import org.springframework.web.server.ResponseStatusException;
 public class ClientOnboardingServiceImpl implements ClientOnboardingService {
     private final ClientProfileMapper clientProfileMapper;
     private final ClientMapper clientMapper;
+    private final AdvisorMapper advisorMapper;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.neueda.leap.trading.TradingAccountSetup tradingAccounts;
 
     public ClientOnboardingServiceImpl(
-            ClientProfileMapper clientProfileMapper, ClientMapper clientMapper) {
+            ClientProfileMapper clientProfileMapper,
+            ClientMapper clientMapper,
+            AdvisorMapper advisorMapper) {
         this.clientProfileMapper = clientProfileMapper;
         this.clientMapper = clientMapper;
+        this.advisorMapper = advisorMapper;
     }
 
     @Override
@@ -48,16 +53,22 @@ public class ClientOnboardingServiceImpl implements ClientOnboardingService {
 
         Client client = clientMapper.getClientByUserId(currentUser.getUserId());
         if (client == null) {
+            advisorMapper.lockAdvisorAssignmentBucket();
             client = new Client();
             client.setUserId(currentUser.getUserId());
             client.setClientName(
                     normalizeRequired(request.clientName(), "Client name is required"));
+            client.setAdvisorId(advisorMapper.findLeastAssignedAdvisorId());
             client.setCashBalance(BigDecimal.ZERO);
             clientMapper.insertClient(client);
             if (tradingAccounts != null) tradingAccounts.initialize(client.getClientId());
         } else {
             client.setClientName(
                     normalizeRequired(request.clientName(), "Client name is required"));
+            if (client.getAdvisorId() == null) {
+                advisorMapper.lockAdvisorAssignmentBucket();
+                client.setAdvisorId(advisorMapper.findLeastAssignedAdvisorId());
+            }
             clientMapper.updateClient(client);
         }
 

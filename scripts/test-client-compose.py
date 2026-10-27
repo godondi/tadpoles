@@ -53,6 +53,9 @@ AUTH_STUB_PORT=4000
 JWT_SECRET=isolated-compose-test-secret-at-least-32-bytes
 FRONTEND_HOST_PORT=18086
 FRONTEND_CONTAINER_PORT=4000
+ANALYTICS_POSTGRES_HOST_PORT=18088
+ANALYTICS_HOST_PORT=18089
+ANALYTICS_CONTAINER_PORT=8000
 """
         )
 
@@ -62,7 +65,6 @@ FRONTEND_CONTAINER_PORT=4000
         "backend",
         "frontend",
         "database",
-        "auth-stub",
         "database-migrate",
         "database-demo-seed",
     ]:
@@ -73,11 +75,9 @@ FRONTEND_CONTAINER_PORT=4000
         ]
         if service == "database":
             lines += ["    ports: !reset []"]
-        if service == "auth-stub":
-            lines += ["    ports: !reset []"]
         if service == "frontend":
             lines += ['    ports: !override ["127.0.0.1:18086:4000"]']
-        if service in ["backend", "frontend", "auth-stub"]:
+        if service in ["backend", "frontend"]:
             lines += [f"    image: {PROJECT}-{service}:test"]
     lines += [
         "  backend:",
@@ -112,6 +112,9 @@ FRONTEND_CONTAINER_PORT=4000
     first = lines.index("  backend:")
     last = lines.index("  frontend:")
     del lines[first:last]
+    for service in ["analytics-database", "analytics-api", "analytics-demo-seed", "nginx"]:
+        lines += [f"  {service}:", '    profiles: ["not-under-test"]',
+                  "    env_file: !reset []", "    ports: !reset []"]
     override.write_text("\n".join(lines) + "\n")
     command = [
         "docker",
@@ -127,13 +130,17 @@ FRONTEND_CONTAINER_PORT=4000
     ]
 
     def compose(*args):
-        with open("/tmp/client-refactor-compose-build.log", "ab") as output:
-            subprocess.run(
-                command + list(args),
-                stdout=output,
-                stderr=subprocess.STDOUT,
-                check=True,
-            )
+        log = temp / "compose-build.log"
+        try:
+            with open(log, "ab") as output:
+                subprocess.run(
+                    command + list(args),
+                    stdout=output,
+                    stderr=subprocess.STDOUT,
+                    check=True,
+                )
+        except subprocess.CalledProcessError as failure:
+            raise RuntimeError(log.read_text()[-4000:]) from failure
 
     def sql(statement, database="tadpoles_isolated_test"):
         return call(

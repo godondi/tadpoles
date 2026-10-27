@@ -5,6 +5,8 @@ services:
     depends_on: !override
       database-migrate:
         condition: service_completed_successfully
+      database-catalog-seed:
+        condition: service_completed_successfully
     # Do not inherit the development .env containing database-owner credentials.
     env_file: !reset []
     environment:
@@ -12,10 +14,16 @@ services:
       DB_PASSWORD: ${TRADING_RUNTIME_DB_PASSWORD:?Set its secret through your deployment environment}
       TRADING_LOCAL_DEMO_SETUP: "false"
       OPERATIONS_ACCESS_ENABLED: ${OPERATIONS_ACCESS_ENABLED:-false}
+      SUPPORT_WORKFLOW_ENABLED: ${SUPPORT_WORKFLOW_ENABLED:-false}
       OPERATIONS_ALLOWED_PURPOSES: ${OPERATIONS_ALLOWED_PURPOSES:-}
       OPERATIONS_POLICY_VERSION: ${OPERATIONS_POLICY_VERSION:-}
       OPERATIONS_CONTEXT_SECONDS: ${OPERATIONS_CONTEXT_SECONDS:-0}
       OPERATIONS_EXPORT_SECONDS: ${OPERATIONS_EXPORT_SECONDS:-0}
+      COMPLIANCE_ACCESS_ENABLED: ${COMPLIANCE_ACCESS_ENABLED:-false}
+      COMPLIANCE_ALLOWED_PURPOSES: ${COMPLIANCE_ALLOWED_PURPOSES:-}
+      COMPLIANCE_POLICY_VERSION: ${COMPLIANCE_POLICY_VERSION:-}
+      COMPLIANCE_CONTEXT_SECONDS: ${COMPLIANCE_CONTEXT_SECONDS:-0}
+      COMPLIANCE_EXPORT_SECONDS: ${COMPLIANCE_EXPORT_SECONDS:-0}
       BANKING_ENCRYPTION_KEY: ${BANKING_ENCRYPTION_KEY:?Set a unique base64 32-byte encryption key}
       SERVER_PORT: ${SERVER_PORT:-8080}
       FAUX_SERVER_URL: ${FAUX_SERVER_URL}

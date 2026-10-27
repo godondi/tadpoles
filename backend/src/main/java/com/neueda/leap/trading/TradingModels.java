@@ -34,7 +34,8 @@ public final class TradingModels {
             BigDecimal priceMultiplier,
             String providerSymbol,
             boolean buyAllowed,
-            boolean sellAllowed) {}
+            boolean sellAllowed,
+            String assetClass) {}
 
     public record Quote(
             UUID quoteId,

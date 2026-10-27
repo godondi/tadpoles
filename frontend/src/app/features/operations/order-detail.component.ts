@@ -1,3 +1,4 @@
+import { TwoDecimalsPipe } from '../../shared/two-decimals.pipe';
 import { RequestStateComponent } from '../../shared/workspace/request-state.component';
 import { Subject, merge, takeUntil } from 'rxjs';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
@@ -10,10 +11,11 @@ import { OperationsContextComponent } from './operations-context.component';
 import { EvidenceTableComponent } from './evidence-table.component';
 import { OperationsResource } from './operations-resource';
 import { createIdempotencyKey } from '../../core/idempotency-key';
+import { DisplayCodePipe } from '../../shared/display-code.pipe';
 
 @Component({
   selector: 'app-operations-investigation',
-  imports: [
+  imports: [TwoDecimalsPipe,
     RequestStateComponent,
     DatePipe,
     JsonPipe,
@@ -21,6 +23,7 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
     RouterLink,
     OperationsContextComponent,
     EvidenceTableComponent,
+    DisplayCodePipe,
   ],
   template: `
     <header class="workspace-heading">
@@ -40,9 +43,9 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
     }
     @if (resource.data(); as detail) {
       <section class="panel">
-        <h2>Order {{ detail.order.orderId }} · {{ detail.order.status }}</h2>
+        <h2>Order {{ detail.order.orderId }} · {{ detail.order.status | displayCode }}</h2>
         <p>
-          {{ detail.order.side }} {{ detail.order.quantity }} {{ detail.order.ticker }} ·
+          {{ detail.order.side }} {{ detail.order.quantity | twoDecimals }} {{ detail.order.ticker }} ·
           {{ detail.order.currency }} · {{ detail.order.executionMode }}
         </p>
         <p>

@@ -1,5 +1,29 @@
 # Managed support integration guide
 
+## Private workflow extension (schema 017)
+
+The existing public conversation and its original-key recovery remain intact. New intake is versioned, bounded to 12000 normalized JSON bytes and accepts only category-allowlisted fields. Client-submitted observation times/reasons are reports, not verified source facts. Legacy submissions without intake remain compatible. Staff see server-authorized actions rather than inferring mutation permission from role.
+
+The private queue supports owner/priority/effective-category filtering inside live CASE_READ scope before count/page. The workbench has an independent version, eligible ownership, next action/due time, checklist revision/history and atomic resolution. Reclassification and client reopen create a fresh checklist revision without copying old completions. Private operations do not change the public projection, time, feed or unread state.
+
+| Category | Evidence and final disposition boundary |
+| --- | --- |
+| ORDER_QUESTION | Review the owned order under the exact managed case context. Explanation of rejection/recovery requires the retained REJECTED/FILLED result; quotes/internal fills do not establish external settlement. |
+| ACCOUNT_REVIEW | Read redacted account/setup/movements with ACCOUNT_DIAGNOSTICS. CLIENT_SETUP_COMPLETED requires actual onboarding and saved-bank prerequisites; do not unlock or repair funds. |
+| HISTORICAL_RECORD | Read allowlisted provenance with independent RECONCILIATION_READ. Historical evidence is not current spendable cash. Escalate unresolved provenance rather than rewriting source records. |
+| TRADING_AVAILABILITY | Compare reported instrument/side/time with current policy, eligibility and passive provider observations. Quote eligibility may be UNKNOWN; never submit a test trade. POLICY_CHANGE_VERIFIED requires an independently authorized audited policy change. |
+| OTHER | Retain bounded clarification/reproduction and reasoned evidence limitations. Duplicate resolution requires an authorized distinct case; specialist resolution needs attributable follow-up or a decided linked review. |
+
+Every category requires a live eligible owner, valid reasoned checklist and category resolution code. Order task references are revalidated at write and resolution. Missing independent evidence permission is unavailable, not permission conferred by assignment. Resolution commits the public event, private snapshot/history, original-key receipt and required audit together; audit failure rolls everything back.
+
+Referrals create independent Compliance `REVIEW-...` records, including account-only investigations. Minimal Operations handoff contains status/reviewer/disposition, information requests and private proposed public reply, never full findings. Mandatory unresolved reviews block resolution. No Compliance action publishes client content or changes trading state.
+
+The default-false `SUPPORT_WORKFLOW_ENABLED` rollout requires schema 017 and least-privilege grants. Local Compose opts in; hardened deployment does not seed fixtures. Read `/api/operations/readiness` for schema/runtime readiness and the explicit unconfigured response target. Existing public-only cases remain compatible while retained intake/private requests prevent flag-off resolution bypass.
+
+Private command metadata persists only actor/resource/action/key. The original body stays in memory; retry/recovery never replaces a key after an unknown result or lookup 404. Changing account/resource/context/session cancels old reads. A private export association is immutable metadata, not download authority; use its role-specific protected export endpoint and live matching purpose, requester, account/order, expiry and digest checks.
+
+Setup uses the complete migration chain through 017 and reapplication of `database/runtime-grants.sql`. The actual-runner compatibility rehearsal is `python3 scripts/test-compliance-migrations.py`; it is separate from browser/production-provider acceptance.
+
 ## Purpose and scope
 
 Clients can now open a durable support case against an owned order or an account issue, recover an uncertain submission, find the conversation after signing in again, exchange public messages with permitted Operations staff, and reopen a resolved case. Operations can locate cases within its account grants, keep private investigation notes, and bind an approved investigation purpose to the actual case. Resolving a case changes support state only.
@@ -52,7 +76,7 @@ python3 scripts/test-operations-demo.py
 
 These verification scripts create isolated resources. Inspect their prerequisites and available ports before running them. Do not substitute a retained database into their test variables. For an explicitly disposable browser environment, `scripts/start-client-review.sh --http-fixture` uses the HTTP fixture; use a distinct `REVIEW_PREFIX`. Its default configuration does not provision case grants. Operations testing requires the approved purpose configuration and explicit fixture-only account grants described below.
 
-Apply the ordered `database/migrate.sh` chain, including `012_managed_support.sql`, before deploying the new application. Fresh installations use `database/fresh/001_schema.sql` and `002_reference.sql`. Reapply `database/runtime-grants.sql` with the intended restricted runtime identity. The Operations readiness response includes `supportSchemaReady`; evidence protection also checks immutable support tables. A privileged schema owner is not a substitute for runtime-grant verification.
+Apply the ordered `database/migrate.sh` chain through `017_compliance_referrals.sql` before enabling the extension. Fresh installations use `database/fresh/001_schema.sql` and `002_reference.sql`. Reapply `database/runtime-grants.sql` with the intended restricted runtime identity. The Operations readiness response includes `supportSchemaReady` and private schema/runtime readiness; evidence protection also checks immutable support tables. A privileged schema owner is not a substitute for runtime-grant verification.
 
 Relevant non-secret configuration names include `OPERATIONS_ACCESS_ENABLED`, `OPERATIONS_ALLOWED_PURPOSES`, `OPERATIONS_POLICY_VERSION`, `OPERATIONS_CONTEXT_SECONDS`, `OPERATIONS_EXPORT_SECONDS`, `TRADING_ADMISSION_ENABLED`, `TRADING_WORKER_ENABLED`, `TRADING_LOCAL_DEMO_SETUP`, `DB_URL`, `DB_USERNAME`, `CORS_ALLOWED_ORIGINS`, and provider connection/timeout settings. See `application.yml` and the Operations runbook for authoritative defaults. Credentials and encryption/signing keys remain secret configuration.
 
@@ -192,7 +216,7 @@ Only authenticated in-app support updates are implemented. Email, SMS and push a
 | `/api/support/cases/{reference}/requests/{key}` | GET actor-scoped action receipt |
 | `/api/support/updates` | GET public activity after cursor |
 | `/api/support/updates/read` | POST owned cursor acknowledgement |
-| `/api/operations/cases` | GET scoped unassigned queue |
+| `/api/operations/cases` | GET scoped actionable queue; explicit All/Unassigned/My/Awaiting client/Awaiting internal review/Resolved views |
 | `/api/operations/cases/{reference}` | GET scoped public detail |
 | `/api/operations/cases/{reference}/replies` | POST client-visible staff reply |
 | `/api/operations/cases/{reference}/notes` | GET private notes; POST private note |
@@ -202,6 +226,10 @@ Only authenticated in-app support updates are implemented. Email, SMS and push a
 | `/api/operations/access-contexts` | POST explicit EXTERNAL/MANAGED purpose binding |
 
 Creation fields are `category`, `subject`, `description`, optional integral `orderId`. Actions use `expectedVersion`, `body` and, only for transitions, `status`; writes use `Idempotency-Key`. Subject/prose are trimmed, bounded and checked for prohibited controls (newline/tab permitted in prose). Lists use `status`, `search`, zero-based `page`, `pageSize` (1–100, default 20); offset is bounded to 100000. Ordering has a stable ID tie-breaker and scope is applied before counts/paging. Updates use nonnegative numeric cursors belonging to the owning stream; future cursors request a reset, foreign cursor IDs are rejected. Read acknowledgement takes `{ "cursor": eventId }` and is monotonic/idempotent.
+
+With the workflow enabled, the staff queue additionally accepts `view`, `assignee`, `priority`, effective `category` and `overdueOnly`. The default view is ACTIONABLE (unresolved); ALL includes resolved cases, MINE uses the authenticated actor, and AWAITING_REVIEW selects unresolved cases with a linked undecided Compliance investigation. Explicit status without a view retains its status-specific behavior. These selectors never affect client lists and are unavailable during disabled rollout.
+
+ACCOUNT task evidence can use the current authorized CASE reference; independent ACCOUNT_DIAGNOSTICS remains required and no internal client ID is exposed. An omitted diagnostic source uses immutable verified intake/order references where retained. Account-wide availability can omit an instrument: policy is explicitly NOT_APPLICABLE and quote eligibility UNKNOWN, rather than inventing policy or probing a provider. Invalid/foreign sources fail closed; a missing order/historical source requires clarification.
 
 Success uses 200 for support writes/reads. Invalid fields, keys, pages and cursors return 400; authentication/role failures use 401/403; missing/inaccessible objects use 404; conflicting replay/version/lifecycle uses 409. Temporary service errors leave write outcome uncertain until recovery proves it. Do not generalize these support statuses to trading admission, which retains its existing 202 contract.
 

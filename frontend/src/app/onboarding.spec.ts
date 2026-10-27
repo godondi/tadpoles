@@ -8,10 +8,25 @@ import { UserService } from './user.service';
 
 const choices = {
   riskTolerance: ['Conservative', 'Moderate', 'Aggressive'],
-  employmentStatus: ['Unemployed', 'Intern', 'Student', 'Employed (Part-Time)', 'Employed (Full-Time)', 'Retired'],
+  employmentStatus: [
+    'Unemployed',
+    'Intern',
+    'Student',
+    'Employed (Part-Time)',
+    'Employed (Full-Time)',
+    'Retired',
+  ],
   investmentObjective: ['Preservation', 'Income', 'Growth', 'Speculation'],
   preferredContactMethod: ['Email', 'Phone'],
-  netWorth: ['$0 - $24,999', '$25,000 - $49,999', '$50,000 - $99,999', '$100,000 - $249,999', '$250,000 - $499,999', '$500,000 - $999,999', '$1,000,000+'],
+  netWorth: [
+    '$0.00 - $24,999.00',
+    '$25,000.00 - $49,999.00',
+    '$50,000.00 - $99,999.00',
+    '$100,000.00 - $249,999.00',
+    '$250,000.00 - $499,999.00',
+    '$500,000.00 - $999,999.00',
+    '$1,000,000.00+',
+  ],
 };
 
 describe('Onboarding dropdowns', () => {
@@ -26,7 +41,12 @@ describe('Onboarding dropdowns', () => {
 
   async function setup(netWorth: number | null = null, riskTolerance = '') {
     const users = TestBed.inject(UserService);
-    const profile = { ...users.getProfileValue(), netWorth, riskTolerance, onboardingComplete: false };
+    const profile = {
+      ...users.getProfileValue(),
+      netWorth,
+      riskTolerance,
+      onboardingComplete: false,
+    };
     vi.spyOn(users, 'loadCurrentProfile').mockResolvedValue(profile);
     const fixture = TestBed.createComponent(OnboardingComponent);
     fixture.detectChanges();
@@ -38,28 +58,74 @@ describe('Onboarding dropdowns', () => {
   for (const [field, options] of Object.entries(choices)) {
     it(`renders the required ${field} dropdown with exactly the requested choices`, async () => {
       const { fixture } = await setup();
-      const select = fixture.nativeElement.querySelector(`select[name="${field}"]`) as HTMLSelectElement;
+      const select = fixture.nativeElement.querySelector(
+        `select[name="${field}"]`,
+      ) as HTMLSelectElement;
       expect(select).toBeTruthy();
       expect(select.required).toBe(true);
       expect(select.value).toBe('');
       expect(select.checkValidity()).toBe(false);
-      expect(Array.from(select.options).slice(1).map(o => o.textContent?.trim())).toEqual(options);
+      expect(
+        Array.from(select.options)
+          .slice(1)
+          .map((o) => o.textContent?.trim()),
+      ).toEqual(options);
     });
   }
 
-  it.each([0, 25000, 50000, 100000, 250000, 500000, 1000000])('saves the selected net worth range %s as a number', async (value) => {
+  it('keeps the risk tolerance field compact without redundant explanatory copy', async () => {
     const { fixture } = await setup();
-    const select = fixture.nativeElement.querySelector('select[name="netWorth"]') as HTMLSelectElement;
-    expect(select).toBeTruthy();
-    select.value = String(value);
-    select.dispatchEvent(new Event('change'));
-    expect(fixture.componentInstance.form().netWorth).toBe(value);
-    select.value = '';
-    select.dispatchEvent(new Event('change'));
-    expect(fixture.componentInstance.form().netWorth).toBeNull();
+    const risk = fixture.nativeElement.querySelector('select[name="riskTolerance"]');
+    expect(risk.getAttribute('aria-describedby')).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('Choose the investment losses');
   });
 
-  it.each([[24999, '0'], [25000, '25000'], [99999, '50000'], [249999, '100000'], [999999, '500000'], [2000000, '1000000']])('shows saved amount %s in range %s without changing it', async (amount, range) => {
+  it('formats phone input, limits phone and postal code to digits, and omits preference checkboxes', async () => {
+    const { fixture } = await setup();
+    expect(fixture.nativeElement.textContent).toContain('Phone (10 digits)');
+    const phone = fixture.nativeElement.querySelector('input[name="phone"]') as HTMLInputElement;
+    phone.value = 'abc+1 (123) 456-7890';
+    phone.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(phone.value).toBe('(123) 456-7890');
+    expect(fixture.componentInstance.form().phone).toBe('(123) 456-7890');
+
+    const postal = fixture.nativeElement.querySelector(
+      'input[name="postalCode"]',
+    ) as HTMLInputElement;
+    postal.value = '12a-345';
+    postal.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(postal.value).toBe('12345');
+    expect(fixture.componentInstance.form().postalCode).toBe('12345');
+    expect(fixture.nativeElement.querySelectorAll('input[type="checkbox"]').length).toBe(0);
+  });
+
+  it.each([0, 25000, 50000, 100000, 250000, 500000, 1000000])(
+    'saves the selected net worth range %s as a number',
+    async (value) => {
+      const { fixture } = await setup();
+      const select = fixture.nativeElement.querySelector(
+        'select[name="netWorth"]',
+      ) as HTMLSelectElement;
+      expect(select).toBeTruthy();
+      select.value = String(value);
+      select.dispatchEvent(new Event('change'));
+      expect(fixture.componentInstance.form().netWorth).toBe(value);
+      select.value = '';
+      select.dispatchEvent(new Event('change'));
+      expect(fixture.componentInstance.form().netWorth).toBeNull();
+    },
+  );
+
+  it.each([
+    [24999, '0'],
+    [25000, '25000'],
+    [99999, '50000'],
+    [249999, '100000'],
+    [999999, '500000'],
+    [2000000, '1000000'],
+  ])('shows saved amount %s in range %s without changing it', async (amount, range) => {
     const { fixture } = await setup(Number(amount));
     expect(fixture.nativeElement.querySelector('select[name="netWorth"]')?.value).toBe(range);
     expect(fixture.componentInstance.form().netWorth).toBe(amount);
@@ -67,29 +133,68 @@ describe('Onboarding dropdowns', () => {
 
   it('submits dropdown values through the existing onboarding service and returns to dashboard', async () => {
     const { fixture, users, profile } = await setup();
-    fixture.componentInstance.form.update(current => ({ ...current,
-      clientName: ' Client ', phone: '1234567890', dateOfBirth: '1990-01-01',
-      addressLine1: '1 Main St', city: 'New York', state: 'NY', postalCode: '10001',
-      country: 'US', riskTolerance: 'Moderate',
+    fixture.componentInstance.form.update((current) => ({
+      ...current,
+      clientName: ' Client ',
+      phone: '1234567890',
+      dateOfBirth: '1990-01-01',
+      addressLine1: '1 Main St',
+      city: 'New York',
+      state: 'NY',
+      postalCode: '10001',
+      country: 'US',
+      riskTolerance: 'Moderate',
     }));
-    for (const [field, value] of Object.entries({ employmentStatus: 'Student', investmentObjective: 'Growth', preferredContactMethod: 'Email', netWorth: '25000' })) {
-      const select = fixture.nativeElement.querySelector(`select[name="${field}"]`) as HTMLSelectElement;
+    for (const [field, value] of Object.entries({
+      employmentStatus: 'Student',
+      investmentObjective: 'Growth',
+      preferredContactMethod: 'Email',
+      netWorth: '25000',
+    })) {
+      const select = fixture.nativeElement.querySelector(
+        `select[name="${field}"]`,
+      ) as HTMLSelectElement;
       expect(select).toBeTruthy();
       select.value = value;
       select.dispatchEvent(new Event('change'));
     }
-    const save = vi.spyOn(users, 'completeOnboarding').mockResolvedValue({ ...profile, clientId: 7, onboardingComplete: true });
+    const save = vi
+      .spyOn(users, 'completeOnboarding')
+      .mockResolvedValue({ ...profile, clientId: 7, onboardingComplete: true });
     const status = vi.spyOn(TestBed.inject(AuthService), 'updateOnboardingStatus');
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     await fixture.componentInstance.submit();
-    expect(save).toHaveBeenCalledWith(expect.objectContaining({clientName: 'Client', employmentStatus: 'Student', investmentObjective: 'Growth', preferredContactMethod: 'Email', netWorth: 25000, riskTolerance: 'Moderate'}));
+    expect(save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        clientName: 'Client',
+        employmentStatus: 'Student',
+        investmentObjective: 'Growth',
+        preferredContactMethod: 'Email',
+        netWorth: 25000,
+        riskTolerance: 'Moderate',
+      }),
+    );
     expect(status).toHaveBeenCalledWith(true, 7);
     expect(navigate).toHaveBeenCalledWith('/');
   });
 
   it('rejects unsupported dropdown values even on direct submission', async () => {
     const { fixture, users } = await setup();
-    fixture.componentInstance.form.update(current => ({...current, clientName: 'Client', addressLine1: '1 Main', city: 'NY', country: 'US', dateOfBirth: '1990-01-01', netWorth: 0, employmentStatus: 'Other', investmentObjective: 'Growth', preferredContactMethod: 'Email'}));
+    fixture.componentInstance.form.update((current) => ({
+      ...current,
+      clientName: 'Client',
+      phone: '1234567890',
+      addressLine1: '1 Main',
+      city: 'NY',
+      state: 'NY',
+      postalCode: '10001',
+      country: 'US',
+      dateOfBirth: '1990-01-01',
+      netWorth: 0,
+      employmentStatus: 'Other',
+      investmentObjective: 'Growth',
+      preferredContactMethod: 'Email',
+    }));
     const save = vi.spyOn(users, 'completeOnboarding');
     await fixture.componentInstance.submit();
     expect(save).not.toHaveBeenCalled();
@@ -98,18 +203,31 @@ describe('Onboarding dropdowns', () => {
 
   it('sends the numeric range and contact choice in the real HTTP onboarding request', async () => {
     const { fixture, profile } = await setup();
-    fixture.componentInstance.form.update(current => ({ ...current,
-      clientName: 'Client', phone: '1234567890', dateOfBirth: '1990-01-01',
-      addressLine1: '1 Main St', city: 'New York', state: 'NY', postalCode: '10001',
-      country: 'US', riskTolerance: 'Moderate', employmentStatus: 'Retired',
-      investmentObjective: 'Income', preferredContactMethod: 'Phone', netWorth: 1000000,
+    fixture.componentInstance.form.update((current) => ({
+      ...current,
+      clientName: 'Client',
+      phone: '1234567890',
+      dateOfBirth: '1990-01-01',
+      addressLine1: '1 Main St',
+      city: 'New York',
+      state: 'NY',
+      postalCode: '10001',
+      country: 'US',
+      riskTolerance: 'Moderate',
+      employmentStatus: 'Retired',
+      investmentObjective: 'Income',
+      preferredContactMethod: 'Phone',
+      netWorth: 1000000,
     }));
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     const saving = fixture.componentInstance.submit();
     const http = TestBed.inject(HttpTestingController);
-    const request = http.expectOne(r => r.url.endsWith('/api/users/me/onboarding'));
+    const request = http.expectOne((r) => r.url.endsWith('/api/users/me/onboarding'));
     expect(request.request.method).toBe('PUT');
-    expect(request.request.body).toEqual(fixture.componentInstance.form());
+    expect(request.request.body).toEqual({
+      ...fixture.componentInstance.form(),
+      phone: '(123) 456-7890',
+    });
     expect(typeof request.request.body.netWorth).toBe('number');
     request.flush({ ...profile, ...request.request.body, clientId: 7, onboardingComplete: true });
     await saving;
@@ -120,17 +238,28 @@ describe('Onboarding dropdowns', () => {
 
   it('keeps dropdown selections and allows a retry after an HTTP save failure', async () => {
     const { fixture } = await setup();
-    fixture.componentInstance.form.update(current => ({ ...current,
-      clientName: 'Client', addressLine1: '1 Main', city: 'NY', country: 'US',
-      dateOfBirth: '1990-01-01', netWorth: 0, employmentStatus: 'Unemployed',
-      investmentObjective: 'Preservation', preferredContactMethod: 'Email', riskTolerance: 'Conservative',
+    fixture.componentInstance.form.update((current) => ({
+      ...current,
+      clientName: 'Client',
+      phone: '1234567890',
+      addressLine1: '1 Main',
+      city: 'NY',
+      state: 'NY',
+      postalCode: '10001',
+      country: 'US',
+      dateOfBirth: '1990-01-01',
+      netWorth: 0,
+      employmentStatus: 'Unemployed',
+      investmentObjective: 'Preservation',
+      preferredContactMethod: 'Email',
+      riskTolerance: 'Conservative',
     }));
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     const saving = fixture.componentInstance.submit();
     const http = TestBed.inject(HttpTestingController);
-    http.expectOne(r => r.url.endsWith('/api/users/me/onboarding')).flush(
-      { message: 'Unable to save profile' }, { status: 500, statusText: 'Server Error' },
-    );
+    http
+      .expectOne((r) => r.url.endsWith('/api/users/me/onboarding'))
+      .flush({ message: 'Unable to save profile' }, { status: 500, statusText: 'Server Error' });
     await saving;
     expect(fixture.componentInstance.errorMessage()).toBe('Unable to save profile');
     expect(fixture.componentInstance.isSubmitting()).toBe(false);
@@ -140,51 +269,92 @@ describe('Onboarding dropdowns', () => {
     http.verify();
   });
 
-  it.each(['Conservative', 'Moderate', 'Aggressive'])('submits selected risk tolerance %s through HTTP', async (risk) => {
-    const { fixture, profile } = await setup();
-    fixture.componentInstance.form.update(current => ({ ...current,
-      clientName: 'Client', phone: '1234567890', dateOfBirth: '1990-01-01',
-      addressLine1: '1 Main St', city: 'New York', state: 'NY', postalCode: '10001',
-      country: 'US', employmentStatus: 'Student', investmentObjective: 'Growth',
-      preferredContactMethod: 'Email', netWorth: 25000,
-    }));
-    const select = fixture.nativeElement.querySelector('select[name="riskTolerance"]') as HTMLSelectElement;
-    expect(select).toBeTruthy();
-    select.value = risk;
-    select.dispatchEvent(new Event('change'));
-    expect(fixture.componentInstance.form().riskTolerance).toBe(risk);
-    vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
-    const saving = fixture.componentInstance.submit();
-    const http = TestBed.inject(HttpTestingController);
-    const request = http.expectOne(r => r.url.endsWith('/api/users/me/onboarding'));
-    expect(request.request.body.riskTolerance).toBe(risk);
-    request.flush({ ...profile, ...request.request.body, clientId: 7, onboardingComplete: true });
-    await saving;
-    http.verify();
-  });
+  it.each(['Conservative', 'Moderate', 'Aggressive'])(
+    'submits selected risk tolerance %s through HTTP',
+    async (risk) => {
+      const { fixture, profile } = await setup();
+      fixture.componentInstance.form.update((current) => ({
+        ...current,
+        clientName: 'Client',
+        phone: '1234567890',
+        dateOfBirth: '1990-01-01',
+        addressLine1: '1 Main St',
+        city: 'New York',
+        state: 'NY',
+        postalCode: '10001',
+        country: 'US',
+        employmentStatus: 'Student',
+        investmentObjective: 'Growth',
+        preferredContactMethod: 'Email',
+        netWorth: 25000,
+      }));
+      const select = fixture.nativeElement.querySelector(
+        'select[name="riskTolerance"]',
+      ) as HTMLSelectElement;
+      expect(select).toBeTruthy();
+      select.value = risk;
+      select.dispatchEvent(new Event('change'));
+      expect(fixture.componentInstance.form().riskTolerance).toBe(risk);
+      vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      const saving = fixture.componentInstance.submit();
+      const http = TestBed.inject(HttpTestingController);
+      const request = http.expectOne((r) => r.url.endsWith('/api/users/me/onboarding'));
+      expect(request.request.body.riskTolerance).toBe(risk);
+      request.flush({ ...profile, ...request.request.body, clientId: 7, onboardingComplete: true });
+      await saving;
+      http.verify();
+    },
+  );
 
-  it.each(['', 'Extreme'])('rejects unsupported risk tolerance "%s" before saving', async (riskTolerance) => {
-    const { fixture, users } = await setup();
-    fixture.componentInstance.form.update(current => ({ ...current,
-      clientName: 'Client', dateOfBirth: '1990-01-01', addressLine1: '1 Main',
-      city: 'NY', country: 'US', netWorth: 0, employmentStatus: 'Student',
-      investmentObjective: 'Growth', preferredContactMethod: 'Email', riskTolerance,
-    }));
-    const save = vi.spyOn(users, 'completeOnboarding').mockResolvedValue(users.getProfileValue());
-    vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
-    await fixture.componentInstance.submit();
-    expect(save).not.toHaveBeenCalled();
-    expect(fixture.componentInstance.errorMessage()).toContain('risk tolerance');
-  });
+  it.each(['', 'Extreme'])(
+    'rejects unsupported risk tolerance "%s" before saving',
+    async (riskTolerance) => {
+      const { fixture, users } = await setup();
+      fixture.componentInstance.form.update((current) => ({
+        ...current,
+        clientName: 'Client',
+        phone: '1234567890',
+        dateOfBirth: '1990-01-01',
+        addressLine1: '1 Main',
+        city: 'NY',
+        state: 'NY',
+        postalCode: '10001',
+        country: 'US',
+        netWorth: 0,
+        employmentStatus: 'Student',
+        investmentObjective: 'Growth',
+        preferredContactMethod: 'Email',
+        riskTolerance,
+      }));
+      const save = vi.spyOn(users, 'completeOnboarding').mockResolvedValue(users.getProfileValue());
+      vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      await fixture.componentInstance.submit();
+      expect(save).not.toHaveBeenCalled();
+      expect(fixture.componentInstance.errorMessage()).toContain('risk tolerance');
+    },
+  );
 
-  it('restores an existing risk tolerance selection with accessible selection guidance', async () => {
+  it('restores an existing risk tolerance selection without redundant explanatory copy', async () => {
     const { fixture } = await setup(null, 'Moderate');
-    const select = fixture.nativeElement.querySelector('select[name="riskTolerance"]') as HTMLSelectElement;
+    const select = fixture.nativeElement.querySelector(
+      'select[name="riskTolerance"]',
+    ) as HTMLSelectElement;
     expect(select).toBeTruthy();
     expect(select.value).toBe('Moderate');
-    const description = select.getAttribute('aria-describedby');
-    expect(description).toBeTruthy();
-    expect(fixture.nativeElement.querySelector(`#${description}`)?.textContent).toContain('willing and able');
+    expect(select.getAttribute('aria-describedby')).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('willing and able');
   });
 
+  it('places required field validation at the end of the onboarding form', async () => {
+    const { fixture, users } = await setup();
+    const save = vi.spyOn(users, 'completeOnboarding');
+    await fixture.componentInstance.submit();
+    fixture.detectChanges();
+    const form = fixture.nativeElement.querySelector('form');
+    const error = fixture.nativeElement.querySelector('[role="alert"]');
+    expect(save).not.toHaveBeenCalled();
+    expect(error.textContent).toContain('required onboarding fields');
+    expect(form.lastElementChild?.classList.contains('actions')).toBe(true);
+    expect(form.contains(error)).toBe(true);
+  });
 });

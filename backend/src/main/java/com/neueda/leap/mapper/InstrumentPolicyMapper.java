@@ -6,7 +6,8 @@ import org.apache.ibatis.annotations.*;
 @Mapper
 public interface InstrumentPolicyMapper {
     String COLUMNS =
-            "i.instrument_id AS \"instrumentId\",i.ticker,i.instrument_name AS"
+            "i.instrument_id AS \"instrumentId\",i.ticker,i.asset_class AS \"assetClass\","
+                + "i.instrument_name AS"
                 + " name,i.currency,i.is_active AS active,p.provider_symbol AS"
                 + " \"providerSymbol\",p.venue,p.quantity_step::text AS"
                 + " \"quantityStep\",p.max_quantity::text AS \"maxQuantity\",p.max_notional::text"

@@ -22,7 +22,7 @@ export class AuthInterceptor implements HttpInterceptor {
     const backend = isPlatformBrowser(this.platform)
       ? new URL(window.location.origin)
       : new URL(buildApiUrl('/', this.platform));
-    const analytics = new URL(buildAnalyticsApiUrl('/', this.platform));
+    const analytics = new URL(buildAnalyticsApiUrl('/', this.platform), backend);
     const url = new URL(request.url, backend);
     const publicPath = ['/auth/login', '/auth/signup', '/auth/register/client'].includes(
       url.pathname,

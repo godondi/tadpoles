@@ -1,4 +1,4 @@
--- Current empty-database snapshot, including migrations 003 through 010.
+-- Current empty-database snapshot, including migrations 003 through 019.
 -- Load before 002_reference.sql. Never run this DDL over existing tables.
 -- Derived from the ordered legacy upgrade chain; FreshTradingSchemaTest checks parity.
 -- Sections below follow pg_dump dependency order: functions, tables/sequences,
@@ -638,7 +638,7 @@ CREATE TABLE public.instrument_trading_policies (
     CONSTRAINT instrument_trading_policies_price_multiplier_check CHECK ((price_multiplier > (0)::numeric)),
     CONSTRAINT instrument_trading_policies_quantity_step_check CHECK ((quantity_step > (0)::numeric)),
     CONSTRAINT instrument_trading_policies_quote_max_age_seconds_check CHECK (((quote_max_age_seconds >= 1)
-    AND (quote_max_age_seconds <= 1200))),
+    AND (quote_max_age_seconds <= 1800))),
     CONSTRAINT instrument_trading_policies_retry_seconds_check CHECK (((retry_seconds >= 1) AND (retry_seconds <= 3600))),
     CONSTRAINT provider_session CHECK ((session = ANY (ARRAY['PROVIDER_OPEN'::text, 'CLOSED'::text])))
 );
@@ -653,8 +653,12 @@ CREATE TABLE public.instruments (
     currency text NOT NULL,
     asset_class text,
     security_type text,
+    exchange text,
     is_active boolean DEFAULT true NOT NULL
 );
+
+COMMENT ON COLUMN public.instruments.exchange IS
+    'Listing venue from the instrument catalog; OTC identifies crypto and forex reference instruments.';
 
 --
 -- Name: instruments_instrument_id_seq; Type: SEQUENCE; Schema: public; Owner: -
@@ -986,7 +990,13 @@ CREATE TABLE public.users (
     display_name text NOT NULL,
     enabled boolean DEFAULT true NOT NULL,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    trade_access_revoked_at timestamp with time zone,
+    trade_access_until timestamp with time zone,
+    trade_access_reason text,
+    CONSTRAINT trade_access_expiry_after_revoke CHECK (
+        trade_access_until IS NULL OR trade_access_revoked_at IS NOT NULL
+    )
 );
 
 --
@@ -2314,3 +2324,563 @@ END;
 $$;
 CREATE TRIGGER support_read_state_guard BEFORE INSERT OR UPDATE ON support_read_state
     FOR EACH ROW EXECUTE FUNCTION guard_support_read_state();
+
+-- Compliance workspace snapshot; kept in parity with migration 013.
+CREATE TABLE compliance_access_grants (
+    grant_id uuid PRIMARY KEY,
+    staff_user_id integer NOT NULL REFERENCES users(user_id),
+    CHECK (staff_user_id > 0),
+    permission text NOT NULL CHECK (permission IN ('EVIDENCE_READ','EXPORT_CREATE','EXPORT_DOWNLOAD')),
+    scope_type text NOT NULL DEFAULT 'CLIENT' CHECK (scope_type = 'CLIENT'),
+    client_id integer NOT NULL REFERENCES clients(client_id) CHECK (client_id > 0),
+    account_reference varchar(80) NOT NULL
+        CHECK (account_reference ~ '^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$'),
+    valid_from timestamptz NOT NULL,
+    valid_until timestamptz NOT NULL CHECK (valid_until > valid_from),
+    approved_by integer NOT NULL REFERENCES users(user_id),
+    approval_reference varchar(200) NOT NULL CHECK (length(trim(approval_reference)) >= 8),
+    revoked_at timestamptz,
+    CHECK (approved_by <> staff_user_id)
+);
+CREATE INDEX compliance_grants_lookup
+    ON compliance_access_grants(staff_user_id,permission,client_id,valid_until)
+    WHERE revoked_at IS NULL;
+CREATE TABLE compliance_grant_events (
+    event_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    grant_id uuid NOT NULL REFERENCES compliance_access_grants(grant_id),
+    database_actor text NOT NULL,
+    action text NOT NULL,
+    before_values jsonb,
+    after_values jsonb NOT NULL,
+    recorded_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE FUNCTION record_compliance_grant_change() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF TG_OP = 'UPDATE'
+       AND (to_jsonb(NEW) - 'revoked_at') IS DISTINCT FROM (to_jsonb(OLD) - 'revoked_at') THEN
+        RAISE EXCEPTION 'Revoke and issue a new Compliance grant to change scope';
+    END IF;
+    IF TG_OP = 'UPDATE' AND (OLD.revoked_at IS NOT NULL OR NEW.revoked_at IS NULL) THEN
+        RAISE EXCEPTION 'Compliance grant revocation cannot be reversed';
+    END IF;
+    INSERT INTO compliance_grant_events(
+        grant_id,database_actor,action,before_values,after_values)
+    VALUES(
+        NEW.grant_id,current_user,TG_OP,
+        CASE WHEN TG_OP='UPDATE' THEN to_jsonb(OLD) END,to_jsonb(NEW));
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER compliance_grant_changes
+    AFTER INSERT OR UPDATE ON compliance_access_grants
+    FOR EACH ROW EXECUTE FUNCTION record_compliance_grant_change();
+CREATE TRIGGER immutable_evidence
+    BEFORE UPDATE OR DELETE ON compliance_grant_events
+    FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+CREATE TRIGGER immutable_evidence
+    BEFORE DELETE ON compliance_access_grants
+    FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+CREATE TABLE compliance_access_contexts (
+    context_id uuid PRIMARY KEY,
+    actor integer NOT NULL REFERENCES users(user_id) CHECK (actor > 0),
+    purpose_code varchar(40) NOT NULL CHECK (purpose_code ~ '^[A-Z][A-Z0-9_]{1,39}$'),
+    case_reference varchar(200) NOT NULL
+        CHECK (case_reference ~ '^[A-Za-z0-9][A-Za-z0-9._:/-]{7,199}$'),
+    created_at timestamptz NOT NULL,
+    expires_at timestamptz NOT NULL CHECK (expires_at > created_at),
+    policy_version varchar(80) NOT NULL,
+    scope_version varchar(64)
+        CONSTRAINT compliance_context_scope_version_check
+        CHECK (scope_version IS NULL OR scope_version ~ '^[0-9a-f]{64}$'),
+    revoked_at timestamptz
+);
+CREATE INDEX compliance_context_actor_time
+    ON compliance_access_contexts(actor,expires_at,context_id);
+CREATE FUNCTION guard_compliance_context() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'Compliance contexts cannot be deleted';
+    END IF;
+    IF (to_jsonb(NEW) - 'revoked_at') IS DISTINCT FROM
+       (to_jsonb(OLD) - 'revoked_at') THEN
+        RAISE EXCEPTION 'Compliance context identity is immutable';
+    END IF;
+    IF OLD.revoked_at IS NOT NULL OR NEW.revoked_at IS NULL THEN
+        RAISE EXCEPTION 'Compliance context revocation cannot be reversed';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER compliance_context_guard
+    BEFORE UPDATE OR DELETE ON compliance_access_contexts
+    FOR EACH ROW EXECUTE FUNCTION guard_compliance_context();
+CREATE TABLE compliance_access_events (
+    event_id uuid PRIMARY KEY,
+    actor integer NOT NULL REFERENCES users(user_id),
+    context_id uuid REFERENCES compliance_access_contexts(context_id),
+    action varchar(80) NOT NULL,
+    target_type varchar(40) NOT NULL,
+    target_id varchar(80),
+    filter_digest varchar(64) NOT NULL,
+    scope_version varchar(64) NOT NULL,
+    outcome varchar(40) NOT NULL,
+    returned_count integer NOT NULL CHECK (returned_count >= 0),
+    recorded_at timestamptz NOT NULL,
+    correlation_id uuid NOT NULL,
+    export_id uuid
+);
+CREATE INDEX compliance_access_events_actor_time
+    ON compliance_access_events(actor,recorded_at);
+CREATE INDEX compliance_access_events_context_time
+    ON compliance_access_events(context_id,recorded_at);
+CREATE TRIGGER immutable_evidence
+    BEFORE UPDATE OR DELETE ON compliance_access_events
+    FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+CREATE TABLE compliance_evidence_exports (
+    export_id uuid PRIMARY KEY,
+    requester integer NOT NULL REFERENCES users(user_id) CHECK (requester > 0),
+    context_id uuid NOT NULL REFERENCES compliance_access_contexts(context_id),
+    order_id integer NOT NULL REFERENCES client_trades(trade_id) CHECK (order_id > 0),
+    idempotency_key varchar(80) NOT NULL
+        CHECK (idempotency_key ~ '^[A-Za-z0-9._-]{8,80}$'),
+    request_hash varchar(64) NOT NULL CHECK (request_hash ~ '^[0-9a-f]{64}$'),
+    scope_version varchar(64) NOT NULL,
+    snapshot_at timestamptz NOT NULL,
+    created_at timestamptz NOT NULL,
+    expires_at timestamptz NOT NULL CHECK (expires_at > created_at),
+    state varchar(16) NOT NULL CHECK (state IN ('REQUESTED','READY','FAILED','EXPIRED','DENIED')),
+    digest varchar(64) NOT NULL CHECK (digest ~ '^[0-9a-f]{64}$'),
+    manifest jsonb NOT NULL,
+    archive bytea NOT NULL,
+    UNIQUE(requester,idempotency_key)
+);
+CREATE INDEX compliance_exports_requester_time
+    ON compliance_evidence_exports(requester,created_at DESC,export_id DESC);
+CREATE INDEX compliance_exports_order_time
+    ON compliance_evidence_exports(order_id,created_at DESC,export_id DESC);
+CREATE TRIGGER immutable_evidence
+    BEFORE UPDATE OR DELETE ON compliance_evidence_exports
+    FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+INSERT INTO schema_migrations(version) VALUES (13) ON CONFLICT DO NOTHING;
+INSERT INTO schema_migrations(version) VALUES (14) ON CONFLICT DO NOTHING;
+INSERT INTO schema_migrations(version) VALUES (15) ON CONFLICT DO NOTHING;
+
+ALTER TABLE operations_access_grants DROP CONSTRAINT operations_access_grants_permission_check;
+ALTER TABLE operations_access_grants ADD CONSTRAINT operations_access_grants_permission_check
+    CHECK (permission IN ('ORDER_READ','EVIDENCE_READ','RECONCILIATION_READ','EVIDENCE_EXPORT',
+        'CASE_READ','CASE_UPDATE','ACCOUNT_DIAGNOSTICS'));
+CREATE TABLE support_case_intake (
+    case_id uuid PRIMARY KEY REFERENCES support_cases(case_id),
+    schema_version integer NOT NULL CHECK (schema_version=1),
+    payload jsonb NOT NULL CHECK (jsonb_typeof(payload)='object' AND octet_length(payload::text)<=12000),
+    recorded_at timestamptz NOT NULL
+);
+CREATE TABLE support_case_workflow (
+    case_id uuid PRIMARY KEY REFERENCES support_cases(case_id),
+    effective_category varchar(40) NOT NULL CHECK (effective_category IN
+        ('ORDER_QUESTION','ACCOUNT_REVIEW','HISTORICAL_RECORD','TRADING_AVAILABILITY','OTHER')),
+    assignee integer REFERENCES users(user_id),
+    priority varchar(16) NOT NULL DEFAULT 'NORMAL' CHECK (priority IN ('LOW','NORMAL','HIGH')),
+    next_action varchar(500),
+    due_at timestamptz,
+    version bigint NOT NULL DEFAULT 1 CHECK (version>=1),
+    checklist_revision bigint NOT NULL DEFAULT 1 CHECK (checklist_revision>=1),
+    updated_at timestamptz NOT NULL
+);
+CREATE INDEX support_workflow_queue ON support_case_workflow(priority,due_at,assignee,case_id);
+CREATE TABLE support_case_workflow_events (
+    event_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    case_id uuid NOT NULL REFERENCES support_case_workflow(case_id),
+    version bigint NOT NULL,
+    actor integer REFERENCES users(user_id),
+    kind varchar(40) NOT NULL,
+    facts jsonb NOT NULL,
+    recorded_at timestamptz NOT NULL,
+    UNIQUE(case_id,version)
+);
+CREATE TABLE support_case_workflow_requests (
+    case_id uuid NOT NULL REFERENCES support_case_workflow(case_id),
+    actor integer NOT NULL REFERENCES users(user_id),
+    request_key varchar(128) NOT NULL,
+    request_hash varchar(64) NOT NULL,
+    receipt jsonb NOT NULL,
+    recorded_at timestamptz NOT NULL,
+    PRIMARY KEY(case_id,actor,request_key)
+);
+CREATE TABLE support_case_tasks (
+    case_id uuid NOT NULL REFERENCES support_case_workflow(case_id),
+    checklist_revision bigint NOT NULL CHECK (checklist_revision>=1),
+    code varchar(60) NOT NULL,
+    label varchar(300) NOT NULL,
+    state varchar(24) NOT NULL CHECK (state IN ('PENDING','COMPLETED','UNAVAILABLE','NOT_APPLICABLE')),
+    reason varchar(2000) NOT NULL CHECK (length(trim(reason)) BETWEEN 10 AND 2000),
+    evidence_kind varchar(40),
+    evidence_reference varchar(200),
+    actor integer NOT NULL REFERENCES users(user_id),
+    recorded_at timestamptz NOT NULL,
+    PRIMARY KEY(case_id,checklist_revision,code)
+);
+CREATE TABLE support_case_resolutions (
+    resolution_id uuid PRIMARY KEY,
+    case_id uuid NOT NULL REFERENCES support_case_workflow(case_id),
+    public_version bigint NOT NULL,
+    workflow_version bigint NOT NULL,
+    category varchar(40) NOT NULL,
+    code varchar(60) NOT NULL,
+    checklist jsonb NOT NULL,
+    actor integer NOT NULL REFERENCES users(user_id),
+    recorded_at timestamptz NOT NULL,
+    UNIQUE(case_id,public_version),
+    FOREIGN KEY(case_id,public_version) REFERENCES support_case_events(case_id,version)
+);
+CREATE FUNCTION guard_support_workflow() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF TG_OP='DELETE' THEN RAISE EXCEPTION 'Private workflow cannot be deleted'; END IF;
+    IF NEW.case_id<>OLD.case_id OR NEW.version<>OLD.version+1
+       OR NEW.checklist_revision<OLD.checklist_revision THEN
+        RAISE EXCEPTION 'Private workflow identity/version is protected';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER support_workflow_guard BEFORE UPDATE OR DELETE ON support_case_workflow
+    FOR EACH ROW EXECUTE FUNCTION guard_support_workflow();
+CREATE FUNCTION check_support_workflow_projection() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE projection support_case_workflow%ROWTYPE;
+BEGIN
+    SELECT * INTO projection FROM support_case_workflow WHERE case_id=NEW.case_id;
+    IF NOT FOUND OR (SELECT count(*) FROM support_case_workflow_events WHERE case_id=NEW.case_id)<>projection.version
+       OR NOT EXISTS (SELECT 1 FROM support_case_workflow_events WHERE case_id=NEW.case_id
+                      AND version=projection.version AND recorded_at=projection.updated_at) THEN
+        RAISE EXCEPTION 'Private workflow requires matching retained history';
+    END IF;
+    RETURN NULL;
+END;
+$$;
+CREATE CONSTRAINT TRIGGER support_workflow_projection AFTER INSERT OR UPDATE ON support_case_workflow
+    DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_support_workflow_projection();
+CREATE CONSTRAINT TRIGGER support_workflow_history AFTER INSERT ON support_case_workflow_events
+    DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_support_workflow_projection();
+CREATE TRIGGER immutable_evidence BEFORE UPDATE OR DELETE ON support_case_intake
+    FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+CREATE TRIGGER immutable_evidence BEFORE UPDATE OR DELETE ON support_case_workflow_events
+    FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+CREATE TRIGGER immutable_evidence BEFORE UPDATE OR DELETE ON support_case_workflow_requests
+    FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+CREATE TRIGGER immutable_evidence BEFORE UPDATE OR DELETE ON support_case_resolutions
+    FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+INSERT INTO schema_migrations(version) VALUES (16);
+
+ALTER TABLE compliance_access_grants DROP CONSTRAINT compliance_access_grants_permission_check;
+ALTER TABLE compliance_access_grants ADD CONSTRAINT compliance_access_grants_permission_check
+    CHECK (permission IN ('EVIDENCE_READ','EXPORT_CREATE','EXPORT_DOWNLOAD',
+        'INVESTIGATION_READ','INVESTIGATION_UPDATE'));
+CREATE TABLE compliance_investigations (
+    investigation_id uuid PRIMARY KEY,
+    reference varchar(43) NOT NULL UNIQUE,
+    case_id uuid NOT NULL,
+    client_id integer NOT NULL,
+    order_id integer,
+    reviewer integer NOT NULL REFERENCES users(user_id),
+    reason_code varchar(24) NOT NULL CHECK (reason_code IN ('POLICY','INTEGRITY','ELIGIBILITY','PROVENANCE')),
+    summary varchar(2000) NOT NULL,
+    status varchar(24) NOT NULL DEFAULT 'QUEUED'
+        CHECK (status IN ('QUEUED','IN_REVIEW','NEEDS_INFORMATION','DECIDED','CLOSED')),
+    version bigint NOT NULL DEFAULT 1 CHECK (version>=1),
+    disposition varchar(100),
+    findings varchar(4000),
+    client_safe_explanation varchar(4000),
+    created_at timestamptz NOT NULL,
+    updated_at timestamptz NOT NULL,
+    FOREIGN KEY(case_id,client_id) REFERENCES support_cases(case_id,client_id),
+    FOREIGN KEY(order_id,client_id) REFERENCES client_trades(trade_id,client_id),
+    CHECK (status NOT IN ('DECIDED','CLOSED') OR (disposition IS NOT NULL AND findings IS NOT NULL))
+);
+CREATE INDEX compliance_case_queue ON compliance_investigations(client_id,status,updated_at,investigation_id);
+CREATE TABLE support_case_referrals (
+    referral_id uuid PRIMARY KEY,
+    case_id uuid NOT NULL REFERENCES support_cases(case_id),
+    investigation_id uuid NOT NULL UNIQUE REFERENCES compliance_investigations(investigation_id),
+    mandatory boolean NOT NULL DEFAULT true CHECK (mandatory),
+    actor integer NOT NULL REFERENCES users(user_id),
+    recorded_at timestamptz NOT NULL
+);
+CREATE INDEX support_referrals_case ON support_case_referrals(case_id,recorded_at,referral_id);
+CREATE TABLE compliance_investigation_events (
+    event_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    investigation_id uuid NOT NULL REFERENCES compliance_investigations(investigation_id),
+    version bigint NOT NULL,
+    actor integer NOT NULL REFERENCES users(user_id),
+    kind varchar(40) NOT NULL,
+    facts jsonb NOT NULL,
+    recorded_at timestamptz NOT NULL,
+    UNIQUE(investigation_id,version)
+);
+CREATE TABLE compliance_investigation_requests (
+    investigation_id uuid NOT NULL REFERENCES compliance_investigations(investigation_id),
+    actor integer NOT NULL REFERENCES users(user_id),
+    request_key varchar(128) NOT NULL,
+    request_hash varchar(64) NOT NULL,
+    receipt jsonb NOT NULL,
+    recorded_at timestamptz NOT NULL,
+    PRIMARY KEY(investigation_id,actor,request_key)
+);
+CREATE TABLE compliance_investigation_exports (
+    investigation_id uuid NOT NULL REFERENCES compliance_investigations(investigation_id),
+    export_id uuid NOT NULL REFERENCES compliance_evidence_exports(export_id),
+    actor integer NOT NULL REFERENCES users(user_id),
+    recorded_at timestamptz NOT NULL,
+    PRIMARY KEY(investigation_id,export_id)
+);
+ALTER TABLE compliance_access_contexts
+    ADD COLUMN reference_type varchar(16) NOT NULL DEFAULT 'EXTERNAL'
+        CHECK (reference_type IN ('EXTERNAL','MANAGED')),
+    ADD COLUMN investigation_id uuid REFERENCES compliance_investigations(investigation_id),
+    ADD COLUMN managed_reviewer integer REFERENCES users(user_id),
+    ADD COLUMN managed_version bigint,
+    ADD CONSTRAINT compliance_managed_context
+        CHECK ((reference_type='MANAGED')=(investigation_id IS NOT NULL)
+            AND (reference_type='MANAGED')=(managed_reviewer IS NOT NULL)
+            AND (reference_type='MANAGED')=(managed_version IS NOT NULL)
+            AND (managed_version IS NULL OR managed_version>=1));
+CREATE FUNCTION guard_compliance_investigation() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF TG_OP='DELETE' THEN RAISE EXCEPTION 'Compliance investigation history cannot be deleted'; END IF;
+    IF (to_jsonb(NEW)-ARRAY['reviewer','status','version','disposition','findings','client_safe_explanation','updated_at'])
+       IS DISTINCT FROM
+       (to_jsonb(OLD)-ARRAY['reviewer','status','version','disposition','findings','client_safe_explanation','updated_at'])
+       OR NEW.version<>OLD.version+1 THEN
+        RAISE EXCEPTION 'Compliance source and version are protected';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER compliance_investigation_guard BEFORE UPDATE OR DELETE ON compliance_investigations
+    FOR EACH ROW EXECUTE FUNCTION guard_compliance_investigation();
+CREATE FUNCTION check_compliance_investigation_projection() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE projection compliance_investigations%ROWTYPE;
+BEGIN
+    SELECT * INTO projection FROM compliance_investigations WHERE investigation_id=NEW.investigation_id;
+    IF NOT FOUND OR (SELECT count(*) FROM compliance_investigation_events WHERE investigation_id=NEW.investigation_id)<>projection.version
+       OR NOT EXISTS (SELECT 1 FROM compliance_investigation_events WHERE investigation_id=NEW.investigation_id
+                      AND version=projection.version AND recorded_at=projection.updated_at) THEN
+        RAISE EXCEPTION 'Compliance investigation requires matching retained history';
+    END IF;
+    RETURN NULL;
+END;
+$$;
+CREATE CONSTRAINT TRIGGER compliance_review_projection AFTER INSERT OR UPDATE ON compliance_investigations
+    DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_compliance_investigation_projection();
+CREATE CONSTRAINT TRIGGER compliance_review_history AFTER INSERT ON compliance_investigation_events
+    DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_compliance_investigation_projection();
+CREATE TRIGGER immutable_evidence BEFORE UPDATE OR DELETE ON support_case_referrals
+    FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+CREATE TRIGGER immutable_evidence BEFORE UPDATE OR DELETE ON compliance_investigation_events
+    FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+CREATE TRIGGER immutable_evidence BEFORE UPDATE OR DELETE ON compliance_investigation_requests
+    FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+CREATE TRIGGER immutable_evidence BEFORE UPDATE OR DELETE ON compliance_investigation_exports
+    FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+INSERT INTO schema_migrations(version) VALUES (17);
+
+-- Advisory projections never write financial state. NONE retains the guidance identity/version.
+CREATE TABLE advisor_guidance (
+    guidance_id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    client_id integer NOT NULL REFERENCES clients(client_id),
+    instrument_id integer NOT NULL REFERENCES instruments(instrument_id),
+    status text NOT NULL CHECK (status IN ('NONE','HOLD','SELL')),
+    reasoning text CHECK (reasoning IS NULL OR (length(reasoning) BETWEEN 1 AND 2000 AND reasoning !~ '^[[:space:]]|[[:space:]]$')),
+    author_advisor_id integer NOT NULL REFERENCES advisors(advisor_id),
+    author_user_id integer NOT NULL REFERENCES users(user_id),
+    version bigint NOT NULL DEFAULT 1 CHECK (version BETWEEN 1 AND 9007199254740991),
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (client_id,instrument_id),
+    CHECK (status <> 'NONE' OR reasoning IS NULL)
+);
+CREATE TABLE advisor_recommendations (
+    recommendation_id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    client_id integer NOT NULL REFERENCES clients(client_id),
+    instrument_id integer NOT NULL REFERENCES instruments(instrument_id),
+    reasoning text NOT NULL CHECK (length(reasoning) BETWEEN 1 AND 2000 AND reasoning !~ '^[[:space:]]|[[:space:]]$'),
+    author_advisor_id integer NOT NULL REFERENCES advisors(advisor_id),
+    author_user_id integer NOT NULL REFERENCES users(user_id),
+    version bigint NOT NULL DEFAULT 1 CHECK (version BETWEEN 1 AND 9007199254740991),
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    archived_at timestamptz
+);
+CREATE UNIQUE INDEX advisor_recommendations_active ON advisor_recommendations(client_id,instrument_id)
+    WHERE archived_at IS NULL;
+
+CREATE TABLE advisor_guidance_history (
+    history_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    guidance_id integer NOT NULL REFERENCES advisor_guidance(guidance_id),
+    client_id integer NOT NULL REFERENCES clients(client_id),
+    instrument_id integer NOT NULL REFERENCES instruments(instrument_id),
+    status text NOT NULL CHECK (status IN ('NONE','HOLD','SELL')),
+    reasoning text CHECK (reasoning IS NULL OR (length(reasoning) BETWEEN 1 AND 2000 AND reasoning !~ '^[[:space:]]|[[:space:]]$')),
+    author_advisor_id integer NOT NULL REFERENCES advisors(advisor_id),
+    author_user_id integer NOT NULL REFERENCES users(user_id),
+    version bigint NOT NULL CHECK (version BETWEEN 1 AND 9007199254740991),
+    created_at timestamptz NOT NULL,
+    updated_at timestamptz NOT NULL,
+    recorded_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+    action text NOT NULL CHECK (action IN ('INSERT','UPDATE')),
+    UNIQUE (guidance_id,version),
+    CHECK (status <> 'NONE' OR reasoning IS NULL)
+);
+CREATE TABLE advisor_recommendation_history (
+    history_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    recommendation_id integer NOT NULL REFERENCES advisor_recommendations(recommendation_id),
+    client_id integer NOT NULL REFERENCES clients(client_id),
+    instrument_id integer NOT NULL REFERENCES instruments(instrument_id),
+    reasoning text NOT NULL CHECK (length(reasoning) BETWEEN 1 AND 2000 AND reasoning !~ '^[[:space:]]|[[:space:]]$'),
+    author_advisor_id integer NOT NULL REFERENCES advisors(advisor_id),
+    author_user_id integer NOT NULL REFERENCES users(user_id),
+    version bigint NOT NULL CHECK (version BETWEEN 1 AND 9007199254740991),
+    created_at timestamptz NOT NULL,
+    updated_at timestamptz NOT NULL,
+    archived_at timestamptz,
+    recorded_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+    action text NOT NULL CHECK (action IN ('INSERT','UPDATE','ARCHIVE')),
+    UNIQUE (recommendation_id,version)
+);
+
+CREATE FUNCTION guard_advisor_projection() RETURNS trigger LANGUAGE plpgsql
+    SET search_path = pg_catalog, public AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'Advisory projections cannot be deleted' USING ERRCODE = '23514';
+    END IF;
+    -- Same lock order as trading: client first, before author/assignment and eligibility checks.
+    PERFORM 1 FROM public.clients WHERE client_id=NEW.client_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Advisory client is unavailable' USING ERRCODE = '23514';
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM public.clients c
+        JOIN public.advisors a ON a.advisor_id=c.advisor_id
+        JOIN public.users u ON u.user_id=a.user_id
+        WHERE c.client_id=NEW.client_id AND a.advisor_id=NEW.author_advisor_id
+          AND u.user_id=NEW.author_user_id AND u.enabled
+          AND EXISTS (SELECT 1 FROM public.user_roles ur JOIN public.roles r USING(role_id)
+                      WHERE ur.user_id=u.user_id AND r.role_name='ADVISOR')
+    ) THEN
+        RAISE EXCEPTION 'Author must be the assigned enabled advisor with linked user and role' USING ERRCODE = '23514';
+    END IF;
+    IF TG_OP = 'INSERT' THEN
+        IF NEW.version IS DISTINCT FROM 1::bigint THEN
+            RAISE EXCEPTION 'Initial advisory version must be one' USING ERRCODE = '23514';
+        END IF;
+    ELSE
+        IF NEW.client_id IS DISTINCT FROM OLD.client_id
+           OR NEW.instrument_id IS DISTINCT FROM OLD.instrument_id
+           OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
+            RAISE EXCEPTION 'Advisory ownership and creation time are immutable' USING ERRCODE = '23514';
+        END IF;
+        IF NEW.version IS DISTINCT FROM OLD.version + 1 THEN
+            RAISE EXCEPTION 'Advisory version must advance once' USING ERRCODE = '23514';
+        END IF;
+    END IF;
+    IF TG_TABLE_NAME = 'advisor_guidance' THEN
+        IF TG_OP = 'UPDATE' AND NEW.guidance_id IS DISTINCT FROM OLD.guidance_id THEN
+            RAISE EXCEPTION 'Guidance identity is immutable' USING ERRCODE = '23514';
+        END IF;
+    ELSE
+        IF TG_OP = 'INSERT' THEN
+            IF NEW.archived_at IS NOT NULL THEN
+                RAISE EXCEPTION 'A recommendation must start active' USING ERRCODE = '23514';
+            END IF;
+        ELSE
+            IF NEW.recommendation_id IS DISTINCT FROM OLD.recommendation_id OR OLD.archived_at IS NOT NULL THEN
+                RAISE EXCEPTION 'Recommendation identity and archived records are immutable' USING ERRCODE = '23514';
+            END IF;
+            IF NEW.archived_at IS NOT NULL AND NEW.reasoning IS DISTINCT FROM OLD.reasoning THEN
+                RAISE EXCEPTION 'Archiving cannot also change reasoning' USING ERRCODE = '23514';
+            END IF;
+        END IF;
+        -- Archiving remains available after acquisition or catalog deactivation.
+        IF NEW.archived_at IS NULL THEN
+            IF EXISTS (SELECT 1 FROM public.client_positions p
+                       WHERE p.client_id=NEW.client_id AND p.instrument_id=NEW.instrument_id AND p.posted>0)
+               OR NOT EXISTS (SELECT 1 FROM public.instruments i WHERE i.instrument_id=NEW.instrument_id
+                   AND i.is_active AND i.currency='USD' AND i.ticker NOT LIKE 'SIM-%'
+                   AND i.ticker NOT IN ('CASH','USD','GBP','INR','EUR')) THEN
+                RAISE EXCEPTION 'Recommendation instrument is held or outside the approved catalog' USING ERRCODE = '23514';
+            END IF;
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER advisor_guidance_guard BEFORE INSERT OR UPDATE OR DELETE ON advisor_guidance
+    FOR EACH ROW EXECUTE FUNCTION guard_advisor_projection();
+CREATE TRIGGER advisor_recommendations_guard BEFORE INSERT OR UPDATE OR DELETE ON advisor_recommendations
+    FOR EACH ROW EXECUTE FUNCTION guard_advisor_projection();
+
+-- Only this owner-executed trigger appends snapshots; runtime has no history INSERT or helper EXECUTE.
+-- Static, schema-qualified inserts and a fixed search_path prevent caller-controlled object resolution.
+CREATE FUNCTION append_advisor_history() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path = pg_catalog, public AS $$
+BEGIN
+    IF TG_RELID = 'public.advisor_guidance'::regclass THEN
+        INSERT INTO public.advisor_guidance_history
+            (guidance_id,client_id,instrument_id,status,reasoning,author_advisor_id,author_user_id,version,created_at,updated_at,action)
+        VALUES (NEW.guidance_id,NEW.client_id,NEW.instrument_id,NEW.status,NEW.reasoning,
+                NEW.author_advisor_id,NEW.author_user_id,NEW.version,NEW.created_at,NEW.updated_at,TG_OP);
+    ELSIF TG_RELID = 'public.advisor_recommendations'::regclass THEN
+        INSERT INTO public.advisor_recommendation_history
+            (recommendation_id,client_id,instrument_id,reasoning,author_advisor_id,author_user_id,version,created_at,updated_at,archived_at,action)
+        VALUES (NEW.recommendation_id,NEW.client_id,NEW.instrument_id,NEW.reasoning,
+                NEW.author_advisor_id,NEW.author_user_id,NEW.version,NEW.created_at,NEW.updated_at,NEW.archived_at,
+                CASE WHEN NEW.archived_at IS NOT NULL THEN 'ARCHIVE' ELSE TG_OP END);
+    ELSE
+        RAISE EXCEPTION 'Unsupported advisory projection' USING ERRCODE = '23514';
+    END IF;
+    RETURN NULL;
+END;
+$$;
+CREATE TRIGGER advisor_guidance_snapshot AFTER INSERT OR UPDATE ON advisor_guidance
+    FOR EACH ROW EXECUTE FUNCTION append_advisor_history();
+CREATE TRIGGER advisor_recommendations_snapshot AFTER INSERT OR UPDATE ON advisor_recommendations
+    FOR EACH ROW EXECUTE FUNCTION append_advisor_history();
+
+CREATE TRIGGER immutable_evidence BEFORE UPDATE OR DELETE ON advisor_guidance_history
+    FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+CREATE TRIGGER immutable_evidence BEFORE UPDATE OR DELETE ON advisor_recommendation_history
+    FOR EACH ROW EXECUTE FUNCTION reject_evidence_change();
+CREATE TRIGGER immutable_evidence_truncate BEFORE TRUNCATE ON advisor_guidance_history
+    FOR EACH STATEMENT EXECUTE FUNCTION reject_evidence_change();
+CREATE TRIGGER immutable_evidence_truncate BEFORE TRUNCATE ON advisor_recommendation_history
+    FOR EACH STATEMENT EXECUTE FUNCTION reject_evidence_change();
+CREATE TRIGGER immutable_projection_truncate BEFORE TRUNCATE ON advisor_guidance
+    FOR EACH STATEMENT EXECUTE FUNCTION reject_evidence_change();
+CREATE TRIGGER immutable_projection_truncate BEFORE TRUNCATE ON advisor_recommendations
+    FOR EACH STATEMENT EXECUTE FUNCTION reject_evidence_change();
+
+REVOKE ALL ON FUNCTION append_advisor_history() FROM PUBLIC;
+REVOKE ALL ON FUNCTION guard_advisor_projection() FROM PUBLIC;
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON advisor_guidance_history, advisor_recommendation_history FROM PUBLIC;
+
+-- Keep fresh installs aligned with migration 020_user_trade_access.sql.
+CREATE TABLE public.client_trade_access_events (
+    event_id bigserial PRIMARY KEY,
+    client_id integer NOT NULL REFERENCES public.clients(client_id),
+    actor_subject text NOT NULL,
+    action text NOT NULL CHECK (action IN ('REVOKE_INDEFINITE', 'REVOKE_TIMED', 'RESTORE')),
+    revoked_until timestamp with time zone,
+    reason text,
+    recorded_at timestamp with time zone NOT NULL DEFAULT now()
+);
+CREATE INDEX client_trade_access_events_client_time
+    ON public.client_trade_access_events(client_id, recorded_at DESC);
+CREATE INDEX users_trade_access_revoked ON public.users(user_id)
+    WHERE trade_access_revoked_at IS NOT NULL;
+CREATE TRIGGER immutable_evidence BEFORE UPDATE OR DELETE ON public.client_trade_access_events
+    FOR EACH ROW EXECUTE FUNCTION public.reject_evidence_change();
+
+INSERT INTO schema_migrations(version) VALUES (18);
+INSERT INTO schema_migrations(version) VALUES (19);
+INSERT INTO schema_migrations(version) VALUES (20);
+INSERT INTO schema_migrations(version) VALUES (21);

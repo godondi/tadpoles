@@ -90,6 +90,7 @@ describe('market catalog background refresh', () => {
       ticker: 'SPY',
       instrumentName: 'SPDR S&P 500 ETF Trust',
       currency: 'USD',
+      exchange: 'NYSE Arca',
     };
     http
       .expectOne((r) => r.url.endsWith('/instruments'))
@@ -111,7 +112,38 @@ describe('market catalog background refresh', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('table')).toBe(table);
     expect(fixture.nativeElement.textContent).toContain('Updated fund name');
+    expect(fixture.nativeElement.textContent).toContain('NYSE Arca');
     fixture.destroy();
     http.verify();
+  });
+});
+
+describe('featured market instruments', () => {
+  it('shows exactly the requested nine instruments in order using real catalog links', () => {
+    TestBed.configureTestingModule({
+      imports: [MarketsPageComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        { provide: AuthService, useValue: { sessionChanged: new Subject<void>() } },
+        { provide: ActivatedRoute, useValue: { queryParamMap: of(convertToParamMap({})) } }],
+    });
+    const http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(MarketsPageComponent);
+    const tickers = ['SPY', 'QQQ', 'IWM', 'X:BTC-USD', 'X:ETH-USD', 'X:BNB-USD', 'FX:EURUSD', 'FX:USDJPY', 'FX:GBPUSD'];
+    tickers.forEach((ticker, index) => {
+      http.expectOne(request => request.params.get('search') === ticker).flush({ items: [
+        { instrumentId: index + 100, ticker, instrumentName: ticker, currency: 'USD', exchange: 'OTC' },
+        { instrumentId: 99, ticker: 'OTHER', instrumentName: 'Unrelated match', currency: 'USD', exchange: 'OTC' },
+      ], total: 2, page: 0, pageSize: 10 });
+    });
+    fixture.detectChanges();
+    const groups = [...fixture.nativeElement.querySelectorAll('.market-group')];
+    expect(groups.map(group => [...group.querySelectorAll('.ticker')].map(item => item.textContent.trim())))
+      .toEqual([['SPY', 'QQQ', 'IWM'], ['BTC', 'ETH', 'BNB'], ['EUR', 'JPY', 'GBP']]);
+    expect([...fixture.nativeElement.querySelectorAll('.market-instrument')].map(item => item.getAttribute('href')))
+      .toEqual(tickers.map((_, index) => `/app/instruments/${index + 100}`));
+    expect(fixture.nativeElement.textContent).not.toContain('OTHER');
+    expect(fixture.componentInstance.groups()[2].items[1].ticker).toBe('FX:USDJPY');
+    http.verify();
+    fixture.destroy();
   });
 });

@@ -11,6 +11,26 @@ const staff = () =>
   import('./shared/workspace/staff-page.component').then((m) => m.StaffPageComponent);
 const analytics = () =>
   import('./features/analytics/analytics-page.component').then((m) => m.AnalyticsPageComponent);
+const complianceInvestigations = () =>
+  import('./features/compliance/investigations-page.component').then(
+    (m) => m.ComplianceInvestigationsPageComponent,
+  );
+const complianceInvestigationDetail = () =>
+  import('./features/compliance/investigation-detail.component').then(
+    (m) => m.ComplianceInvestigationDetailComponent,
+  );
+const complianceEvidence = () =>
+  import('./features/compliance/evidence-page.component').then(
+    (m) => m.ComplianceEvidencePageComponent,
+  );
+const financeOverview = () =>
+  import('./features/finance/overview/finance-overview.component').then(
+    (m) => m.FinanceOverviewComponent,
+  );
+const financeReconciliation = () =>
+  import('./features/finance/reconciliation/finance-reconciliation.component').then(
+    (m) => m.FinanceReconciliationComponent,
+  );
 const message = () =>
   import('./shared/workspace/message-page.component').then((m) => m.MessagePageComponent);
 const client = [clientGuard];
@@ -68,17 +88,66 @@ export const routes: Routes = [
         path: '',
         canActivateChild: [workspaceGuard],
         children: [
-          { path: 'app/support/new', data: { new: true }, canActivate: client, loadComponent: () => import('./features/client/support-page.component').then(m => m.SupportPageComponent) },
-          { path: 'app/support/:reference', data: {}, canActivate: client, loadComponent: () => import('./features/client/support-page.component').then(m => m.SupportPageComponent) },
-          { path: 'app/support', data: {}, canActivate: client, loadComponent: () => import('./features/client/support-page.component').then(m => m.SupportPageComponent) },
-          { path: 'operations/cases/:reference', data: { staff: true }, loadComponent: () => import('./features/client/support-page.component').then(m => m.SupportPageComponent) },
-          { path: 'operations/cases', data: { staff: true }, loadComponent: () => import('./features/client/support-page.component').then(m => m.SupportPageComponent) },
+          {
+            path: 'app/support/new',
+            data: { new: true },
+            canActivate: client,
+            loadComponent: () =>
+              import('./features/client/support-page.component').then(
+                (m) => m.SupportPageComponent,
+              ),
+          },
+          {
+            path: 'app/support/:reference',
+            data: {},
+            canActivate: client,
+            loadComponent: () =>
+              import('./features/client/support-page.component').then(
+                (m) => m.SupportPageComponent,
+              ),
+          },
+          {
+            path: 'app/support',
+            data: {},
+            canActivate: client,
+            loadComponent: () =>
+              import('./features/client/support-page.component').then(
+                (m) => m.SupportPageComponent,
+              ),
+          },
+          {
+            path: 'operations/cases/:reference',
+            data: { staff: true },
+            loadComponent: () =>
+              import('./features/client/support-page.component').then(
+                (m) => m.SupportPageComponent,
+              ),
+          },
+          {
+            path: 'operations/cases',
+            data: { staff: true },
+            loadComponent: () =>
+              import('./features/client/support-page.component').then(
+                (m) => m.SupportPageComponent,
+              ),
+          },
+          {
+            path: 'compliance/cases/:reference',
+            loadComponent: () =>
+              import('./features/compliance/review-cases.component').then(
+                (m) => m.ReviewCasesComponent,
+              ),
+          },
+          {
+            path: 'compliance/cases',
+            loadComponent: () =>
+              import('./features/compliance/review-cases.component').then(
+                (m) => m.ReviewCasesComponent,
+              ),
+          },
           {
             path: 'finance/reconciliation',
-            loadComponent: () =>
-              import('./shared/workspace/reconciliation-page.component').then(
-                (m) => m.ReconciliationPageComponent,
-              ),
+            loadComponent: financeReconciliation,
           },
           {
             path: 'operations/overview',
@@ -122,6 +191,20 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./features/operations/instruments-page.component').then(
                 (m) => m.OperationsInstrumentsComponent,
+              ),
+          },
+          {
+            path: 'operations/users/create',
+            loadComponent: () =>
+              import('./features/operations/create-account.component').then(
+                (m) => m.OperationsCreateAccountComponent,
+              ),
+          },
+          {
+            path: 'operations/users',
+            loadComponent: () =>
+              import('./features/operations/user-access.component').then(
+                (m) => m.OperationsUserAccessComponent,
               ),
           },
           {
@@ -196,6 +279,20 @@ export const routes: Routes = [
             canActivate: client,
             loadComponent: () => import('./profile').then((m) => m.ProfileComponent),
           },
+          {
+            path: 'advisor/clients',
+            loadComponent: () =>
+              import('./features/advisor/advisor-clients-page.component').then(
+                (m) => m.AdvisorClientsPageComponent,
+              ),
+          },
+          {
+            path: 'advisor/clients/:id',
+            loadComponent: () =>
+              import('./features/advisor/advisor-client-detail-page.component').then(
+                (m) => m.AdvisorClientDetailPageComponent,
+              ),
+          },
           { path: 'trades', redirectTo: 'app/orders', pathMatch: 'full' },
           {
             path: 'trade/:symbol',
@@ -205,61 +302,49 @@ export const routes: Routes = [
                 (m) => m.LegacyInstrumentComponent,
               ),
           },
-            {
-              path: 'analytics/overview',
-              loadComponent: analytics,
-              data: {
-                analyticsView: 'overview',
-                title: 'Analytics overview',
-                description: 'A read-only view of aggregate trading activity with explicit freshness and metric definitions.',
-              },
+          {
+            path: 'analytics/overview',
+            loadComponent: analytics,
+            data: {
+              analyticsView: 'overview',
+              title: 'Analytics overview',
+              description:
+                'A read-only view of aggregate trading activity with explicit freshness and metric definitions.',
             },
-            {
-              path: 'analytics/trends',
-              loadComponent: analytics,
-              data: {
-                analyticsView: 'trends',
-                title: 'Activity trends',
-                description: 'Explore historical activity over an explicit reporting period and granularity.',
-              },
+          },
+          {
+            path: 'analytics/trends',
+            loadComponent: analytics,
+            data: {
+              analyticsView: 'trends',
+              title: 'Activity trends',
+              description:
+                'Explore historical activity over an explicit reporting period and granularity.',
             },
-            {
-              path: 'analytics/instruments',
-              loadComponent: analytics,
-              data: {
-                analyticsView: 'instruments',
-                title: 'Instrument analysis',
-                description: 'Compare approved aggregate activity by instrument, market, unit, and currency.',
-              },
+          },
+          {
+            path: 'analytics/instruments',
+            loadComponent: analytics,
+            data: {
+              analyticsView: 'instruments',
+              title: 'Instrument analysis',
+              description:
+                'Compare approved aggregate activity by instrument, market, unit, and currency.',
             },
+          },
+          {
+            path: 'compliance/investigations',
+            loadComponent: complianceInvestigations,
+          },
+          {
+            path: 'compliance/investigations/:id',
+            loadComponent: complianceInvestigationDetail,
+          },
+          {
+            path: 'compliance/evidence',
+            loadComponent: complianceEvidence,
+          },
           ...[
-            [
-              'compliance/investigations',
-              'Investigations',
-              'Risk & compliance',
-              'Find and review order evidence within your approved scope.',
-              'Purpose-controlled access to immutable order evidence and completeness indicators.',
-              '/api/compliance/investigations',
-              '',
-            ],
-            [
-              'compliance/investigations/:id',
-              'Investigation details',
-              'Risk & compliance',
-              'Review the evidence behind an order outcome.',
-              'Original instructions, recorded decisions and audited sensitive access.',
-              '/api/compliance/orders/:id/evidence',
-              '/compliance/investigations',
-            ],
-            [
-              'compliance/evidence',
-              'Evidence & exports',
-              'Risk & compliance',
-              'Review approved evidence requests and access purposes.',
-              'Export history and protected downloads after purpose, redaction and retention policies are approved.',
-              '/api/compliance/evidence',
-              '',
-            ],
             [
               'finance/overview',
               'Finance overview',
@@ -271,7 +356,7 @@ export const routes: Routes = [
             ],
           ].map(([path, title, section, description, expectation, endpoint, back]) => ({
             path,
-            loadComponent: staff,
+            loadComponent: path === 'finance/overview' ? financeOverview : staff,
             data: { title, section, description, expectation, endpoint, back },
           })),
         ],

@@ -1,12 +1,14 @@
 package com.neueda.leap.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
-import java.time.OffsetDateTime;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.time.OffsetDateTime;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -118,6 +120,18 @@ public class GlobalExceptionHandler {
 
         String message =
                 exception.getReason() == null ? status.getReasonPhrase() : exception.getReason();
+        if (exception instanceof WorkflowException workflow) {
+            return ResponseEntity.status(status)
+                    .body(
+                            new ApiErrorResponse(
+                                    OffsetDateTime.now(),
+                                    status.value(),
+                                    status.getReasonPhrase(),
+                                    message,
+                                    request.getRequestURI(),
+                                    workflow.code(),
+                                    java.util.UUID.randomUUID().toString()));
+        }
         return buildErrorResponse(status, message, request.getRequestURI());
     }
 

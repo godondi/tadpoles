@@ -4,7 +4,7 @@
 
 **Current status:** provisional service, reporting schema, Compose isolation, and Angular workspace shell implemented; authoritative reporting data and metric definitions remain intentionally unavailable.
 
-**Source documents:** `analytics_adsf.md` defines the proposed analytics page behavior. `HailMary.md` defines BR-16 historical analytics isolation and BR-17 useful internal insights. `AnalyticsImplPage.MD` is the companion architecture and API guide.
+**Source documents:** `analytics_adsf.md` defines the proposed analytics page behavior. `HailMary.md` defines BR-16 historical analytics isolation and BR-17 useful internal insights. `AnalyticsPage/AnalyticsImplPage.MD` is the companion architecture and API guide.
 
 ## 1. Starting point captured
 

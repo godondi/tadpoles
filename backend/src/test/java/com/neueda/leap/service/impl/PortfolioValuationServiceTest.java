@@ -7,10 +7,12 @@ import com.neueda.leap.domain.FauxnanceQuote;
 import com.neueda.leap.domain.FauxnanceQuoteMeta;
 import com.neueda.leap.domain.FauxnanceQuoteResponse;
 import com.neueda.leap.mapper.TradingMapper;
+import com.neueda.leap.mapper.TradingMapper.ExternalCashFlow;
 import com.neueda.leap.service.FauxnanceQuoteService;
 import com.neueda.leap.trading.TradingModels.Policy;
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -51,8 +53,27 @@ class PortfolioValuationServiceTest {
                                         "available",
                                         "800.01")));
         when(mapper.positions(7)).thenReturn(List.of(position(1, "AAPL", "0.5")));
+        when(mapper.externalCashFlows(7)).thenReturn(List.of());
         when(mapper.policy(1)).thenReturn(policy(1, "AAPL"));
         when(provider.getQuote("AAPL")).thenReturn(quote("AAPL", "100.125"));
+    }
+
+    @Test
+    void allTimeReturnWeightsDepositsAndWithdrawalsByTime() {
+        when(mapper.balances(7)).thenReturn(List.of(Map.of("posted", "15000")));
+        when(mapper.positions(7)).thenReturn(List.of());
+        when(mapper.externalCashFlows(7))
+                .thenReturn(
+                        List.of(
+                                new ExternalCashFlow(
+                                        NOW.minus(Duration.ofDays(30)),
+                                        new BigDecimal("10000")),
+                                new ExternalCashFlow(NOW, new BigDecimal("-5000"))));
+
+        assertEquals("100.00", service.value(7).allTimeReturnPercent());
+
+        when(mapper.balances(7)).thenReturn(List.of(Map.of("posted", "5000")));
+        assertEquals("0.00", service.value(7).allTimeReturnPercent());
     }
 
     @Test
@@ -121,6 +142,7 @@ class PortfolioValuationServiceTest {
         assertEquals("UNAVAILABLE", value.status());
         assertNull(value.totalValue());
         assertNull(value.holdingsValue());
+        assertNull(value.allTimeReturnPercent());
         assertEquals("1000.01", value.cashBalance());
         assertEquals(List.of("MSFT"), value.unpricedTickers());
         when(mapper.policy(1)).thenReturn(null);
@@ -238,7 +260,8 @@ class PortfolioValuationServiceTest {
                 BigDecimal.ONE,
                 ticker,
                 false,
-                false);
+                false,
+                null);
     }
 
     private FauxnanceQuoteResponse quote(String symbol, String price) {

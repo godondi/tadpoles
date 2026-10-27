@@ -54,7 +54,7 @@ class ClientHoldingControllerTest {
     }
 
     @Test
-    void createHoldingRejectsRetiredWritePath() throws Exception {
+    void createHoldingRouteIsRemoved() throws Exception {
         mockMvc.perform(
                         post("/api/clients/7/holdings")
                                 .with(jwtWithRoles("ADMIN"))
@@ -67,7 +67,7 @@ class ClientHoldingControllerTest {
                                           "asOfDate": "2026-09-24"
                                         }
                                         """))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isMethodNotAllowed());
         org.mockito.Mockito.verifyNoInteractions(clientHoldingService);
     }
 
@@ -82,7 +82,7 @@ class ClientHoldingControllerTest {
     }
 
     @Test
-    void updateHoldingRejectsRetiredWritePath() throws Exception {
+    void updateHoldingRouteIsRemoved() throws Exception {
         mockMvc.perform(
                         patch("/api/clients/7/holdings/13")
                                 .with(jwtWithRoles("ADMIN"))
@@ -93,7 +93,7 @@ class ClientHoldingControllerTest {
                                           "quantity": 12.0
                                         }
                                         """))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isMethodNotAllowed());
         org.mockito.Mockito.verifyNoInteractions(clientHoldingService);
     }
 

@@ -49,6 +49,15 @@ public class TradingServiceImpl implements TradingService {
         return enabled;
     }
 
+    public Map<String, Object> tradeAccessState(int client) {
+        Map<String, Object> state = db.tradeAccess(client);
+        if (state == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Client account not found.");
+        Object until = state.get("revoked_until");
+        boolean revoked = state.get("revoked_at") != null
+                && (!(until instanceof java.time.OffsetDateTime expiry) || expiry.isAfter(OffsetDateTime.now(clock)));
+        return Map.of("revoked", revoked, "revokedUntil", revoked && until != null ? until : "");
+    }
+
     public Map<String, Object> availability(int client, Integer instrument) {
         String reason =
                 !enabled

@@ -1,7 +1,9 @@
 from collections.abc import Iterator
 
+from fastapi import HTTPException, status
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -18,7 +20,13 @@ def reporting_engine() -> Engine:
 
 
 def reporting_session() -> Iterator[Session]:
-    with reporting_engine().begin() as connection:
-        connection.execute(text("SET TRANSACTION READ ONLY"))
-        with Session(bind=connection) as session:
-            yield session
+    try:
+        with reporting_engine().begin() as connection:
+            connection.execute(text("SET TRANSACTION READ ONLY"))
+            with Session(bind=connection) as session:
+                yield session
+    except (RuntimeError, SQLAlchemyError):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The reporting database is unavailable.",
+        ) from None

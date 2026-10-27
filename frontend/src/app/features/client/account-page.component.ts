@@ -1,3 +1,4 @@
+import { TwoDecimalsPipe } from '../../shared/two-decimals.pipe';
 import { OrderUpdateHealthComponent } from '../../shared/workspace/order-update-health.component';
 import { Component, inject } from '@angular/core';
 import { DisplayCurrencyComponent } from './display-currency.component';
@@ -15,15 +16,19 @@ import { OrderStatusService } from '../../core/api/order-status.service';
 import { PageResource } from '../../shared/workspace/page-resource';
 import { RequestStateComponent } from '../../shared/workspace/request-state.component';
 import { OrdersTableComponent } from '../../shared/workspace/orders-table.component';
+import { ClientAdvisoryApi } from './advisory/client-advisory-api.service';
+import { ClientAdvisory } from './advisory/client-advisory-models';
+import { ClientRecommendationsComponent } from './advisory/client-recommendations.component';
 
 @Component({
   selector: 'app-account-page',
-  imports: [OrderUpdateHealthComponent,
+  imports: [TwoDecimalsPipe, OrderUpdateHealthComponent,
     DisplayCurrencyComponent,
     DatePipe,
     RouterLink,
     RequestStateComponent,
     OrdersTableComponent,
+    ClientRecommendationsComponent,
   ],
   template: `
     <header class="workspace-heading">
@@ -56,20 +61,20 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
           <h2 id="investing-heading" class="eyebrow">Investing</h2>
           @if (valuation.data(); as estimate) {
             <p class="mono-value metric-value">
-              {{ valuation.error() ? 'Unavailable' : (estimate.totalValue ?? 'Unavailable') }}
+              {{ valuation.error() ? 'Unavailable' : ((estimate.totalValue ?? 'Unavailable') | twoDecimals) }}
               @if (!valuation.error() && estimate.totalValue !== null) {
                 <small>USD</small>
               }
             </p>
             @if (!valuation.error()) {
               <p>
-                Holdings estimate: {{ estimate.holdingsValue ?? 'Unavailable' }}
+                Holdings estimate: {{ (estimate.holdingsValue ?? 'Unavailable') | twoDecimals }}
                 @if (estimate.holdingsValue !== null) {
                   USD
                 }
               </p>
               <p>
-                Cash balance: {{ estimate.cashBalance ?? 'Unavailable' }}
+                Cash balance: {{ (estimate.cashBalance ?? 'Unavailable') | twoDecimals }}
                 @if (estimate.cashBalance !== null) {
                   USD
                 }
@@ -80,23 +85,23 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
                   cannot be calculated.
                 </p>
               }
-              <p class="as-of">
-                Account snapshot {{ estimate.snapshotAt | date: 'medium' : 'UTC' }} UTC
+              <p
+                class="as-of"
+                title="Modified Dietz estimate; deposits and withdrawals are weighted by time invested."
+              >
+                <span
+                  [class.return-positive]="returnTone(estimate.allTimeReturnPercent) === 'positive'"
+                  [class.return-negative]="returnTone(estimate.allTimeReturnPercent) === 'negative'"
+                >
+                  {{ formatAllTimeReturn(estimate.allTimeReturnPercent) }}
+                </span>
               </p>
-              @if (estimate.quoteAsOf) {
-                <p class="as-of">
-                  Oldest quote {{ estimate.quoteAsOf | date: 'medium' : 'UTC' }} UTC
-                </p>
-              }
             }
           } @else {
             <p class="mono-value metric-value">
               {{ valuation.loading() ? 'Calculating…' : 'Unavailable' }}
             </p>
           }
-          <p class="muted">
-            Estimated holdings value plus total cash. This is not cash available to spend.
-          </p>
           <p class="metric-status" role="status">
             @if (valuation.loading()) {
               Updating estimate…
@@ -113,13 +118,11 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
           <h2 id="settled-balance-heading" class="eyebrow">Settled balance</h2>
           @for (balance of data.balances; track balance.currency) {
             <p class="mono-value metric-value">
-              {{ balance.available }}
+              {{ balance.available | twoDecimals }}
               <small>{{ balance.currency }}</small>
             </p>
-            <p>Available to invest or withdraw</p>
-            <p>Reserved for pending buys: {{ balance.reserved }} {{ balance.currency }}</p>
-            <p>Total settled cash: {{ balance.posted }} {{ balance.currency }}</p>
-            <p class="as-of">Committed {{ balance.updatedAt | date: 'medium' : 'UTC' }} UTC</p>
+            <p>Reserved for pending buys: {{ balance.reserved | twoDecimals }} {{ balance.currency }}</p>
+            <p>Total settled cash: {{ balance.posted | twoDecimals }} {{ balance.currency }}</p>
           } @empty {
             <p class="mono-value metric-value">Unavailable</p>
             <p class="muted">Your USD cash account is not available.</p>
@@ -136,10 +139,6 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
           </section>
         }
       </div>
-      <p class="muted">
-        Available cash is your posted balance minus amounts reserved for pending buys. Sales settle
-        internally when the fill commits.
-      </p>
       @if (!data.tradingEnabled) {
         <p class="notice">
           New order admission is currently unavailable. Your orders and balances remain saved.
@@ -153,11 +152,7 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
         </div>
         @if (!data.currentPositions?.length) {
           <div class="empty">
-            <h3>Your first investment starts here</h3>
-            <p>Choose an instrument and review its estimated impact before buying.</p>
-            <p>
-              If your available cash is zero, add a bank reference and make an internal deposit.
-            </p>
+            <p>No positions</p>
           </div>
         } @else {
           <div
@@ -173,6 +168,7 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
                   <th>Owned</th>
                   <th>Reserved to sell</th>
                   <th>Available to sell</th>
+                  <th scope="col">Advisor’s</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -183,9 +179,18 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
                       <a [routerLink]="['/app/instruments', p.instrumentId]">{{ p.ticker }}</a>
                       <small>{{ p.name }} · {{ p.currency }}</small>
                     </td>
-                    <td>{{ p.owned }}</td>
-                    <td>{{ p.reserved }}</td>
-                    <td>{{ p.available }}</td>
+                    <td>{{ p.owned | twoDecimals }}</td>
+                    <td>{{ p.reserved | twoDecimals }}</td>
+                    <td>{{ p.available | twoDecimals }}</td>
+                    <td>
+                      @if (advisory.error()) {
+                        <span role="status">Unavailable</span>
+                      } @else if (advisory.loading() && !advisory.data()) {
+                        <span role="status">Loading…</span>
+                      } @else {
+                        {{ guidanceStatus(p.instrumentId) }}
+                      }
+                    </td>
                     <td>
                       <a
                         [routerLink]="['/app/trade', p.instrumentId]"
@@ -210,21 +215,26 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
           </div>
         }
       </section>
+      <app-client-recommendations
+        [advisory]="advisory.data()"
+        [positions]="data.currentPositions ?? []"
+        [loading]="advisory.loading()"
+        [error]="advisory.error()"
+        [status]="advisory.status()"
+        (retry)="loadAdvisory()"
+      />
       @if (data.migrationExceptions?.length) {
         <section class="notice">
           <h2>Historical records need review</h2>
           <p>These records are preserved separately and cannot be spent or sold.</p>
           <a routerLink="/app/support/new" [queryParams]="{category: 'HISTORICAL_RECORD'}">Ask about historical records</a>
           @for (e of data.migrationExceptions; track e.id) {
-            <p>Reference {{ e.id }} · {{ e.kind }}</p>
+            <p>Reference {{ e.id }} · {{ e.kind }}
+              <a routerLink="/app/support/new" [queryParams]="{category:'HISTORICAL_RECORD',exceptionId:e.id,recordKind:e.kind,reason:'PROVENANCE'}">Ask about this retained record</a>
+            </p>
           }
         </section>
       }
-      <p class="as-of">
-        Retrieved {{ data.retrievedAt | date: 'medium' : 'UTC' }} UTC · automatic updates for up to
-        10 minutes; use Resume automatic updates to continue.
-      </p>
-      <p class="muted">{{ data.limitation }}</p>
     }
     <section class="panel">
       <div class="section-heading">
@@ -245,9 +255,11 @@ import { OrdersTableComponent } from '../../shared/workspace/orders-table.compon
 })
 export class AccountPageComponent {
   private readonly api = inject(WorkspaceApi);
+  private readonly advisoryApi = inject(ClientAdvisoryApi);
   readonly resource = new PageResource<Portfolio>();
   readonly recent = new PageResource<Page<Order>>();
   readonly valuation = new PageResource<PortfolioValuation>();
+  readonly advisory = new PageResource<ClientAdvisory>();
 
   constructor() {
     this.load();
@@ -261,6 +273,11 @@ export class AccountPageComponent {
     this.resource.load(this.api.portfolio(), true);
     this.loadOrders();
     this.loadValuation();
+    this.loadAdvisory();
+  }
+
+  loadAdvisory() {
+    this.advisory.load(this.advisoryApi.advisory(), true);
   }
 
   loadValuation() {
@@ -273,5 +290,21 @@ export class AccountPageComponent {
 
   hasUnits(value: string) {
     return /[1-9]/.test(value);
+  }
+
+  formatAllTimeReturn(value: string | null | undefined): string {
+    if (typeof value !== 'string') return 'All Time —';
+    return `All Time ${value.startsWith('-') ? '' : '+'}${value}%`;
+  }
+
+  returnTone(value: string | null | undefined): 'positive' | 'negative' | 'neutral' {
+    if (typeof value !== 'string' || value === '0.00') return 'neutral';
+    return value.startsWith('-') ? 'negative' : 'positive';
+  }
+
+  guidanceStatus(instrumentId: number): string {
+    if (this.advisory.error() || !this.advisory.data()) return 'Unavailable';
+    const status = this.advisory.data()?.guidance.find((item) => item.instrumentId === instrumentId)?.status;
+    return !status || status === 'NONE' ? 'N/A' : status;
   }
 }

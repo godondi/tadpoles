@@ -123,9 +123,9 @@ class ClientControllerTest {
     }
 
     @Test
-    void scalarBalanceEndpointIsRetired() throws Exception {
+    void scalarBalanceEndpointIsRemoved() throws Exception {
         mockMvc.perform(get("/api/clients/7/balance").with(jwtWithRoles("ADMIN")))
-                .andExpect(status().isGone());
+                .andExpect(status().isNotFound());
         org.mockito.Mockito.verifyNoInteractions(clientService);
     }
 

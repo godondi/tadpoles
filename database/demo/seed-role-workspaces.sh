@@ -8,3 +8,8 @@ if [ "${TRADING_LOCAL_DEMO_SETUP:-false}" = "true" ] &&
    [ "${OPERATIONS_ACCESS_ENABLED:-false}" = "true" ]; then
     psql -v ON_ERROR_STOP=1 -f /operations_workspace.sql
 fi
+
+if [ "${COMPLIANCE_LOCAL_DEMO_SETUP:-false}" = "true" ] &&
+   [ "${COMPLIANCE_ACCESS_ENABLED:-false}" = "true" ]; then
+    psql -v ON_ERROR_STOP=1 -f /compliance_workspace.sql
+fi

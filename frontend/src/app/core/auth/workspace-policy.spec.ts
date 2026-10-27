@@ -35,6 +35,27 @@ describe('implemented staff landing pages', () => {
   });
 });
 
+describe('Advisor workspace policy', () => {
+  it('recognizes the Advisor role and lands at the assigned-client workspace', () => {
+    expect(normalizeRoles(['ADVISOR'])).toEqual(['ADVISOR']);
+    expect(landingPage(['ADVISOR'])).toBe('/advisor/clients');
+  });
+
+  it.each(['/advisor/clients', '/advisor/clients/7?tab=recommendations'])('recognizes Advisor route %s', (path) => {
+    expect(routeRole(path)).toBe('ADVISOR');
+    expect(safeReturnUrl(path, ['ADVISOR'])).toBe(path);
+  });
+
+  it.each(['/advisor/clients/0', '/advisor/clients/-1', '/advisor/clients/1.5', '/advisor/clients/nope'])(
+    'rejects invalid Advisor client detail route %s',
+    (path) => expect(routeRole(path)).toBeNull(),
+  );
+
+  it('does not authorize Advisor links for another role', () => {
+    expect(safeReturnUrl('/advisor/clients', ['CLIENT'])).toBe('/app/overview');
+  });
+});
+
 describe('Operations instrument editor routes', () => {
   it.each(['/operations/instruments/new', '/operations/instruments/42'])(
     'allows the editor only for an unmixed Operations identity: %s',
@@ -44,6 +65,14 @@ describe('Operations instrument editor routes', () => {
       expect(safeReturnUrl(path, ['CLIENT'])).toBe('/app/overview');
     },
   );
+});
+
+describe('Operations user administration pages', () => {
+  it.each(['/operations/users', '/operations/users/create'])('authorizes the separate Operations page %s', (path) => {
+    expect(routeRole(path)).toBe('TRADING_OPS');
+    expect(safeReturnUrl(path, ['TRADING_OPS'])).toBe(path);
+    expect(safeReturnUrl(path, ['CLIENT'])).toBe('/app/overview');
+  });
 });
 
 it.each([

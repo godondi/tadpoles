@@ -10,6 +10,7 @@ public class Instrument {
     private String currency;
     private String assetClass;
     private String securityType;
+    private String exchange;
     private Boolean isActive;
     public Integer getInstrumentId() {
         return instrumentId;
@@ -46,6 +47,12 @@ public class Instrument {
     }
     public void setSecurityType(String securityType) {
         this.securityType = securityType;
+    }
+    public String getExchange() {
+        return exchange;
+    }
+    public void setExchange(String exchange) {
+        this.exchange = exchange;
     }
     public Boolean getIsActive() {
         return isActive;

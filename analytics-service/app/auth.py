@@ -31,7 +31,13 @@ def get_current_analyst(
     if credentials is None or credentials.scheme.lower() != "bearer" or not settings.jwt_secret:
         raise _unauthorized()
     try:
-        decode_options = {"algorithms": ["HS256"], "options": {"require": ["exp", "sub"]}}
+        decode_options = {
+            "algorithms": ["HS256"],
+            "options": {
+                "require": ["exp", "sub"],
+                "verify_aud": bool(settings.jwt_audience),
+            },
+        }
         if settings.jwt_issuer:
             decode_options["issuer"] = settings.jwt_issuer
         if settings.jwt_audience:

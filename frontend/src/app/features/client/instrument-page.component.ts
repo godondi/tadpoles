@@ -42,7 +42,7 @@ import { TradeComponent } from '../trade/trade.component';
       @if (ticket || data.availability.enabled || data.availability.code === 'BANK_REQUIRED') {
         @if (ticket) {
           <p>{{data.availability.reason}}</p>
-          <a routerLink="/app/support/new" [queryParams]="{category:'TRADING_AVAILABILITY'}">Ask about trading availability</a>
+          <a routerLink="/app/support/new" [queryParams]="{category:'TRADING_AVAILABILITY',instrumentId:data.instrument.instrumentId,side:sideHint,reportedReason:data.availability.reason,observedAt:observedAt,reason:sideHint==='SELL'?'CANNOT_SELL':'CANNOT_BUY'}">Ask about trading availability</a>
           <app-order-ticket
             [buyAllowed]="data.availability.buyAllowed ?? data.availability.enabled"
             [sellAllowed]="data.availability.sellAllowed ?? data.availability.enabled"
@@ -79,7 +79,7 @@ import { TradeComponent } from '../trade/trade.component';
           <h2>Trading unavailable for this instrument</h2>
           <p>{{ data.availability.reason }}</p>
           <p>You can still browse its market information.</p>
-          <a routerLink="/app/support/new" [queryParams]="{category:'TRADING_AVAILABILITY'}">Ask about trading availability</a>
+          <a routerLink="/app/support/new" [queryParams]="{category:'TRADING_AVAILABILITY',instrumentId:data.instrument.instrumentId,side:sideHint,reportedReason:data.availability.reason,observedAt:observedAt,reason:sideHint==='SELL'?'CANNOT_SELL':'CANNOT_BUY'}">Ask about trading availability</a>
         </section>
       }
       @if (!ticket) {
@@ -104,6 +104,7 @@ export class InstrumentPageComponent {
   readonly ticket = this.route.snapshot.data['ticket'] === true;
   readonly sideHint = this.route.snapshot.queryParamMap.get('side') === 'SELL' ? 'SELL' : 'BUY';
   id = '';
+  observedAt = new Date().toISOString();
 
   constructor() {
     inject(CatalogRefreshService).watch().pipe(takeUntilDestroyed()).subscribe(()=>this.load(true));
@@ -114,6 +115,7 @@ export class InstrumentPageComponent {
   }
 
   load(background=false) {
+    this.observedAt = new Date().toISOString();
     this.resource.load(
       forkJoin({
         instrument: this.api.instrument(this.id),

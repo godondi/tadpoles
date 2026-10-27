@@ -1,10 +1,11 @@
 import { Component, input } from '@angular/core';
 import { DatePipe, JsonPipe, KeyValuePipe } from '@angular/common';
 import { EvidenceRow } from '../../core/api/operations-api.service';
+import { DisplayFactPipe } from '../../shared/two-decimals.pipe';
 
 @Component({
   selector: 'app-evidence-table',
-  imports: [DatePipe, JsonPipe, KeyValuePipe],
+  imports: [DatePipe, JsonPipe, KeyValuePipe, DisplayFactPipe],
   template: `
     <div class="table-wrapper" tabindex="0" [attr.aria-label]="caption() + ', scroll horizontally'">
       <table>
@@ -49,10 +50,10 @@ import { EvidenceRow } from '../../core/api/operations-api.service';
                           }
                           <details>
                             <summary>Show captured values</summary>
-                            <pre class="evidence-json">{{ field.value | json }}</pre>
+                            <pre class="evidence-json">{{ field.value | displayFact: field.key | json }}</pre>
                           </details>
                         } @else {
-                          {{ field.value === null ? 'Not recorded' : field.value }}
+                          {{ field.value === null ? 'Not recorded' : (field.value | displayFact: field.key) }}
                         }
                       </dd>
                     </div>

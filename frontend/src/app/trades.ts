@@ -1,3 +1,4 @@
+import { TwoDecimalsPipe } from './shared/two-decimals.pipe';
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TradesService } from './trades.service';
@@ -70,7 +71,7 @@ import { TradesService } from './trades.service';
                         {{ trade.action | uppercase }}
                       </span>
                     </td>
-                     <td class="text-right mono-value">{{ trade.quantity }}</td>
+                     <td class="text-right mono-value">{{ trade.quantity | twoDecimals }}</td>
                      <td class="text-right mono-value">{{ formatCurrency(trade.price) }}</td>
                      <td class="text-right mono-value"><strong>{{ formatCurrency(trade.total) }}</strong></td>
                      <td class="text-muted mono-value">{{ trade.date }}<br/>{{ trade.time }}</td>
@@ -102,7 +103,7 @@ import { TradesService } from './trades.service';
       display: block;
       width: 100%;
       min-height: 100vh;
-      background: #f8f9fa;
+      background: var(--page-bg);
     }
 
     .trades-container {
@@ -124,13 +125,13 @@ import { TradesService } from './trades.service';
     }
 
     .trades-header h1 {
-      color: #006044;
+      color: var(--dark-green);
       font-size: 2rem;
       margin: 0 0 0.5rem 0;
     }
 
     .subtitle {
-      color: #666;
+      color: var(--text-secondary);
       margin: 0;
     }
 
@@ -142,7 +143,7 @@ import { TradesService } from './trades.service';
     }
 
     .stat-card {
-      background: white;
+      background: var(--surface);
       padding: 1.5rem;
       border-radius: 0;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -150,7 +151,7 @@ import { TradesService } from './trades.service';
     }
 
     .stat-label {
-      color: #666;
+      color: var(--text-secondary);
       font-size: 0.875rem;
       font-weight: 600;
       text-transform: uppercase;
@@ -159,14 +160,14 @@ import { TradesService } from './trades.service';
     }
 
     .stat-value {
-      color: #006044;
+      color: var(--dark-green);
       font-size: 1.75rem;
       font-weight: 700;
        font-family: Consolas, 'SFMono-Regular', Menlo, Monaco, monospace;
     }
 
     .trades-card {
-      background: white;
+      background: var(--surface);
       border-radius: 0;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       overflow: hidden;
@@ -182,7 +183,7 @@ import { TradesService } from './trades.service';
 
     .table-header h2 {
       margin: 0;
-      color: #006044;
+      color: var(--dark-green);
       font-size: 1.25rem;
     }
 
@@ -193,10 +194,10 @@ import { TradesService } from './trades.service';
 
     .filter-select {
       padding: 0.5rem 1rem;
-      border: 1px solid #ddd;
+      border: 1px solid var(--border-gray);
       border-radius: 0;
-      background-color: white;
-      color: #006044;
+      background-color: var(--surface);
+      color: var(--dark-green);
       font-weight: 500;
       cursor: pointer;
       transition: border-color 0.2s ease;
@@ -221,15 +222,15 @@ import { TradesService } from './trades.service';
     }
 
     thead {
-      background-color: #f8f9fa;
-      border-bottom: 2px solid #e0e0e0;
+      background-color: var(--surface-muted);
+      border-bottom: 2px solid var(--border-gray);
     }
 
     th {
       padding: 1rem;
       text-align: left;
       font-weight: 600;
-      color: #006044;
+      color: var(--dark-green);
       font-size: 0.875rem;
       text-transform: uppercase;
       letter-spacing: 0.5px;
@@ -237,12 +238,12 @@ import { TradesService } from './trades.service';
 
     td {
       padding: 1rem;
-      border-bottom: 1px solid #e0e0e0;
-      color: #333;
+      border-bottom: 1px solid var(--border-gray);
+      color: var(--text-primary);
     }
 
     tbody tr:hover {
-      background-color: #f8f9fa;
+      background-color: var(--surface-muted);
     }
 
     tbody tr.buy-row {
@@ -254,8 +255,8 @@ import { TradesService } from './trades.service';
     }
 
     .symbol-badge {
-      background-color: #e8f5e9;
-      color: #006044;
+      background-color: var(--success-bg);
+      color: var(--dark-green);
       padding: 0.25rem 0.75rem;
       border-radius: 0;
       font-weight: 600;
@@ -270,13 +271,13 @@ import { TradesService } from './trades.service';
     }
 
     .action-buy {
-      background-color: #d4edda;
-      color: #155724;
+      background-color: var(--success-bg);
+      color: var(--success-text);
     }
 
     .action-sell {
-      background-color: #f8d7da;
-      color: #721c24;
+      background-color: var(--error-bg);
+      color: var(--error-text);
     }
 
     .status-badge {
@@ -287,18 +288,18 @@ import { TradesService } from './trades.service';
     }
 
     .status-completed {
-      background-color: #d4edda;
-      color: #155724;
+      background-color: var(--success-bg);
+      color: var(--success-text);
     }
 
     .status-pending {
-      background-color: #fff3cd;
-      color: #856404;
+      background-color: var(--notice-bg);
+      color: var(--notice-text);
     }
 
     .status-cancelled {
-      background-color: #f8d7da;
-      color: #721c24;
+      background-color: var(--error-bg);
+      color: var(--error-text);
     }
 
     .text-right {
@@ -306,14 +307,14 @@ import { TradesService } from './trades.service';
     }
 
     .text-muted {
-      color: #999;
+      color: var(--text-secondary);
       font-size: 0.875rem;
     }
 
     .no-trades {
       padding: 2rem;
       text-align: center;
-      color: #666;
+      color: var(--text-secondary);
     }
 
     @media (max-width: 1024px) {
@@ -350,7 +351,7 @@ import { TradesService } from './trades.service';
       }
     }
   `],
-  imports: [CommonModule],
+  imports: [TwoDecimalsPipe, CommonModule],
 })
 export class TradesComponent {
   private tradesService = inject(TradesService);

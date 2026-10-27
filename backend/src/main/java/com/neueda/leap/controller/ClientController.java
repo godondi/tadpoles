@@ -1,7 +1,6 @@
 package com.neueda.leap.controller;
 
 import com.neueda.leap.domain.Client;
-import com.neueda.leap.dto.ClientBalanceResponseDto;
 import com.neueda.leap.dto.ClientListResponseDto;
 import com.neueda.leap.dto.ClientResponseDto;
 import com.neueda.leap.dto.CreateClientRequestDto;
@@ -64,16 +63,5 @@ public class ClientController {
         SecurityRoleSupport.requireClientOwnership(jwt, appUserService, clientId);
         Client client = clientService.updateClient(clientId, request);
         return ClientResponseDto.fromEntity(client);
-    }
-
-    @GetMapping("/clients/{clientId}/balance")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CLIENT')")
-    public ClientBalanceResponseDto getClientBalance(
-            @PathVariable Integer clientId, @AuthenticationPrincipal Jwt jwt) {
-        SecurityRoleSupport.requireClientOwnership(jwt, appUserService, clientId);
-        throw new org.springframework.web.server.ResponseStatusException(
-                HttpStatus.GONE,
-                "Use the owned USD portfolio endpoint; historical scalar cash is not a spendable"
-                        + " balance");
     }
 }

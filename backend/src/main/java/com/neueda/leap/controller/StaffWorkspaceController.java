@@ -1,24 +1,25 @@
 package com.neueda.leap.controller;
 
+import com.neueda.leap.dto.FinanceSummaryResponseDto;
+import com.neueda.leap.service.FinanceSummaryService;
+import java.time.LocalDate;
 import org.springframework.http.HttpStatus;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 /** Fail closed until approved scopes and genuine evidence/reporting sources are configured. */
 @RestController
 @RequestMapping("/api")
 public class StaffWorkspaceController {
-    @GetMapping({
-        "/compliance/investigations",
-        "/compliance/orders/{id}/evidence",
-        "/compliance/evidence"
-    })
-    @PreAuthorize("hasRole('COMPLIANCE')")
-    public void compliance() {
-        unavailable(
-                "Investigation evidence is not available yet. Approved access scopes, purposes and"
-                        + " evidence policies must be configured. Exports are disabled.");
+    private final FinanceSummaryService financeSummaryService;
+
+    public StaffWorkspaceController(FinanceSummaryService financeSummaryService) {
+        this.financeSummaryService = financeSummaryService;
     }
 
     @GetMapping({
@@ -35,11 +36,11 @@ public class StaffWorkspaceController {
     }
 
     @GetMapping("/finance/summary")
-    @PreAuthorize("hasRole('FINANCE')")
-    public void finance() {
-        unavailable(
-                "Period totals and reporting are not available yet. Operational reconciliation is"
-                        + " available in the Reconciliation workspace.");
+    @PreAuthorize("hasRole('FINANCE') and !hasRole('CLIENT')")
+    public FinanceSummaryResponseDto financeSummary(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return financeSummaryService.summary(from, to);
     }
 
     private void unavailable(String message) {

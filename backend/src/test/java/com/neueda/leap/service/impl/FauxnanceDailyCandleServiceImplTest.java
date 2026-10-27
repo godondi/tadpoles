@@ -172,4 +172,25 @@ class FauxnanceDailyCandleServiceImplTest {
         assertEquals("Symbol was not recognized.", exception.getReason());
         server.verify();
     }
+
+    @Test
+    void providerServerFailureIsReportedAsBadGateway() {
+        server.expect(requestTo("http://localhost:9090/v1/candles/SPY?interval=1d"))
+                .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
+        var error = assertThrows(ResponseStatusException.class, () -> service.getCandles("SPY", null, null, null));
+        assertEquals(HttpStatus.BAD_GATEWAY, error.getStatusCode());
+        assertEquals("Market data provider is temporarily unavailable. Please retry shortly.", error.getReason());
+        server.verify();
+    }
+
+    @Test
+    void providerTimeoutIsReportedAsServiceUnavailable() {
+        server.expect(requestTo("http://localhost:9090/v1/candles/SPY?interval=1d"))
+                .andRespond(org.springframework.test.web.client.response.MockRestResponseCreators.withException(
+                        new java.net.SocketTimeoutException("upstream timeout")));
+        var error = assertThrows(ResponseStatusException.class, () -> service.getCandles("SPY", null, null, null));
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, error.getStatusCode());
+        assertEquals("Market data provider could not be reached. Please retry shortly.", error.getReason());
+        server.verify();
+    }
 }

@@ -69,7 +69,7 @@ import { Candle } from '../../core/api/market-data.service';
                 <td>{{ candle.high | number: '1.2-2' }}</td>
                 <td>{{ candle.low | number: '1.2-2' }}</td>
                 <td>{{ candle.close | number: '1.2-2' }}</td>
-                <td>{{ candle.volume === null ? '—' : (candle.volume | number) }}</td>
+                <td>{{ candle.volume === null ? '—' : (candle.volume | number: '1.2-2') }}</td>
                 <td>
                   {{
                     candle.synthetic === true
@@ -162,9 +162,13 @@ export class CandleChartComponent {
         wickUpColor: '#216b4a',
         wickDownColor: '#a72c3d',
         borderVisible: false,
+        priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
       });
       const applyTheme = () => {
         const style = getComputedStyle(host);
+        const up = style.getPropertyValue('--positive').trim() || '#216b4a';
+        const down = style.getPropertyValue('--negative').trim() || '#a72c3d';
+        this.series?.applyOptions({ upColor: up, wickUpColor: up, downColor: down, wickDownColor: down });
         this.chart?.applyOptions({
           layout: {
             background: {

@@ -27,6 +27,8 @@ public class TradingOperationsController {
     private final boolean provider;
     private final ProviderHealthService health;
     private final java.time.Clock clock;
+    private final SupportWorkflowMapper workflow;
+    private final com.neueda.leap.service.support.SupportCategoryRegistry categories;
 
     public TradingOperationsController(
             ReconciliationService reconciliation,
@@ -39,9 +41,13 @@ public class TradingOperationsController {
             @Value("${trading.worker-enabled:false}") boolean worker,
             @Value("${fauxnance.api-key:}") String key,
             ProviderHealthService health,
-            java.time.Clock clock) {
+            java.time.Clock clock,
+            SupportWorkflowMapper workflow,
+            com.neueda.leap.service.support.SupportCategoryRegistry categories) {
         this.health = health;
         this.clock = clock;
+        this.workflow = workflow;
+        this.categories = categories;
         this.executionWorker = executionWorker;
         this.setup = setup;
         this.reconciliation = reconciliation;
@@ -73,6 +79,14 @@ public class TradingOperationsController {
                 trading.schemaReady(),
                 "supportSchemaReady",
                 trading.supportSchemaReady(),
+                "supportWorkflow",
+                map(
+                        "enabled",
+                        categories.enabled(),
+                        "schemaAndRuntimeReady",
+                        workflow.ready(),
+                        "responseTarget",
+                        "NOT_CONFIGURED"),
                 "referenceDataReady",
                 db.referenceDataReady(),
                 "runtimePermissions",

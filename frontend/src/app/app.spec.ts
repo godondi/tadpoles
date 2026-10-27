@@ -13,6 +13,13 @@ describe('App routing and shell', () => {
 
   beforeEach(async () => {
     localStorage.clear();
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        disconnect() {}
+      },
+    );
     getContextSpy = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
 
     await TestBed.configureTestingModule({
@@ -24,10 +31,15 @@ describe('App routing and shell', () => {
   afterEach(() => {
     localStorage.clear();
     getContextSpy.mockRestore();
+    vi.unstubAllGlobals();
   });
 
-  async function renderAt(url: string, session?: { onboardingComplete: boolean }) {
+  async function renderAt(
+    url: string,
+    session?: { onboardingComplete: boolean; roles?: string[] },
+  ) {
     const router = TestBed.inject(Router);
+    const roles = session?.roles ?? ['CLIENT'];
 
     if (session) {
       localStorage.setItem(
@@ -40,7 +52,7 @@ describe('App routing and shell', () => {
           userId: 14,
           email: 'casey@example.com',
           displayName: 'Casey Example',
-          clientId: session.onboardingComplete ? 7 : null,
+          clientId: roles.includes('CLIENT') && session.onboardingComplete ? 7 : null,
           onboardingComplete: session.onboardingComplete,
         }),
       );
@@ -49,7 +61,7 @@ describe('App routing and shell', () => {
         'tadpoles.user.profile',
         JSON.stringify({
           userId: 14,
-          clientId: session.onboardingComplete ? 7 : null,
+          clientId: roles.includes('CLIENT') && session.onboardingComplete ? 7 : null,
           email: 'casey@example.com',
           displayName: 'Casey Example',
           clientName: '',
@@ -82,27 +94,33 @@ describe('App routing and shell', () => {
         .flush({
           userId: 14,
           enabled: true,
-          roles: ['CLIENT'],
-          clientId: session.onboardingComplete ? 7 : null,
+          roles,
+          clientId: roles.includes('CLIENT') && session.onboardingComplete ? 7 : null,
           email: 'casey@example.com',
           displayName: 'Casey',
         });
       await init;
-      const profile = auth.ensureClientProfile();
-      http
-        .expectOne((r) => r.url.endsWith('/api/users/me/profile'))
-        .flush({
-          userId: 14,
-          clientId: session.onboardingComplete ? 7 : null,
-          email: 'casey@example.com',
-          displayName: 'Casey',
-          onboardingComplete: session.onboardingComplete,
-        });
-      await profile;
+      if (roles.includes('CLIENT')) {
+        const profile = auth.ensureClientProfile();
+        http
+          .expectOne((r) => r.url.endsWith('/api/users/me/profile'))
+          .flush({
+            userId: 14,
+            clientId: session.onboardingComplete ? 7 : null,
+            email: 'casey@example.com',
+            displayName: 'Casey',
+            onboardingComplete: session.onboardingComplete,
+          });
+        await profile;
+      }
     }
     const fixture = TestBed.createComponent(App);
     await router.navigateByUrl(url);
     fixture.detectChanges();
+    const access = TestBed.inject(HttpTestingController).match((r) =>
+      r.url.endsWith('/api/workspace/client/trade-access'),
+    );
+    access.forEach((request) => request.flush({ revoked: false, revokedUntil: '' }));
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -123,7 +141,9 @@ describe('App routing and shell', () => {
 
     expect(router.url).toBe('/app/overview');
     expect(compiled.querySelector('app-top-nav')).toBeTruthy();
-    expect(shellText).toContain('Tadpoles');
+    expect(compiled.querySelector('app-top-nav .brand')?.getAttribute('aria-label')).toBe(
+      'Tadpoles dashboard',
+    );
     expect(shellText).toContain('Search');
     expect(shellText).toContain('Account');
     expect(shellText).not.toContain('Trades');
@@ -173,5 +193,85 @@ describe('App routing and shell', () => {
     const { router } = await renderAt('/trade/AAPL');
     expect(router.url).toContain('/login');
     expect(router.parseUrl(router.url).queryParams['redirectTo']).toBe('/trade/AAPL');
+  });
+
+  it('keeps latest reconciliation available when Finance summary is unavailable', async () => {
+    const { fixture, router } = await renderAt('/finance/overview', {
+      onboardingComplete: true,
+      roles: ['FINANCE'],
+    });
+    const http = TestBed.inject(HttpTestingController);
+    const summary = http.expectOne(
+      (request) => request.method === 'GET' && request.url.endsWith('/api/finance/summary'),
+    );
+    summary.flush(
+      { message: 'Period totals are not available yet.' },
+      { status: 503, statusText: 'Service Unavailable' },
+    );
+
+    const reconciliation = http.expectOne(
+      (request) => request.method === 'GET' && request.url.endsWith('/api/finance/reconciliations'),
+    );
+    reconciliation.flush({ runId: null, message: 'No stored run yet.' });
+    fixture.detectChanges();
+
+    expect(router.url).toBe('/finance/overview');
+    expect(fixture.nativeElement.textContent).toContain('Finance overview');
+    expect(fixture.nativeElement.textContent).toContain('No stored run yet.');
+    expect(fixture.nativeElement.textContent).toContain('unavailable');
+    http.verify();
+  });
+
+  it('renders the dedicated Finance reconciliation route without replacing shared consumers', async () => {
+    const { fixture, router } = await renderAt('/finance/reconciliation', {
+      onboardingComplete: true,
+      roles: ['FINANCE'],
+    });
+    const http = TestBed.inject(HttpTestingController);
+    http
+      .expectOne((request) => request.method === 'GET' && request.url.endsWith('/reconciliations'))
+      .flush({
+        runId: null,
+        message: 'Run a reconciliation to inspect a consistent snapshot.',
+      });
+    fixture.detectChanges();
+    expect(router.url).toBe('/finance/reconciliation');
+    expect(fixture.nativeElement.querySelector('app-finance-reconciliation')).toBeTruthy();
+    expect(fixture.nativeElement.textContent).toContain('No reconciliation run is stored');
+  });
+
+  it.each(['CLIENT', 'ANALYST', 'ADVISOR', 'COMPLIANCE'])(
+    'denies direct Finance navigation for %s-only identities',
+    async (role) => {
+      const { router, fixture } = await renderAt('/finance/overview', {
+        onboardingComplete: true,
+        roles: [role],
+      });
+      expect(router.url).toBe('/unauthorized');
+      expect(fixture.nativeElement.textContent).toContain('Access denied');
+      TestBed.inject(HttpTestingController).expectNone((request) =>
+        request.url.includes('/api/finance/'),
+      );
+    },
+  );
+
+  it('keeps mixed-role Finance denial fail-closed at the backend API', async () => {
+    const { fixture, router } = await renderAt('/finance/overview', {
+      onboardingComplete: true,
+      roles: ['CLIENT', 'FINANCE'],
+    });
+    const http = TestBed.inject(HttpTestingController);
+    const reconciliation = http.expectOne((request) =>
+      request.url.endsWith('/api/finance/reconciliations'),
+    );
+    http
+      .expectOne((request) => request.url.endsWith('/api/finance/summary'))
+      .flush({ message: 'Access denied' }, { status: 403, statusText: 'Forbidden' });
+    expect(reconciliation.cancelled).toBe(true);
+    fixture.detectChanges();
+    expect(router.url).toBe('/finance/overview');
+    expect(fixture.nativeElement.textContent).toContain('Access denied');
+    expect(fixture.nativeElement.textContent).not.toContain('No stored run');
+    http.verify({ ignoreCancelled: true });
   });
 });

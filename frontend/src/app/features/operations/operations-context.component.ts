@@ -3,24 +3,21 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { OperationsApi, AccessPolicy } from '../../core/api/operations-api.service';
+import { DisplayCodePipe } from '../../shared/display-code.pipe';
 
 @Component({
   selector: 'app-operations-context',
-  imports: [DatePipe, FormsModule],
+  imports: [DatePipe, FormsModule, DisplayCodePipe],
   template: `
     <section class="panel" aria-label="Investigation access purpose">
       <h2>Access purpose</h2>
       @if (api.context(); as context) {
         <p>
-          {{ context.purposeCode }} · {{ context.referenceType }} · {{ context.caseReference }} ·
+          {{ context.purposeCode | displayCode }} · {{ context.referenceType | displayCode }} · {{ context.caseReference }} ·
           expires {{ context.expiresAt | date: 'medium' : 'UTC' }} UTC
         </p>
         <button type="button" (click)="api.clear()">End context and clear evidence</button>
       } @else {
-        <p>
-          Choose the approved reason for this investigation. Access remains limited to your assigned
-          accounts.
-        </p>
         @if (policy()?.configured) {
           <form class="filters" (ngSubmit)="start()">
             <div class="form-field">
@@ -28,7 +25,7 @@ import { OperationsApi, AccessPolicy } from '../../core/api/operations-api.servi
               <select id="ops-purpose" name="purpose" [(ngModel)]="purpose" required>
                 <option value="">Select purpose</option>
                 @for (code of policy()?.purposes; track code) {
-                  <option [value]="code">{{ code }}</option>
+                  <option [value]="code">{{ code | displayCode }}</option>
                 }
               </select>
             </div>
@@ -40,7 +37,9 @@ import { OperationsApi, AccessPolicy } from '../../core/api/operations-api.servi
               </select>
             </div>
             <div class="form-field">
-              <label for="ops-case">Case reference (8–200 characters)</label>
+              <label for="ops-case"
+                >Case reference <small class="min-length-hint">(minimum 8 characters)</small></label
+              >
               <input
                 id="ops-case"
                 name="case"
@@ -55,10 +54,6 @@ import { OperationsApi, AccessPolicy } from '../../core/api/operations-api.servi
               Start context
             </button>
           </form>
-          <p>
-            Use a case reference. Do not enter bank details, credentials or client profile
-            information.
-          </p>
         } @else {
           <p>Investigation access is unavailable until an access policy has been configured.</p>
         }

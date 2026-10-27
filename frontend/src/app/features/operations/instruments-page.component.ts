@@ -19,7 +19,6 @@ import { CatalogRefreshService } from '../../core/api/catalog-refresh.service';
         their policy snapshots. Current halts apply before booking.
       </p>
     </header>
-    <p role="status">Catalog changes appear automatically. Your filters stay selected.</p>
     @if (message()) {
       <p role="alert">{{ message() }}</p>
     }

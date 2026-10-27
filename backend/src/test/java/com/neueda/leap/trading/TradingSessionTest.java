@@ -50,4 +50,69 @@ class TradingSessionTest {
         assertTrue(TradingSession.isOpen("unknown", "NYSE Arca", now));
         assertTrue(TradingSession.isOpen("open", "NYSE", now));
     }
+
+    @Test
+    void unknownFxAndCryptoStatesUseTheirAssetSpecificSchedules() {
+        assertFalse(
+                TradingSession.isOpen(
+                        "unknown",
+                        "OTC",
+                        "Foreign Exchange",
+                        Instant.parse("2026-10-18T20:59:59Z")));
+        assertTrue(
+                TradingSession.isOpen(
+                        "unknown",
+                        "OTC",
+                        "Foreign Exchange",
+                        Instant.parse("2026-10-18T21:00:00Z")));
+        assertTrue(
+                TradingSession.isOpen(
+                        "unknown",
+                        "OTC",
+                        "Foreign Exchange",
+                        Instant.parse("2026-10-16T20:59:59Z")));
+        assertFalse(
+                TradingSession.isOpen(
+                        "unknown",
+                        "OTC",
+                        "Foreign Exchange",
+                        Instant.parse("2026-10-16T21:00:00Z")));
+        assertTrue(
+                TradingSession.isOpen(
+                        "unknown",
+                        "OTC",
+                        "Cryptocurrency",
+                        Instant.parse("2026-10-17T14:00:00Z")));
+        assertFalse(
+                TradingSession.isOpen(
+                        "closed",
+                        "OTC",
+                        "Cryptocurrency",
+                        Instant.parse("2026-10-17T14:00:00Z")));
+        assertFalse(
+                TradingSession.isOpen(
+                        "unknown",
+                        "OTC",
+                        "Other",
+                        Instant.parse("2026-10-17T14:00:00Z")));
+    }
+
+    @Test
+    void fxUsesItsWeeklySessionWhenProviderReportsEquityClosedStates() {
+        var weekday = Instant.parse("2026-10-14T14:00:00Z");
+        for (String state : new String[] {"closed", "pre", "post", null, ""}) {
+            assertTrue(
+                    TradingSession.isOpen(state, "OTC", "Foreign Exchange", weekday),
+                    String.valueOf(state));
+        }
+        assertFalse(
+                TradingSession.isOpen(
+                        "halted", "OTC", "Foreign Exchange", weekday));
+        assertFalse(
+                TradingSession.isOpen(
+                        "closed",
+                        "OTC",
+                        "Foreign Exchange",
+                        Instant.parse("2026-10-17T14:00:00Z")));
+    }
 }
