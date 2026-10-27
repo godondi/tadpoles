@@ -3,25 +3,22 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ComplianceApi } from './compliance-api.service';
+import { DisplayCodePipe } from '../../shared/display-code.pipe';
 
 @Component({
   selector: 'app-compliance-context',
-  imports: [DatePipe, FormsModule],
+  imports: [DatePipe, FormsModule, DisplayCodePipe],
   template: `
     <section class="panel" aria-label="Compliance access purpose">
       <h2>Access purpose</h2>
       @if (api.context(); as context) {
         <p>
-          <strong>{{ context.purposeCode }}</strong> · case {{ context.caseReference }} ·
+          <strong>{{ context.purposeCode | displayCode }}</strong> · case {{ context.caseReference }} ·
           {{ context.scopeLabel }} · expires {{ context.expiresAt | date: 'medium' : 'UTC' }} UTC
         </p>
         <p>Approved permissions: {{ context.permissions.join(', ') || 'Read-only evidence' }}</p>
         <button type="button" (click)="api.clear()">End context and clear evidence</button>
       } @else {
-        <p>
-          Select an approved purpose and provide a case reference. The server must issue an expiring
-          context before protected evidence can be requested.
-        </p>
         <form class="filters" (ngSubmit)="start()">
           <div class="form-field">
             <label for="compliance-purpose">Approved purpose</label>
@@ -34,7 +31,7 @@ import { ComplianceApi } from './compliance-api.service';
             >
               <option value="">Select purpose</option>
               @for (code of policy()?.purposes ?? []; track code) {
-                <option [value]="code">{{ code }}</option>
+                <option [value]="code">{{ code | displayCode }}</option>
               }
             </select>
           </div>
@@ -72,9 +69,6 @@ import { ComplianceApi } from './compliance-api.service';
             disabled; entering a purpose here does not grant access.
           </p>
         }
-        <p>
-          Do not enter bank details, credentials, client names or evidence in the case reference.
-        </p>
       }
       @if (policyError()) {
         <p class="notice" role="alert">{{ policyError() }}</p>

@@ -13,10 +13,13 @@ describe('App routing and shell', () => {
 
   beforeEach(async () => {
     localStorage.clear();
-    vi.stubGlobal('ResizeObserver', class {
-      observe() {}
-      disconnect() {}
-    });
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        disconnect() {}
+      },
+    );
     getContextSpy = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
 
     await TestBed.configureTestingModule({
@@ -31,7 +34,10 @@ describe('App routing and shell', () => {
     vi.unstubAllGlobals();
   });
 
-  async function renderAt(url: string, session?: { onboardingComplete: boolean; roles?: string[] }) {
+  async function renderAt(
+    url: string,
+    session?: { onboardingComplete: boolean; roles?: string[] },
+  ) {
     const router = TestBed.inject(Router);
     const roles = session?.roles ?? ['CLIENT'];
 
@@ -111,6 +117,10 @@ describe('App routing and shell', () => {
     const fixture = TestBed.createComponent(App);
     await router.navigateByUrl(url);
     fixture.detectChanges();
+    const access = TestBed.inject(HttpTestingController).match((r) =>
+      r.url.endsWith('/api/workspace/client/trade-access'),
+    );
+    access.forEach((request) => request.flush({ revoked: false, revokedUntil: '' }));
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -131,7 +141,9 @@ describe('App routing and shell', () => {
 
     expect(router.url).toBe('/app/overview');
     expect(compiled.querySelector('app-top-nav')).toBeTruthy();
-    expect(shellText).toContain('Tadpoles');
+    expect(compiled.querySelector('app-top-nav .brand')?.getAttribute('aria-label')).toBe(
+      'Tadpoles dashboard',
+    );
     expect(shellText).toContain('Search');
     expect(shellText).toContain('Account');
     expect(shellText).not.toContain('Trades');
@@ -198,8 +210,7 @@ describe('App routing and shell', () => {
     );
 
     const reconciliation = http.expectOne(
-      (request) =>
-        request.method === 'GET' && request.url.endsWith('/api/finance/reconciliations'),
+      (request) => request.method === 'GET' && request.url.endsWith('/api/finance/reconciliations'),
     );
     reconciliation.flush({ runId: null, message: 'No stored run yet.' });
     fixture.detectChanges();
@@ -217,10 +228,12 @@ describe('App routing and shell', () => {
       roles: ['FINANCE'],
     });
     const http = TestBed.inject(HttpTestingController);
-    http.expectOne((request) => request.method === 'GET' && request.url.endsWith('/reconciliations')).flush({
-      runId: null,
-      message: 'Run a reconciliation to inspect a consistent snapshot.',
-    });
+    http
+      .expectOne((request) => request.method === 'GET' && request.url.endsWith('/reconciliations'))
+      .flush({
+        runId: null,
+        message: 'Run a reconciliation to inspect a consistent snapshot.',
+      });
     fixture.detectChanges();
     expect(router.url).toBe('/finance/reconciliation');
     expect(fixture.nativeElement.querySelector('app-finance-reconciliation')).toBeTruthy();
@@ -236,7 +249,9 @@ describe('App routing and shell', () => {
       });
       expect(router.url).toBe('/unauthorized');
       expect(fixture.nativeElement.textContent).toContain('Access denied');
-      TestBed.inject(HttpTestingController).expectNone((request) => request.url.includes('/api/finance/'));
+      TestBed.inject(HttpTestingController).expectNone((request) =>
+        request.url.includes('/api/finance/'),
+      );
     },
   );
 
@@ -249,10 +264,9 @@ describe('App routing and shell', () => {
     const reconciliation = http.expectOne((request) =>
       request.url.endsWith('/api/finance/reconciliations'),
     );
-    http.expectOne((request) => request.url.endsWith('/api/finance/summary')).flush(
-      { message: 'Access denied' },
-      { status: 403, statusText: 'Forbidden' },
-    );
+    http
+      .expectOne((request) => request.url.endsWith('/api/finance/summary'))
+      .flush({ message: 'Access denied' }, { status: 403, statusText: 'Forbidden' });
     expect(reconciliation.cancelled).toBe(true);
     fixture.detectChanges();
     expect(router.url).toBe('/finance/overview');

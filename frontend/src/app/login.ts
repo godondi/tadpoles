@@ -16,6 +16,7 @@ interface LoginForm {
     <div class="login-container">
       <div class="login-box">
         <div class="login-header">
+          <img class="login-logo" src="/tadpole-yellow.png" alt="" aria-hidden="true" />
           <h1 class="login-title">Tadpoles</h1>
           <p class="login-subtitle">Sign in to your account or staff workspace.</p>
         </div>
@@ -78,7 +79,7 @@ interface LoginForm {
         display: block;
         width: 100%;
         min-height: 100vh;
-        background: var(--surface-strong);
+        background: #1b684b;
         color: var(--text-primary);
         font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
         margin: 0;
@@ -107,7 +108,25 @@ interface LoginForm {
 
       .login-header {
         text-align: center;
-        margin-bottom: 2rem;
+        background: var(--surface-strong);
+        padding: 1.25rem 1rem;
+        margin: -28px -28px 2rem;
+      }
+
+      .login-header .login-title {
+        color: #fff;
+      }
+
+      .login-header .login-subtitle {
+        color: var(--text-inverse);
+      }
+
+      .login-logo {
+        display: block;
+        width: 104px;
+        height: 100px;
+        object-fit: contain;
+        margin: 0 auto 12px;
       }
 
       .login-title {
@@ -264,6 +283,10 @@ interface LoginForm {
       @media (max-width: 480px) {
         .login-box {
           padding: 2rem 1.5rem;
+        }
+
+        .login-header {
+          margin: -2rem -1.5rem 2rem;
         }
 
         .login-title {

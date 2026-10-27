@@ -23,6 +23,8 @@ export const WORKSPACES = [
       ['Orders & monitoring', '/operations/orders'],
       ['Instruments', '/operations/instruments'],
       ['Add instrument', '/operations/instruments/new'],
+      ['User access', '/operations/users'],
+      ['Create account', '/operations/users/create'],
     ],
   },
   {
@@ -83,6 +85,7 @@ export function routeRole(url: string): WorkspaceRole | null {
   if (isInstrumentManagementRoute(path)) return 'TRADING_OPS';
   if (/^\/operations\/(orders(?:\/\d+)?|overview|exceptions|reconciliation)$/.test(path))
     return 'TRADING_OPS';
+  if (/^\/operations\/users(?:\/create)?$/.test(path)) return 'TRADING_OPS';
   if (/^\/compliance\/(investigations(?:\/\d+)?|evidence)$/.test(path)) return 'COMPLIANCE';
   if (/^\/compliance\/cases(?:\/REVIEW-[0-9a-f-]{36})?$/.test(path)) return 'COMPLIANCE';
   if (/^\/analytics\/(overview|trends|instruments)$/.test(path)) return 'ANALYST';

@@ -251,7 +251,7 @@ describe('owned support journey', () => {
         pageSize: 20,
       });
     f.detectChanges();
-    expect(f.nativeElement.textContent).toContain('account review');
+    expect(f.nativeElement.textContent).toContain('Account review');
     refresh.next();
     const request = http.expectOne((r) => r.url.endsWith('/operations/cases'));
     expect(request.request.params.get('search')).toBe('');
@@ -269,7 +269,7 @@ describe('owned support journey', () => {
       pageSize: 20,
     });
     f.detectChanges();
-    expect(f.nativeElement.textContent).toContain('trading availability');
+    expect(f.nativeElement.textContent).toContain('Trading availability');
     http.verify();
   });
   it('offers server-enabled attention views without sending private selectors to a legacy queue', async () => {

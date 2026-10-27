@@ -20,6 +20,7 @@ describe('display currency estimates', () => {
     f.componentRef.setInput('availableUsd', '100.01');
     f.detectChanges();
     expect(f.nativeElement.textContent).toContain('100.01 USD');
+    expect(f.nativeElement.textContent).not.toContain('Informational cash estimate only');
     const select = f.nativeElement.querySelector('select') as HTMLSelectElement;
     select.value = 'GBP';
     select.dispatchEvent(new Event('change'));

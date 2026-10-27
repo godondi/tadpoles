@@ -23,6 +23,10 @@
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
   border: none;
   background: transparent;
   padding: 0;
@@ -34,6 +38,13 @@
   font-weight: 700;
   letter-spacing: 0.02em;
   white-space: nowrap;
+}
+
+.brand-logo {
+  display: block;
+  width: 58px;
+  height: 36px;
+  object-fit: contain;
 }
 
 .nav-actions {

@@ -66,10 +66,6 @@ interface DisplayEstimate {
         <button type="button" (click)="refresh()">Retry estimate</button>
       }
     </div>
-    <p class="muted">
-      Informational cash estimate only. This does not convert funds or value positions. Trading,
-      deposits and withdrawals remain in USD.
-    </p>
   </section>`,
 })
 export class DisplayCurrencyComponent implements OnChanges {

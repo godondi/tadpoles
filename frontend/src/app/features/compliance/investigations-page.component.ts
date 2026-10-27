@@ -9,6 +9,7 @@ import { ComplianceContextComponent } from './compliance-context.component';
 import { ComplianceResource } from './compliance-resource';
 import { ComplianceSearchFilters, ComplianceSearchPage } from './compliance.models';
 import { RequestStateComponent } from '../../shared/workspace/request-state.component';
+import { DisplayCodePipe } from '../../shared/display-code.pipe';
 import {
   ComplianceSearchState,
   complianceStatuses,
@@ -21,7 +22,7 @@ import {
 
 @Component({
   selector: 'app-compliance-investigations',
-  imports: [TwoDecimalsPipe, DatePipe, FormsModule, RouterLink, RequestStateComponent, ComplianceContextComponent],
+  imports: [TwoDecimalsPipe, DatePipe, FormsModule, RouterLink, RequestStateComponent, ComplianceContextComponent, DisplayCodePipe],
   template: `
     <header class="workspace-heading">
       <p class="eyebrow">RISK &amp; COMPLIANCE</p>
@@ -81,7 +82,7 @@ import {
               <option value="">All statuses</option>
               @for (status of statuses; track status) {
                 <option [value]="status">
-                  {{ legacyStatus(status) ? status + ' (legacy)' : status }}
+                  {{ legacyStatus(status) ? (status | displayCode) + ' (legacy)' : (status | displayCode) }}
                 </option>
               }
             </select>
@@ -137,7 +138,7 @@ import {
                       <small>{{ item.executionMode }} · {{ item.recordKind }}</small>
                     </td>
                     <td>
-                      {{ item.status }}<small>{{ item.evidenceCompleteness }}</small>
+                      {{ item.status | displayCode }}<small>{{ item.evidenceCompleteness | displayCode }}</small>
                     </td>
                     <td>
                       <small>Submitted: {{ time(item.submittedAt) }}</small>

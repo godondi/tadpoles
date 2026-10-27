@@ -11,6 +11,7 @@ import { OperationsContextComponent } from './operations-context.component';
 import { EvidenceTableComponent } from './evidence-table.component';
 import { OperationsResource } from './operations-resource';
 import { createIdempotencyKey } from '../../core/idempotency-key';
+import { DisplayCodePipe } from '../../shared/display-code.pipe';
 
 @Component({
   selector: 'app-operations-investigation',
@@ -22,6 +23,7 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
     RouterLink,
     OperationsContextComponent,
     EvidenceTableComponent,
+    DisplayCodePipe,
   ],
   template: `
     <header class="workspace-heading">
@@ -41,7 +43,7 @@ import { createIdempotencyKey } from '../../core/idempotency-key';
     }
     @if (resource.data(); as detail) {
       <section class="panel">
-        <h2>Order {{ detail.order.orderId }} · {{ detail.order.status }}</h2>
+        <h2>Order {{ detail.order.orderId }} · {{ detail.order.status | displayCode }}</h2>
         <p>
           {{ detail.order.side }} {{ detail.order.quantity | twoDecimals }} {{ detail.order.ticker }} ·
           {{ detail.order.currency }} · {{ detail.order.executionMode }}

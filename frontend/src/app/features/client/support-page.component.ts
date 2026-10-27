@@ -282,12 +282,6 @@ import { SupportWorkbenchComponent } from '../operations/support-workbench.compo
       @if (!staff) {
         <app-support-updates (changed)="load()" />
       }
-      @if (staff) {
-        <p>
-          All report categories within your current account grants appear here automatically.
-          Filters are optional. Case access does not grant evidence access.
-        </p>
-      }
       <form class="filters case-filters" (ngSubmit)="page = 0; load()">
         @if (staff && list.data()?.workflowEnabled) {
           <label
@@ -555,7 +549,8 @@ export class SupportPageComponent {
     }
   }
   label(value: string) {
-    return value.replaceAll('_', ' ').toLowerCase();
+    const words = value.replaceAll('_', ' ').toLowerCase();
+    return words ? words[0].toUpperCase() + words.slice(1) : words;
   }
   load() {
     if (this.reference) this.detail.load(this.api.detail(this.staff, this.reference, this.page));

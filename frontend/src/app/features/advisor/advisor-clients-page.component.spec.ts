@@ -90,5 +90,22 @@ describe('AdvisorClientsPageComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('No clients are assigned');
     expect(fixture.nativeElement.textContent).not.toContain('Unable to connect');
+    const emptyState = fixture.nativeElement.querySelector('section.empty');
+    expect(emptyState).not.toBeNull();
+    expect(emptyState.textContent).toContain('A successful response contained no clients');
+  });
+
+  it('does not show the redundant client record table caption', () => {
+    const { fixture, request } = setup();
+    request.flush({
+      items: [{ clientId: 7, displayName: 'Ada Client', clientReference: 'CLIENT-7', assignmentStatus: 'Assigned', updatedAt: '2026-10-22T18:00:00Z' }],
+      page: 0,
+      pageSize: 20,
+      total: 1,
+    });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('table caption')?.textContent.trim()).toBe(
+      'Assigned clients',
+    );
   });
 });

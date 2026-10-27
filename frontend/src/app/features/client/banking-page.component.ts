@@ -1,4 +1,4 @@
-import { TwoDecimalsPipe } from '../../shared/two-decimals.pipe';
+import { TwoDecimalsPipe, twoDecimals } from '../../shared/two-decimals.pipe';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -38,16 +38,12 @@ interface PendingMovement {
     <section class="panel">
       <h2>Available USD: {{ available() | twoDecimals }}</h2>
       <p>Posted: {{ posted() | twoDecimals }} · Reserved for orders: {{ reserved() | twoDecimals }}</p>
-      <p>A completed sale credits this account. Withdrawal is a separate action.</p>
       <button type="button" (click)="load()" [disabled]="busy()">
         Refresh balances and accounts
       </button>
     </section>
     <section class="panel">
       <h2>Saved bank accounts</h2>
-      <p>
-        Format checked references, not verified bank ownership. Full numbers are never returned.
-      </p>
       @for (bank of banks(); track bank.bankId) {
         <article class="bank-reference">
           <h3>{{ bank.nickname }} · {{ bank.maskedAccount }}</h3>
@@ -96,6 +92,7 @@ interface PendingMovement {
             id="bank-routing"
             name="routing"
             [(ngModel)]="routing"
+            (input)="sanitizeDigits($event, 'routing')"
             type="password"
             inputmode="numeric"
             autocomplete="off"
@@ -113,6 +110,7 @@ interface PendingMovement {
             id="bank-account"
             name="account"
             [(ngModel)]="account"
+            (input)="sanitizeDigits($event, 'account')"
             type="password"
             inputmode="numeric"
             autocomplete="off"
@@ -144,10 +142,6 @@ interface PendingMovement {
     </section>
     <section class="panel">
       <h2>Deposit or withdraw</h2>
-      <p>
-        USD 10,000.00 maximum per movement. Deposits are limited to USD 10,000.00 total per UTC day.
-        Withdrawals use settled, available cash.
-      </p>
       @if (pending(); as p) {
         <section class="notice">
           <h3>Checking your saved request</h3>
@@ -193,7 +187,11 @@ interface PendingMovement {
               name="amount"
               [(ngModel)]="amount"
               (ngModelChange)="reviewing.set(null)"
+              (input)="formatAmountInput($event)"
+              (blur)="formatAmount($event)"
               inputmode="decimal"
+              autocomplete="off"
+              maxlength="10"
               type="text"
             />
             <button type="submit" [disabled]="!selectedBank || !validAmount()">
@@ -441,11 +439,39 @@ export class BankingPageComponent {
   }
 
   validAmount() {
+    const amount = this.amount.replaceAll(',', '');
     return (
-      /^[0-9]{1,5}(\.[0-9]{1,2})?$/.test(this.amount) &&
-      /[1-9]/.test(this.amount) &&
-      Number(this.amount) <= 10000
+      /^[0-9]{1,5}(\.[0-9]{1,2})?$/.test(amount) &&
+      /[1-9]/.test(amount) &&
+      Number(amount) <= 10000
     );
+  }
+
+  sanitizeDigits(event: Event, field: 'routing' | 'account'): void {
+    const input = event.target as HTMLInputElement;
+    const value = input.value.replace(/\D/g, '');
+    input.value = value;
+    this[field] = value;
+  }
+
+  formatAmountInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const raw = input.value.replaceAll(',', '').replace(/[^\d.]/g, '');
+    const [whole = '', ...rest] = raw.split('.');
+    const fraction = rest.join('').replaceAll('.', '').slice(0, 2);
+    const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    this.amount = grouped + (raw.includes('.') ? `.${fraction}` : '');
+    input.value = this.amount;
+    this.reviewing.set(null);
+  }
+
+  formatAmount(event: Event): void {
+    const amount = this.amount.replaceAll(',', '');
+    const match = /^(\d+)(?:\.(\d{0,2}))?$/.exec(amount);
+    if (!match) return;
+    const whole = match[1].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    this.amount = `${whole}.${(match[2] ?? '').padEnd(2, '0')}`;
+    (event.target as HTMLInputElement).value = this.amount;
   }
 
   projectedAvailable(command: MovementCommand): string | null {
@@ -459,7 +485,7 @@ export class BankingPageComponent {
     if (available === null || amount === null) return null;
     const result = available + (command.direction === 'DEPOSIT' ? amount : -amount),
       absolute = result < 0n ? -result : result;
-    return `${result < 0n ? '-' : ''}${absolute / 100n}.${(absolute % 100n).toString().padStart(2, '0')}`;
+    return twoDecimals(`${result < 0n ? '-' : ''}${absolute / 100n}.${(absolute % 100n).toString().padStart(2, '0')}`);
   }
 
   review() {
@@ -467,7 +493,7 @@ export class BankingPageComponent {
     this.reviewing.set({
       bankId: this.selectedBank,
       direction: this.direction,
-      amount: this.amount,
+      amount: this.amount.replaceAll(',', ''),
     });
     this.receipt.set(null);
   }

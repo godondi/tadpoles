@@ -22,26 +22,45 @@ import { CompleteClientOnboardingRequest, UserService } from './user.service';
           <p class="status">Loading your profile…</p>
         }
 
-        @if (errorMessage()) {
-          <div class="message error" role="alert">{{ errorMessage() }}</div>
-        }
-
-        <form class="form-grid" (ngSubmit)="submit()">
+        <form class="form-grid" novalidate (ngSubmit)="submit()">
           <label>
             <span>Client name</span>
-            <input type="text" [value]="form().clientName" (input)="updateField('clientName', $event)" required />
+            <input
+              type="text"
+              [value]="form().clientName"
+              (input)="updateField('clientName', $event)"
+              required
+            />
           </label>
           <label>
             <span>Phone</span>
-            <input type="tel" [value]="form().phone" (input)="updateField('phone', $event)" required />
+            <input
+              type="tel"
+              name="phone"
+              inputmode="numeric"
+              maxlength="14"
+              [value]="form().phone"
+              (input)="updateField('phone', $event)"
+              required
+            />
           </label>
           <label>
             <span>Date of birth</span>
-            <input type="date" [value]="form().dateOfBirth" (input)="updateField('dateOfBirth', $event)" required />
+            <input
+              type="date"
+              [value]="form().dateOfBirth"
+              (input)="updateField('dateOfBirth', $event)"
+              required
+            />
           </label>
           <label>
             <span>Employment status</span>
-            <select name="employmentStatus" [value]="form().employmentStatus" (change)="updateField('employmentStatus', $event)" required>
+            <select
+              name="employmentStatus"
+              [value]="form().employmentStatus"
+              (change)="updateField('employmentStatus', $event)"
+              required
+            >
               <option value="" disabled>Select employment status</option>
               @for (option of employmentStatusOptions; track option) {
                 <option [value]="option">{{ option }}</option>
@@ -50,31 +69,68 @@ import { CompleteClientOnboardingRequest, UserService } from './user.service';
           </label>
           <label class="span-2">
             <span>Address line 1</span>
-            <input type="text" [value]="form().addressLine1" (input)="updateField('addressLine1', $event)" required />
+            <input
+              type="text"
+              [value]="form().addressLine1"
+              (input)="updateField('addressLine1', $event)"
+              required
+            />
           </label>
           <label class="span-2">
             <span>Address line 2</span>
-            <input type="text" [value]="form().addressLine2" (input)="updateField('addressLine2', $event)" />
+            <input
+              type="text"
+              [value]="form().addressLine2"
+              (input)="updateField('addressLine2', $event)"
+            />
           </label>
           <label>
             <span>City</span>
-            <input type="text" [value]="form().city" (input)="updateField('city', $event)" required />
+            <input
+              type="text"
+              [value]="form().city"
+              (input)="updateField('city', $event)"
+              required
+            />
           </label>
           <label>
             <span>State</span>
-            <input type="text" [value]="form().state" (input)="updateField('state', $event)" required />
+            <input
+              type="text"
+              [value]="form().state"
+              (input)="updateField('state', $event)"
+              required
+            />
           </label>
           <label>
             <span>Postal code</span>
-            <input type="text" [value]="form().postalCode" (input)="updateField('postalCode', $event)" required />
+            <input
+              type="text"
+              name="postalCode"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              [value]="form().postalCode"
+              (input)="updateField('postalCode', $event)"
+              required
+            />
           </label>
           <label>
             <span>Country</span>
-            <input type="text" [value]="form().country" (input)="updateField('country', $event)" required />
+            <input
+              type="text"
+              [value]="form().country"
+              (input)="updateField('country', $event)"
+              required
+            />
           </label>
           <label>
             <span>Net worth</span>
-            <select name="netWorth" [value]="selectedNetWorthRange()" (change)="updateNetWorth($event)" required>
+            <select
+              name="netWorth"
+              [value]="selectedNetWorthRange()"
+              (change)="updateNetWorth($event)"
+              required
+            >
               <option value="" disabled>Select net worth</option>
               @for (range of netWorthRanges; track range.minimum) {
                 <option [value]="range.minimum">{{ range.label }}</option>
@@ -83,17 +139,26 @@ import { CompleteClientOnboardingRequest, UserService } from './user.service';
           </label>
           <label>
             <span>Risk tolerance</span>
-            <select name="riskTolerance" [value]="form().riskTolerance" (change)="updateField('riskTolerance', $event)" aria-describedby="risk-tolerance-help" required>
+            <select
+              name="riskTolerance"
+              [value]="form().riskTolerance"
+              (change)="updateField('riskTolerance', $event)"
+              required
+            >
               <option value="" disabled>Select risk tolerance</option>
               @for (option of riskToleranceOptions; track option) {
                 <option [value]="option">{{ option }}</option>
               }
             </select>
-            <small id="risk-tolerance-help">Choose the investment losses and price fluctuations you are willing and able to accept: lower (Conservative), medium (Moderate), or higher (Aggressive).</small>
           </label>
           <label class="span-2">
             <span>Investment objective</span>
-            <select name="investmentObjective" [value]="form().investmentObjective" (change)="updateField('investmentObjective', $event)" required>
+            <select
+              name="investmentObjective"
+              [value]="form().investmentObjective"
+              (change)="updateField('investmentObjective', $event)"
+              required
+            >
               <option value="" disabled>Select investment objective</option>
               @for (option of investmentObjectiveOptions; track option) {
                 <option [value]="option">{{ option }}</option>
@@ -102,21 +167,21 @@ import { CompleteClientOnboardingRequest, UserService } from './user.service';
           </label>
           <label>
             <span>Preferred contact method</span>
-            <select name="preferredContactMethod" [value]="form().preferredContactMethod" (change)="updateField('preferredContactMethod', $event)" required>
+            <select
+              name="preferredContactMethod"
+              [value]="form().preferredContactMethod"
+              (change)="updateField('preferredContactMethod', $event)"
+              required
+            >
               <option value="" disabled>Select contact method</option>
               @for (option of preferredContactMethodOptions; track option) {
                 <option [value]="option">{{ option }}</option>
               }
             </select>
           </label>
-          <label class="checkbox-row">
-            <input type="checkbox" [checked]="form().paperlessStatements" (change)="updateCheckbox('paperlessStatements', $event)" />
-            <span>Enroll in paperless statements</span>
-          </label>
-          <label class="checkbox-row">
-            <input type="checkbox" [checked]="form().marketingOptIn" (change)="updateCheckbox('marketingOptIn', $event)" />
-            <span>Receive marketing updates</span>
-          </label>
+          @if (errorMessage()) {
+            <div class="message error span-2" role="alert" tabindex="-1">{{ errorMessage() }}</div>
+          }
 
           <div class="actions span-2">
             <button type="submit" [disabled]="isSubmitting() || isLoading()">
@@ -127,167 +192,175 @@ import { CompleteClientOnboardingRequest, UserService } from './user.service';
       </section>
     </div>
   `,
-  styles: [`
-    :host {
-      display: block;
-      min-height: 100vh;
-      background: var(--page-bg);
-      padding: 2rem 1rem;
-    }
-
-    .page-shell {
-      max-width: 72rem;
-      margin: 0 auto;
-    }
-
-    .panel {
-      background: var(--surface);
-      border-radius: 0;
-      padding: 2rem;
-      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
-    }
-
-    .panel-header {
-      display: flex;
-      justify-content: space-between;
-      gap: 1rem;
-      align-items: flex-start;
-      margin-bottom: 1.5rem;
-    }
-
-    h1 {
-      margin: 0 0 0.5rem;
-      color: var(--dark-green);
-    }
-
-    p {
-      margin: 0;
-      color: var(--text-secondary);
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 1rem;
-    }
-
-    label {
-      display: grid;
-      gap: 0.45rem;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
-
-    input,
-    select {
-      border: 1px solid var(--border-gray);
-      border-radius: 0;
-      padding: 0.8rem 0.95rem;
-      font: inherit;
-      background: var(--surface);
-      color: var(--text-primary);
-      min-width: 0;
-      width: 100%;
-    }
-
-    small {
-      color: var(--text-secondary);
-      font-weight: 400;
-      line-height: 1.4;
-    }
-
-    .span-2 {
-      grid-column: span 2;
-    }
-
-    .checkbox-row {
-      grid-template-columns: auto 1fr;
-      align-items: center;
-      gap: 0.75rem;
-      font-weight: 500;
-    }
-
-    .checkbox-row input {
-      padding: 0;
-      width: 1rem;
-      height: 1rem;
-    }
-
-    .actions {
-      display: flex;
-      justify-content: flex-end;
-      margin-top: 0.5rem;
-    }
-
-    button {
-      border: none;
-      border-radius: 0;
-      padding: 0.9rem 1.2rem;
-      background: var(--action-bg);
-      color: white;
-      font: inherit;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    button:disabled {
-      opacity: 0.75;
-      cursor: progress;
-    }
-
-    .link-button {
-      background: transparent;
-      color: var(--dark-green);
-      padding: 0;
-    }
-
-    .status,
-    .message {
-      margin-bottom: 1rem;
-      padding: 0.85rem 1rem;
-      border-radius: 0;
-    }
-
-    .status {
-      background: var(--success-bg);
-      color: var(--dark-green);
-    }
-
-    .message.error {
-      background: var(--error-bg);
-      color: var(--error-text);
-    }
-
-    @media (max-width: 768px) {
-      .panel {
-        padding: 1.5rem;
+  styles: [
+    `
+      :host {
+        display: block;
+        min-height: 100vh;
+        background: var(--page-bg);
+        padding: 2rem 1rem;
       }
 
-      .panel-header,
+      .page-shell {
+        max-width: 72rem;
+        margin: 0 auto;
+      }
+
+      .panel {
+        background: var(--surface);
+        border-radius: 0;
+        padding: clamp(1.25rem, 3vw, 2rem);
+        border: 1px solid var(--border-gray);
+        box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+      }
+
+      .panel-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+      }
+
+      h1 {
+        margin: 0 0 0.5rem;
+        color: var(--dark-green);
+      }
+
+      p {
+        margin: 0;
+        color: var(--text-secondary);
+      }
+
       .form-grid {
-        grid-template-columns: 1fr;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+      }
+
+      label {
+        display: grid;
+        gap: 0.45rem;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      input,
+      select {
+        border: 1px solid var(--border-gray);
+        border-radius: 0;
+        padding: 0.75rem 0.875rem;
+        min-height: 46px;
+        font: inherit;
+        background: var(--surface);
+        color: var(--text-primary);
+        min-width: 0;
+        width: 100%;
+      }
+
+      small {
+        color: var(--text-secondary);
+        font-weight: 400;
+        line-height: 1.4;
       }
 
       .span-2 {
-        grid-column: auto;
+        grid-column: span 2;
       }
 
       .actions {
-        justify-content: stretch;
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 0.5rem;
       }
 
-      .actions button {
-        width: 100%;
+      button {
+        border: 1px solid var(--dark-green);
+        border-radius: 0;
+        padding: 0.75rem 1.125rem;
+        min-height: 46px;
+        background: var(--action-bg);
+        color: white;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
       }
-    }
-  `],
+
+      button:disabled {
+        background: var(--surface-muted);
+        color: var(--text-secondary);
+        border-color: var(--border-gray);
+        cursor: not-allowed;
+      }
+
+      button:not(:disabled):hover {
+        background: var(--action-hover);
+      }
+
+      .link-button {
+        background: transparent;
+        color: var(--dark-green);
+        padding: 0;
+      }
+
+      .status,
+      .message {
+        margin-bottom: 1rem;
+        padding: 0.85rem 1rem;
+        border-radius: 0;
+      }
+
+      .status {
+        background: var(--success-bg);
+        color: var(--dark-green);
+      }
+
+      .message.error {
+        background: var(--error-bg);
+        color: var(--error-text);
+      }
+
+      @media (max-width: 768px) {
+        .panel {
+          padding: 1.5rem;
+        }
+
+        .panel-header {
+          flex-direction: column;
+        }
+
+        .form-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .span-2 {
+          grid-column: auto;
+        }
+
+        .actions {
+          justify-content: stretch;
+        }
+
+        .actions button {
+          width: 100%;
+        }
+      }
+    `,
+  ],
 })
 export class OnboardingComponent implements OnInit {
   private readonly userService = inject(UserService);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
 
-  readonly employmentStatusOptions = ['Unemployed', 'Intern', 'Student', 'Employed (Part-Time)', 'Employed (Full-Time)', 'Retired'];
+  readonly employmentStatusOptions = [
+    'Unemployed',
+    'Intern',
+    'Student',
+    'Employed (Part-Time)',
+    'Employed (Full-Time)',
+    'Retired',
+  ];
   readonly investmentObjectiveOptions = ['Preservation', 'Income', 'Growth', 'Speculation'];
   readonly preferredContactMethodOptions = ['Email', 'Phone'];
   readonly riskToleranceOptions = ['Conservative', 'Moderate', 'Aggressive'];
@@ -304,7 +377,9 @@ export class OnboardingComponent implements OnInit {
   readonly selectedNetWorthRange = computed(() => {
     const amount = this.form().netWorth;
     if (amount === null || !Number.isFinite(amount) || amount < 0) return '';
-    const range = this.netWorthRanges.reduce((selected, next) => amount >= next.minimum ? next : selected);
+    const range = this.netWorthRanges.reduce((selected, next) =>
+      amount >= next.minimum ? next : selected,
+    );
     return String(range.minimum);
   });
 
@@ -342,13 +417,13 @@ export class OnboardingComponent implements OnInit {
 
       this.form.set({
         clientName: profile.clientName,
-        phone: profile.phone,
+        phone: this.formatPhoneNumber(profile.phone),
         dateOfBirth: profile.dateOfBirth,
         addressLine1: profile.addressLine1,
         addressLine2: profile.addressLine2,
         city: profile.city,
         state: profile.state,
-        postalCode: profile.postalCode,
+        postalCode: profile.postalCode.replace(/\D/g, ''),
         country: profile.country,
         employmentStatus: profile.employmentStatus,
         netWorth: profile.netWorth,
@@ -366,12 +441,11 @@ export class OnboardingComponent implements OnInit {
   }
 
   updateField(field: keyof CompleteClientOnboardingRequest, event: Event): void {
-    const value = (event.target as HTMLInputElement | HTMLSelectElement).value;
-    this.form.update((current) => ({ ...current, [field]: value }));
-  }
-
-  updateCheckbox(field: 'paperlessStatements' | 'marketingOptIn', event: Event): void {
-    const value = (event.target as HTMLInputElement).checked;
+    const input = event.target as HTMLInputElement | HTMLSelectElement;
+    let value = input.value;
+    if (field === 'phone') value = this.formatPhoneNumber(value);
+    if (field === 'postalCode') value = value.replace(/\D/g, '');
+    input.value = value;
     this.form.update((current) => ({ ...current, [field]: value }));
   }
 
@@ -385,8 +459,26 @@ export class OnboardingComponent implements OnInit {
 
   async submit(): Promise<void> {
     const payload = this.form();
-    if (!payload.clientName.trim() || !payload.addressLine1.trim() || !payload.city.trim() || !payload.country.trim()) {
+    if (
+      !payload.clientName.trim() ||
+      !payload.phone.trim() ||
+      !payload.addressLine1.trim() ||
+      !payload.city.trim() ||
+      !payload.state.trim() ||
+      !payload.postalCode.trim() ||
+      !payload.country.trim()
+    ) {
       this.errorMessage.set('Please complete all required onboarding fields.');
+      return;
+    }
+
+    if (!/^\d{10}$/.test(payload.phone.replace(/\D/g, ''))) {
+      this.errorMessage.set('Phone number must contain 10 digits.');
+      return;
+    }
+
+    if (!/^\d+$/.test(payload.postalCode)) {
+      this.errorMessage.set('Postal code must contain numbers only.');
       return;
     }
 
@@ -400,10 +492,14 @@ export class OnboardingComponent implements OnInit {
       return;
     }
 
-    if (!this.employmentStatusOptions.includes(payload.employmentStatus)
-      || !this.investmentObjectiveOptions.includes(payload.investmentObjective)
-      || !this.preferredContactMethodOptions.includes(payload.preferredContactMethod)) {
-      this.errorMessage.set('Please select an employment status, investment objective, and preferred contact method.');
+    if (
+      !this.employmentStatusOptions.includes(payload.employmentStatus) ||
+      !this.investmentObjectiveOptions.includes(payload.investmentObjective) ||
+      !this.preferredContactMethodOptions.includes(payload.preferredContactMethod)
+    ) {
+      this.errorMessage.set(
+        'Please select an employment status, investment objective, and preferred contact method.',
+      );
       return;
     }
 
@@ -418,7 +514,7 @@ export class OnboardingComponent implements OnInit {
       const profile = await this.userService.completeOnboarding({
         ...payload,
         clientName: payload.clientName.trim(),
-        phone: payload.phone.trim(),
+        phone: this.formatPhoneNumber(payload.phone),
         addressLine1: payload.addressLine1.trim(),
         addressLine2: payload.addressLine2.trim(),
         city: payload.city.trim(),
@@ -453,5 +549,15 @@ export class OnboardingComponent implements OnInit {
     }
 
     return 'Unable to load or save onboarding details.';
+  }
+
+  private formatPhoneNumber(value: string): string {
+    let digits = value.replace(/\D/g, '');
+    if (digits.length === 11 && digits.startsWith('1')) digits = digits.slice(1);
+    digits = digits.slice(0, 10);
+    if (!digits) return '';
+    if (digits.length <= 3) return `(${digits}`;
+    if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
   }
 }

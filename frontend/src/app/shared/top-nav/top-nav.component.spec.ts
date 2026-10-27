@@ -72,13 +72,16 @@ describe('TopNavComponent', () => {
     localStorage.clear();
   });
 
-  it('renders the Tadpoles brand, ticker search, and account button', () => {
+  it('renders the clickable frog brand, ticker search, and account button', () => {
     const fixture = TestBed.createComponent(TopNavComponent);
     fixture.detectChanges();
 
     const host = fixture.nativeElement as HTMLElement;
 
-    expect(host.textContent).toContain('Tadpoles');
+    const brand = host.querySelector('.brand') as HTMLButtonElement;
+    expect(brand.getAttribute('aria-label')).toBe('Tadpoles dashboard');
+    expect(brand.querySelector('img')?.getAttribute('src')).toBe('/tadpole-yellow.png');
+    expect(brand.textContent?.trim()).toBe('');
     expect(host.querySelector('.search-input')?.getAttribute('placeholder')).toContain('Search');
     expect(host.querySelector('.search-button')?.textContent).toContain('Search');
     expect(host.querySelector('.profile-btn')?.textContent).toContain('Account');

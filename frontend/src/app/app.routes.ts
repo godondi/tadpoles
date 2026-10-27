@@ -88,13 +88,63 @@ export const routes: Routes = [
         path: '',
         canActivateChild: [workspaceGuard],
         children: [
-          { path: 'app/support/new', data: { new: true }, canActivate: client, loadComponent: () => import('./features/client/support-page.component').then(m => m.SupportPageComponent) },
-          { path: 'app/support/:reference', data: {}, canActivate: client, loadComponent: () => import('./features/client/support-page.component').then(m => m.SupportPageComponent) },
-          { path: 'app/support', data: {}, canActivate: client, loadComponent: () => import('./features/client/support-page.component').then(m => m.SupportPageComponent) },
-          { path: 'operations/cases/:reference', data: { staff: true }, loadComponent: () => import('./features/client/support-page.component').then(m => m.SupportPageComponent) },
-          { path: 'operations/cases', data: { staff: true }, loadComponent: () => import('./features/client/support-page.component').then(m => m.SupportPageComponent) },
-          { path: 'compliance/cases/:reference', loadComponent: () => import('./features/compliance/review-cases.component').then(m => m.ReviewCasesComponent) },
-          { path: 'compliance/cases', loadComponent: () => import('./features/compliance/review-cases.component').then(m => m.ReviewCasesComponent) },
+          {
+            path: 'app/support/new',
+            data: { new: true },
+            canActivate: client,
+            loadComponent: () =>
+              import('./features/client/support-page.component').then(
+                (m) => m.SupportPageComponent,
+              ),
+          },
+          {
+            path: 'app/support/:reference',
+            data: {},
+            canActivate: client,
+            loadComponent: () =>
+              import('./features/client/support-page.component').then(
+                (m) => m.SupportPageComponent,
+              ),
+          },
+          {
+            path: 'app/support',
+            data: {},
+            canActivate: client,
+            loadComponent: () =>
+              import('./features/client/support-page.component').then(
+                (m) => m.SupportPageComponent,
+              ),
+          },
+          {
+            path: 'operations/cases/:reference',
+            data: { staff: true },
+            loadComponent: () =>
+              import('./features/client/support-page.component').then(
+                (m) => m.SupportPageComponent,
+              ),
+          },
+          {
+            path: 'operations/cases',
+            data: { staff: true },
+            loadComponent: () =>
+              import('./features/client/support-page.component').then(
+                (m) => m.SupportPageComponent,
+              ),
+          },
+          {
+            path: 'compliance/cases/:reference',
+            loadComponent: () =>
+              import('./features/compliance/review-cases.component').then(
+                (m) => m.ReviewCasesComponent,
+              ),
+          },
+          {
+            path: 'compliance/cases',
+            loadComponent: () =>
+              import('./features/compliance/review-cases.component').then(
+                (m) => m.ReviewCasesComponent,
+              ),
+          },
           {
             path: 'finance/reconciliation',
             loadComponent: financeReconciliation,
@@ -141,6 +191,20 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./features/operations/instruments-page.component').then(
                 (m) => m.OperationsInstrumentsComponent,
+              ),
+          },
+          {
+            path: 'operations/users/create',
+            loadComponent: () =>
+              import('./features/operations/create-account.component').then(
+                (m) => m.OperationsCreateAccountComponent,
+              ),
+          },
+          {
+            path: 'operations/users',
+            loadComponent: () =>
+              import('./features/operations/user-access.component').then(
+                (m) => m.OperationsUserAccessComponent,
               ),
           },
           {
@@ -238,33 +302,36 @@ export const routes: Routes = [
                 (m) => m.LegacyInstrumentComponent,
               ),
           },
-            {
-              path: 'analytics/overview',
-              loadComponent: analytics,
-              data: {
-                analyticsView: 'overview',
-                title: 'Analytics overview',
-                description: 'A read-only view of aggregate trading activity with explicit freshness and metric definitions.',
-              },
+          {
+            path: 'analytics/overview',
+            loadComponent: analytics,
+            data: {
+              analyticsView: 'overview',
+              title: 'Analytics overview',
+              description:
+                'A read-only view of aggregate trading activity with explicit freshness and metric definitions.',
             },
-            {
-              path: 'analytics/trends',
-              loadComponent: analytics,
-              data: {
-                analyticsView: 'trends',
-                title: 'Activity trends',
-                description: 'Explore historical activity over an explicit reporting period and granularity.',
-              },
+          },
+          {
+            path: 'analytics/trends',
+            loadComponent: analytics,
+            data: {
+              analyticsView: 'trends',
+              title: 'Activity trends',
+              description:
+                'Explore historical activity over an explicit reporting period and granularity.',
             },
-            {
-              path: 'analytics/instruments',
-              loadComponent: analytics,
-              data: {
-                analyticsView: 'instruments',
-                title: 'Instrument analysis',
-                description: 'Compare approved aggregate activity by instrument, market, unit, and currency.',
-              },
+          },
+          {
+            path: 'analytics/instruments',
+            loadComponent: analytics,
+            data: {
+              analyticsView: 'instruments',
+              title: 'Instrument analysis',
+              description:
+                'Compare approved aggregate activity by instrument, market, unit, and currency.',
             },
+          },
           {
             path: 'compliance/investigations',
             loadComponent: complianceInvestigations,

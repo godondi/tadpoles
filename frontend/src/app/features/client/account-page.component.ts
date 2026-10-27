@@ -85,9 +85,6 @@ import { ClientRecommendationsComponent } from './advisory/client-recommendation
                   cannot be calculated.
                 </p>
               }
-              <p class="as-of">
-                Account snapshot {{ estimate.snapshotAt | date: 'medium' : 'UTC' }} UTC
-              </p>
               @if (estimate.quoteAsOf) {
                 <p class="as-of">
                   Oldest quote {{ estimate.quoteAsOf | date: 'medium' : 'UTC' }} UTC
@@ -99,9 +96,6 @@ import { ClientRecommendationsComponent } from './advisory/client-recommendation
               {{ valuation.loading() ? 'Calculating…' : 'Unavailable' }}
             </p>
           }
-          <p class="muted">
-            Estimated holdings value plus total cash. This is not cash available to spend.
-          </p>
           <p class="metric-status" role="status">
             @if (valuation.loading()) {
               Updating estimate…
@@ -121,10 +115,8 @@ import { ClientRecommendationsComponent } from './advisory/client-recommendation
               {{ balance.available | twoDecimals }}
               <small>{{ balance.currency }}</small>
             </p>
-            <p>Available to invest or withdraw</p>
             <p>Reserved for pending buys: {{ balance.reserved | twoDecimals }} {{ balance.currency }}</p>
             <p>Total settled cash: {{ balance.posted | twoDecimals }} {{ balance.currency }}</p>
-            <p class="as-of">Committed {{ balance.updatedAt | date: 'medium' : 'UTC' }} UTC</p>
           } @empty {
             <p class="mono-value metric-value">Unavailable</p>
             <p class="muted">Your USD cash account is not available.</p>
@@ -141,10 +133,6 @@ import { ClientRecommendationsComponent } from './advisory/client-recommendation
           </section>
         }
       </div>
-      <p class="muted">
-        Available cash is your posted balance minus amounts reserved for pending buys. Sales settle
-        internally when the fill commits.
-      </p>
       @if (!data.tradingEnabled) {
         <p class="notice">
           New order admission is currently unavailable. Your orders and balances remain saved.
@@ -158,11 +146,7 @@ import { ClientRecommendationsComponent } from './advisory/client-recommendation
         </div>
         @if (!data.currentPositions?.length) {
           <div class="empty">
-            <h3>Your first investment starts here</h3>
-            <p>Choose an instrument and review its estimated impact before buying.</p>
-            <p>
-              If your available cash is zero, add a bank reference and make an internal deposit.
-            </p>
+            <p>No positions</p>
           </div>
         } @else {
           <div
@@ -245,11 +229,6 @@ import { ClientRecommendationsComponent } from './advisory/client-recommendation
           }
         </section>
       }
-      <p class="as-of">
-        Retrieved {{ data.retrievedAt | date: 'medium' : 'UTC' }} UTC · automatic updates for up to
-        10 minutes; use Resume automatic updates to continue.
-      </p>
-      <p class="muted">{{ data.limitation }}</p>
     }
     <section class="panel">
       <div class="section-heading">

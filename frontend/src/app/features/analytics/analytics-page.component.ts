@@ -126,7 +126,7 @@ type InstrumentSortKey = 'symbol' | 'market' | 'asset_class' | 'value';
 
     <section class="lower-grid">
       <article class="content-panel">
-        <div class="panel-heading"><div><p class="eyebrow">{{ view === 'trends' ? 'Time series' : view === 'instruments' ? 'Ranking' : 'Preview' }}</p><h2>{{ view === 'trends' ? 'Activity over time' : view === 'instruments' ? 'Instrument activity' : 'Instrument preview' }}</h2></div><span class="panel-note">Values shown to two decimal places</span></div>
+        <div class="panel-heading"><div><p class="eyebrow">{{ view === 'trends' ? 'Time series' : view === 'instruments' ? 'Ranking' : 'Preview' }}</p><h2>{{ view === 'trends' ? 'Activity over time' : view === 'instruments' ? 'Instrument activity' : 'Instrument preview' }}</h2></div></div>
         @if (view === 'trends') {
           <div class="panel-controls"><label>Measure <select [ngModel]="selectedMeasure()" (ngModelChange)="selectMeasure($event)" name="trend-measure"><option value="fills_booked">Booked fills</option><option value="orders_filled">Filled orders</option><option value="executed_quantity">Executed quantity</option></select></label><span class="panel-note">{{ measureLabel(selectedMeasure()) }} · {{ metadata()?.reporting_timezone ?? draftFilters.timezone }}</span></div>
           @if (trendPoints().length) {

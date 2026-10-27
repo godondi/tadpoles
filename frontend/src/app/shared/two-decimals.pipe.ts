@@ -17,7 +17,8 @@ export function twoDecimals(value: unknown): string {
     const original = BigInt(digits);
     cents = original / divisor + (original % divisor * 2n >= divisor ? 1n : 0n);
   }
-  return `${match[1] === '-' && cents !== 0n ? '-' : ''}${cents / 100n}.${String(cents % 100n).padStart(2, '0')}`;
+  const whole = (cents / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return `${match[1] === '-' && cents !== 0n ? '-' : ''}${whole}.${String(cents % 100n).padStart(2, '0')}`;
 }
 
 /** Preserve IDs, reference strings and counts in mixed operational evidence. */

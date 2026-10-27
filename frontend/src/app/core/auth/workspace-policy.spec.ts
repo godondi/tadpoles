@@ -67,6 +67,14 @@ describe('Operations instrument editor routes', () => {
   );
 });
 
+describe('Operations user administration pages', () => {
+  it.each(['/operations/users', '/operations/users/create'])('authorizes the separate Operations page %s', (path) => {
+    expect(routeRole(path)).toBe('TRADING_OPS');
+    expect(safeReturnUrl(path, ['TRADING_OPS'])).toBe(path);
+    expect(safeReturnUrl(path, ['CLIENT'])).toBe('/app/overview');
+  });
+});
+
 it.each([
   '/operations/overview',
   '/operations/orders',

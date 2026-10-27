@@ -8,10 +8,11 @@ import { AdvisorClient, AdvisorPage } from './advisor-models';
 import { PageResource } from '../../shared/workspace/page-resource';
 import { RequestStateComponent } from '../../shared/workspace/request-state.component';
 import { AuthService } from '../../core/auth/auth.service';
+import { DisplayCodePipe } from '../../shared/display-code.pipe';
 
 @Component({
   selector: 'app-advisor-clients-page',
-  imports: [DatePipe, FormsModule, RouterLink, RequestStateComponent],
+  imports: [DatePipe, FormsModule, RouterLink, RequestStateComponent, DisplayCodePipe],
   template: `
     <header class="workspace-heading">
       <p class="eyebrow">ADVISOR WORKSPACE</p>
@@ -57,7 +58,7 @@ import { AuthService } from '../../core/auth/auth.service';
           </div>
           <div class="table-wrapper" tabindex="0" aria-label="Assigned clients, scroll horizontally">
             <table>
-              <caption>Assigned clients and the latest available client record time</caption>
+              <caption class="sr-only">Assigned clients</caption>
               <thead>
                 <tr>
                   <th scope="col">Client</th>
@@ -72,7 +73,7 @@ import { AuthService } from '../../core/auth/auth.service';
                   <tr>
                     <th scope="row">{{ client.displayName }}</th>
                     <td>{{ client.clientReference }}</td>
-                    <td>{{ client.assignmentStatus || 'Assigned' }}</td>
+                    <td>{{ (client.assignmentStatus || 'Assigned') | displayCode }}</td>
                     <td>{{ client.updatedAt | date: 'medium' : 'UTC' }} UTC</td>
                     <td><a [routerLink]="['/advisor/clients', client.clientId]">View holdings</a></td>
                   </tr>

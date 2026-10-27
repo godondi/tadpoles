@@ -4,6 +4,8 @@ import { provideRouter } from '@angular/router';
 import { AuthenticatedShellComponent } from './authenticated-shell.component';
 import { AuthService } from '../core/auth/auth.service';
 import { UserService } from '../user.service';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 
 // Browser checks exercise actual sticky positioning; this verifies the shared navigation
 // and that the offset follows the rendered header instead of a fixed role-specific height.
@@ -28,6 +30,8 @@ describe('shared workspace navigation', () => {
       imports: [AuthenticatedShellComponent],
       providers: [
         provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
         { provide: AuthService, useValue: { roles, isAuthenticated: signal(true) } },
         {
           provide: UserService,
@@ -50,6 +54,9 @@ describe('shared workspace navigation', () => {
     expect(fixture.nativeElement.style.getPropertyValue('--workspace-header-height')).toBe('192px');
     roles.set(['TRADING_OPS', 'CLIENT']);
     fixture.detectChanges();
+    TestBed.inject(HttpTestingController)
+      .expectOne((r) => r.url.endsWith('/api/workspace/client/trade-access'))
+      .flush({ revoked: false, revokedUntil: '' });
     expect(fixture.nativeElement.querySelector('a[href="/operations/instruments/new"]')).toBeNull();
     expect(fixture.nativeElement.querySelector('a[href="/operations/instruments"]')).toBeNull();
     fixture.destroy();

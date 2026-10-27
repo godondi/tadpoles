@@ -3,10 +3,11 @@ import { Component, input } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Order } from '../../core/api/workspace-api.service';
+import { DisplayCodePipe } from '../display-code.pipe';
 
 @Component({
   selector: 'app-orders-table',
-  imports: [TwoDecimalsPipe, RouterLink, DatePipe],
+  imports: [TwoDecimalsPipe, RouterLink, DatePipe, DisplayCodePipe],
   template: ` @if (!orders().length) {
       <section class="empty">
         <h3>No orders to show</h3>
@@ -44,7 +45,7 @@ import { Order } from '../../core/api/workspace-api.service';
                 <td>{{ order.side }}</td>
                 <td class="mono-value">{{ (order.exactQuantity ?? order.quantity) | twoDecimals }}</td>
                 <td>
-                  <span class="status-label">{{ order.status }}</span
+                  <span class="status-label">{{ order.status | displayCode }}</span
                   ><small>{{
                     order.recordKind === 'SELF_DIRECTED' ? 'Simulation' : 'Legacy record'
                   }}</small>

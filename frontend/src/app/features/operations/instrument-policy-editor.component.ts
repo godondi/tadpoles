@@ -141,10 +141,6 @@ import {
                 <option value="OTC">OTC</option>
               </select>
             </div>
-            <p>
-              Venue is an Operations label; a quote response alone does not verify listing identity.
-              Review the provider mapping before enabling.
-            </p>
           </fieldset>
           <fieldset [disabled]="saving()">
             <legend>Trading limits</legend>
@@ -221,10 +217,6 @@ import {
                 <option [ngValue]="1200">20 minutes</option>
               </select>
             </div>
-            <p>
-              Session policy: provider open, or a verified U.S. core session when provider status is
-              unknown. Settlement: immediate internal booking. Project fee: zero.
-            </p>
           </fieldset>
           <fieldset [disabled]="saving()">
             <legend>Trading permissions</legend>
@@ -262,10 +254,6 @@ import {
                 required
               ></textarea>
             </div>
-            <p>
-              Saving rechecks the current provider values. Full halts remain available during
-              provider outages. Deactivation preserves instruments and historical records.
-            </p>
             <div class="actions">
               <button type="submit">
                 {{ saving() ? 'Saving…' : !form.active ? 'Save full halt' : 'Save policy' }}

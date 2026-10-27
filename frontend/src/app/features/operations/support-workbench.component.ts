@@ -26,10 +26,11 @@ import { PrivateCommand } from '../../shared/workspace/private-command';
 import { EvidenceFactsComponent } from '../../shared/workspace/evidence-facts.component';
 import { CASE_CATEGORIES } from '../../core/api/support-api.service';
 import { utcFilter } from '../../shared/workspace/utc-filter';
+import { DisplayCodePipe } from '../../shared/display-code.pipe';
 
 @Component({
   selector: 'app-support-workbench',
-  imports: [FormsModule, DatePipe, RouterLink, EvidenceFactsComponent],
+  imports: [FormsModule, DatePipe, RouterLink, EvidenceFactsComponent, DisplayCodePipe],
   template: `
     <section class="panel case-workbench" aria-label="Private case workbench">
       <header class="workspace-heading">
@@ -51,11 +52,11 @@ import { utcFilter } from '../../shared/workspace/utc-filter';
       }
       @if (data(); as w) {
         <p>
-          Original: {{ w.originalCategory }} / Effective: {{ w.effectiveCategory }} / Private
+          Original: {{ w.originalCategory | displayCode }} / Effective: {{ w.effectiveCategory | displayCode }} / Private
           version {{ w.workflowVersion }} / Checklist {{ w.checklistRevision }}
         </p>
         <p>
-          {{ w.responseTarget }}. Owner {{ w.assignee ?? 'unassigned' }}; priority {{ w.priority }}.
+          {{ w.responseTarget }}. Owner {{ w.assignee ?? 'unassigned' }}; priority {{ w.priority | displayCode }}.
           Next action: {{ w.nextAction ?? 'not recorded' }}; due
           {{ (w.dueAt | date: 'medium' : 'UTC') ?? 'not set' }} UTC.
         </p>
@@ -104,7 +105,7 @@ import { utcFilter } from '../../shared/workspace/utc-filter';
               <label
                 >Effective category<select name="category" [(ngModel)]="category">
                   @for (c of categories; track c) {
-                    <option>{{ c }}</option>
+                    <option>{{ c | displayCode }}</option>
                   }
                 </select></label
               >
@@ -239,7 +240,7 @@ import { utcFilter } from '../../shared/workspace/utc-filter';
         @for (task of w.tasks; track task.code) {
           <article class="panel">
             <h4>{{ task.label }}</h4>
-            <p>{{ task.state }} - {{ task.reason ?? 'Not checked' }}</p>
+            <p>{{ task.state | displayCode }} - {{ task.reason ? (task.reason | displayCode) : 'Not checked' }}</p>
             @if (w.actions.workflow) {
               <form class="workspace-form" (ngSubmit)="saveTask(task)">
                 <label
@@ -269,7 +270,7 @@ import { utcFilter } from '../../shared/workspace/utc-filter';
                   >
                     <option value="">No evidence reference</option>
                     @for (kind of evidenceKinds; track kind) {
-                      <option>{{ kind }}</option>
+                      <option>{{ kind | displayCode }}</option>
                     }
                   </select></label
                 >
@@ -290,9 +291,9 @@ import { utcFilter } from '../../shared/workspace/utc-filter';
         <p>Mandatory referrals block resolution until a decision with disposition is retained.</p>
         @for (review of w.referrals; track review.reference) {
           <article>
-            <strong>{{ review.reference }}</strong> / {{ review.status }} / next owner
+            <strong>{{ review.reference }}</strong> / {{ review.status | displayCode }} / next owner
             {{ review.nextOwner }}
-            <p>Disposition: {{ review.disposition ?? 'pending' }}</p>
+              <p>Disposition: {{ review.disposition ? (review.disposition | displayCode) : 'Pending' }}</p>
             @if (review.informationRequest) {
               <p class="case-prose">Information requested: {{ review.informationRequest }}</p>
             }
@@ -354,7 +355,7 @@ import { utcFilter } from '../../shared/workspace/utc-filter';
               >Category disposition<select name="resolution" [(ngModel)]="resolution" required>
                 <option value="">Choose disposition</option>
                 @for (code of w.definitions.resolutions; track code) {
-                  <option>{{ code }}</option>
+                  <option>{{ code | displayCode }}</option>
                 }
               </select></label
             >
@@ -381,7 +382,7 @@ import { utcFilter } from '../../shared/workspace/utc-filter';
           @for (event of w.history; track event.version) {
             <article>
               <p>
-                Version {{ event.version }} / {{ event.kind }} / actor
+                Version {{ event.version }} / {{ event.kind | displayCode }} / actor
                 {{ event.actor ?? 'migration' }} /
                 {{ event.recordedAt | date: 'medium' : 'UTC' }} UTC
               </p>

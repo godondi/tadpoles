@@ -217,7 +217,24 @@ describe('account background updates', () => {
       .flush({ guidance: [], recommendations: [], asOf: null, source: 'test' });
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).not.toContain('AAPL');
-    expect(fixture.nativeElement.textContent).toContain('Your first investment starts here');
+    expect(fixture.nativeElement.textContent).toContain('No positions');
+    expect(fixture.nativeElement.textContent).not.toContain('Your first investment starts here');
+    const positionsPanel = Array.from(fixture.nativeElement.querySelectorAll('.panel')).find(
+      (panel: any) => panel.textContent.includes('No positions'),
+    ) as HTMLElement;
+    expect(positionsPanel.querySelector('h3')).toBeNull();
+    for (const caption of [
+      'Estimated holdings value plus total cash',
+      'Available to invest or withdraw',
+      'Account snapshot',
+      'Committed',
+      'automatic updates for up to',
+      'USD ledger. Available',
+      'Informational cash estimate only',
+      'Choose an instrument and review its estimated impact',
+    ]) {
+      expect(fixture.nativeElement.textContent).not.toContain(caption);
+    }
     expect(fixture.nativeElement.querySelector('select')).toBe(select);
     expect(select.value).toBe('GBP');
 
@@ -307,7 +324,7 @@ describe('Investing estimates', () => {
       .flush({ guidance: [], recommendations: [], asOf: null, source: 'test' });
     fixture.detectChanges();
     const panel = fixture.nativeElement.querySelector('[aria-labelledby="investing-heading"]');
-    expect(panel.textContent).toContain('9007199254740993.02');
+    expect(panel.textContent).toContain('9,007,199,254,740,993.02');
     expect(panel.textContent).toContain('Oldest quote');
     const currency = fixture.nativeElement.querySelector('select');
     panel.querySelector('button').click();
@@ -326,7 +343,7 @@ describe('Investing estimates', () => {
       });
     fixture.detectChanges();
     expect(panel.textContent).toContain('Prices unavailable for AAPL');
-    expect(panel.textContent).not.toContain('9007199254740993.02');
+    expect(panel.textContent).not.toContain('9,007,199,254,740,993.02');
     expect(
       fixture.nativeElement.querySelector('[aria-labelledby="settled-balance-heading"]')
         .textContent,
