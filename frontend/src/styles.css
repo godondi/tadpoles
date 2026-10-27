@@ -256,10 +256,14 @@ a:focus-visible {
   border-left: 3px solid transparent;
 }
 .workspace-group a.active {
-  background: #edf4e8;
+  background: var(--success-bg);
   color: var(--dark-green);
   border-left-color: var(--dark-green);
   font-weight: 700;
+}
+.workspace-group a:not(.active):hover {
+  background: var(--surface-muted);
+  color: var(--dark-green);
 }
 .workspace-content {
   padding: 24px clamp(16px, 2vw, 28px);
@@ -417,6 +421,12 @@ table caption {
   border-color: var(--border-gray);
   cursor: not-allowed;
 }
+.workspace-content button:not(:disabled):hover,
+.standalone-page button:not(:disabled):hover,
+.navigation-toggle:not(:disabled):hover {
+  background: var(--action-hover);
+  border-color: var(--action-hover);
+}
 .pagination,
 .actions {
   display: flex;
@@ -430,6 +440,9 @@ table caption {
 }
 .empty {
   padding: 28px 0;
+}
+.panel.empty {
+  padding: 24px;
 }
 .details {
   display: grid;
@@ -586,7 +599,8 @@ table caption {
 .workspace-content .button-link:hover,
 .workspace-content .button-link:focus-visible,
 .workspace-content button:not(:disabled):hover {
-  background: var(--action-bg);
+  background: var(--action-hover);
+  border-color: var(--action-hover);
   color: var(--action-text);
 }
 /* Keep labelled banking controls readable in one column on narrow displays. */
